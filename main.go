@@ -3,6 +3,7 @@ package main
 import (
 	"encoding/json"
 	"net/http"
+	"os"
 	"time"
 
 	"github.com/go-chi/chi"
@@ -17,6 +18,12 @@ var (
 )
 
 func main() {
+	port := "8080"
+	if fromEnv := os.Getenv("PORT"); fromEnv != "" {
+		port = fromEnv
+	}
+	log.Printf("Starting up on http://localhost:%s", port)
+
 	r := chi.NewRouter()
 
 	r.Use(middleware.RequestID)
@@ -59,4 +66,6 @@ func main() {
 
 		log.WithFields(logrus.Fields{"bucket": bucket, "data": data}).Info("report")
 	})
+
+	log.Fatal(http.ListenAndServe(":"+port, r))
 }
