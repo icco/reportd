@@ -3,11 +3,13 @@ package main
 import (
 	"encoding/json"
 	"net/http"
+	"time"
 
 	"github.com/go-chi/chi"
 	"github.com/go-chi/chi/middleware"
 	"github.com/go-chi/cors"
 	sdLogging "github.com/icco/logrus-stackdriver-formatter"
+	"github.com/sirupsen/logrus"
 )
 
 var (
@@ -43,10 +45,10 @@ func main() {
 
 		var data []map[string]string
 		decoder := json.NewDecoder(r.Body)
-		err = decoder.Decode(&data)
+		err := decoder.Decode(&data)
 		if err != nil {
 			log.WithError(err).Error("Error seen during json decode")
-			Renderer.JSON(w, 500, map[string]string{"error": err.Error()})
+			http.Error(w, "processing error", 500)
 			return
 		}
 
