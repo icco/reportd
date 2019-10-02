@@ -40,9 +40,14 @@ func main() {
 		w.Write([]byte("hi"))
 	})
 
+	r.Get("/healthz", func(w http.ResponseWriter, r *http.Request) {
+		w.Write([]byte("ok."))
+	})
+
 	r.Post("/report/{bucket}", func(w http.ResponseWriter, r *http.Request) {
 		bucket := chi.URLParam(r, "bucket")
 
+		// TODO: Validate application/reports+json
 		var data []map[string]string
 		decoder := json.NewDecoder(r.Body)
 		err := decoder.Decode(&data)
