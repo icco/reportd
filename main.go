@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"mime"
 	"net/http"
 	"os"
 	"time"
@@ -106,7 +107,12 @@ func main() {
 }
 
 func ParseReport(ct, body string) (interface{}, error) {
-	switch ct {
+	media, _, err := mime.ParseMediaType(ct)
+	if err != nil {
+		return nil, err
+	}
+
+	switch media {
 	case "application/reports+json":
 		var data []Report
 		err := json.Unmarshal([]byte(body), &data)
