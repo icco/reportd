@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bytes"
 	"encoding/json"
 	"net/http"
 	"os"
@@ -60,10 +61,14 @@ func main() {
 
 		// TODO: Validate application/reports+json
 		var data []map[string]string
-		decoder := json.NewDecoder(r.Body)
-		err := decoder.Decode(&data)
+
+		buf := new(bytes.Buffer)
+		buf.ReadFrom(r.Body)
+		bodyStr := buf.String()
+
+		err := json.Unmarshal([]byte(bodyStr), &data)
 		if err != nil {
-			log.WithError(err).Error("Error seen during json decode")
+			log.WithError(err).WithField("json", bodyStr).Error("Error seen during json decode")
 			http.Error(w, "processing error", 500)
 			return
 		}
