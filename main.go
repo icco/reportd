@@ -121,6 +121,14 @@ func ParseReport(ct, body string) (interface{}, error) {
 			return nil, err
 		}
 		return data, nil
+		// https://www.w3.org/TR/CSP3/#violation
+		//	case "application/csp-report":
+		//		var data CSPReport
+		//		err := json.Unmarshal([]byte(body), &data)
+		//		if err != nil {
+		//			return nil, err
+		//		}
+		//		return data, nil
 	}
 
 	return nil, fmt.Errorf("not a valid content-type")
