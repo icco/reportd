@@ -45,13 +45,16 @@ func main() {
 	r.Use(middleware.Timeout(30 * time.Second))
 
 	r.Get("/", func(w http.ResponseWriter, r *http.Request) {
-		w.Write([]byte("hi"))
+		w.Header().Set("Content-Type", "text/html")
+		w.Write([]byte(`hi! Please see <a href="https://github.com/icco/reportd">github.com/icco/reportd</a> for more information.`))
 	})
 
 	r.Get("/healthz", func(w http.ResponseWriter, r *http.Request) {
 		w.Write([]byte("ok."))
 	})
 
+	// Needed because some browsers fire off an OPTIONS request before sending a
+	// POST to validate CORS.
 	r.Options("/report/{bucket}", func(w http.ResponseWriter, r *http.Request) {
 		w.Write([]byte(""))
 	})
@@ -70,7 +73,9 @@ func main() {
 			http.Error(w, "processing error", 500)
 			return
 		}
-		log.WithFields(logrus.Fields{"bucket": bucket, "data": data}).Info("report")
+
+		// Log the report.
+		log.WithFields(logrus.Fields{"bucket": bucket, "data": data}).Warn("report recieved")
 	})
 
 	log.Fatal(http.ListenAndServe(":"+port, r))
