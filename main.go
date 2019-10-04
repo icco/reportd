@@ -51,6 +51,10 @@ func main() {
 		w.Write([]byte("ok."))
 	})
 
+	r.Options("/report/{bucket}", func(w http.ResponseWriter, r *http.Request) {
+		w.Write([]byte(""))
+	})
+
 	r.Post("/report/{bucket}", func(w http.ResponseWriter, r *http.Request) {
 		bucket := chi.URLParam(r, "bucket")
 
