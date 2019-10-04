@@ -3,6 +3,7 @@ package main
 import (
 	"bytes"
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"os"
 	"time"
@@ -19,7 +20,7 @@ var (
 )
 
 // {"expect-ct-report":{"date-time":"2019-10-04T01:05:38.621Z","effective-expiration-date":"2019-10-04T01:05:38.621Z","hostname":"expect-ct-report.test","port":443,"scts":[],"served-certificate-chain":[],"validated-certificate-chain":[]}}
-type Report struct {
+type ExpectCTReport struct {
 	ExpectCTReport struct {
 		DateTime                  time.Time `json:"date-time"`
 		EffectiveExpirationDate   time.Time `json:"effective-expiration-date"`
@@ -29,6 +30,21 @@ type Report struct {
 		ServedCertificateChain    []string  `json:"served-certificate-chain"`
 		ValidatedCertificateChain []string  `json:"validated-certificate-chain"`
 	} `json:"expect-ct-report"`
+}
+
+// { "type": "csp", "age": 10, "url": "https://example.com/vulnerable-page/", "user_agent": "Mozilla/5.0 (X11; Linux x86_64; rv:60.0) Gecko/20100101 Firefox/60.0", "body": { "blocked": "https://evil.com/evil.js", "directive": "script-src", "policy": "script-src 'self'; object-src 'none'", "status": 200, "referrer": "https://evil.com/" } }
+type Report struct {
+	Type      string `json:"type"`
+	Age       int    `json:"age"`
+	URL       string `json:"url"`
+	UserAgent string `json:"user_agent"`
+	Body      struct {
+		Blocked   string `json:"blocked"`
+		Directive string `json:"directive"`
+		Policy    string `json:"policy"`
+		Status    int    `json:"status"`
+		Referrer  string `json:"referrer"`
+	} `json:"body"`
 }
 
 func main() {
@@ -72,22 +88,40 @@ func main() {
 	r.Post("/report/{bucket}", func(w http.ResponseWriter, r *http.Request) {
 		bucket := chi.URLParam(r, "bucket")
 
-		// TODO: Validate application/reports+json
-		var data Report
-
 		buf := new(bytes.Buffer)
 		buf.ReadFrom(r.Body)
 		bodyStr := buf.String()
+		ct := r.Header.Get("content-type")
 
-		err := json.Unmarshal([]byte(bodyStr), &data)
+		data, err := ParseReport(ct, bodyStr)
 		if err != nil {
-			log.WithError(err).WithField("json", bodyStr).Error("Error seen during json decode")
+			log.WithError(err).WithFields(logrus.Fields{"content-type": ct, "user-agent": r.UserAgent(), "json": bodyStr}).Error("error seen during parse")
 			http.Error(w, "processing error", 500)
 			return
 		}
-
 		log.WithFields(logrus.Fields{"bucket": bucket, "data": data}).Info("report")
 	})
 
 	log.Fatal(http.ListenAndServe(":"+port, r))
+}
+
+func ParseReport(ct, body string) (interface{}, error) {
+	switch ct {
+	case "application/reports+json":
+		var data []Report
+		err := json.Unmarshal([]byte(body), &data)
+		if err != nil {
+			return nil, err
+		}
+		return data, nil
+	case "application/expect-ct-report+json":
+		var data ExpectCTReport
+		err := json.Unmarshal([]byte(body), &data)
+		if err != nil {
+			return nil, err
+		}
+		return data, nil
+	}
+
+	return nil, fmt.Errorf("not a valid content-type")
 }
