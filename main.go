@@ -18,6 +18,19 @@ var (
 	log = InitLogging()
 )
 
+// {"expect-ct-report":{"date-time":"2019-10-04T01:05:38.621Z","effective-expiration-date":"2019-10-04T01:05:38.621Z","hostname":"expect-ct-report.test","port":443,"scts":[],"served-certificate-chain":[],"validated-certificate-chain":[]}}
+type Report struct {
+	ExpectCTReport struct {
+		DateTime                  time.Time `json:"date-time"`
+		EffectiveExpirationDate   time.Time `json:"effective-expiration-date"`
+		Hostname                  string    `json:"hostname"`
+		Port                      int       `json:"port"`
+		Scts                      []string  `json:"scts"`
+		ServedCertificateChain    []string  `json:"served-certificate-chain"`
+		ValidatedCertificateChain []string  `json:"validated-certificate-chain"`
+	} `json:"expect-ct-report"`
+}
+
 func main() {
 	port := "8080"
 	if fromEnv := os.Getenv("PORT"); fromEnv != "" {
@@ -60,7 +73,7 @@ func main() {
 		bucket := chi.URLParam(r, "bucket")
 
 		// TODO: Validate application/reports+json
-		var data []map[string]string
+		var data Report
 
 		buf := new(bytes.Buffer)
 		buf.ReadFrom(r.Body)
