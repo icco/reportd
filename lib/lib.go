@@ -7,7 +7,7 @@ import (
 	"time"
 )
 
-// {"expect-ct-report":{"date-time":"2019-10-04T01:05:38.621Z","effective-expiration-date":"2019-10-04T01:05:38.621Z","hostname":"expect-ct-report.test","port":443,"scts":[],"served-certificate-chain":[],"validated-certificate-chain":[]}}
+// ExpectCTReport is the struct for Expect-CT errors.
 type ExpectCTReport struct {
 	ExpectCTReport struct {
 		DateTime                  time.Time `json:"date-time"`
@@ -20,7 +20,7 @@ type ExpectCTReport struct {
 	} `json:"expect-ct-report"`
 }
 
-// { "type": "csp", "age": 10, "url": "https://example.com/vulnerable-page/", "user_agent": "Mozilla/5.0 (X11; Linux x86_64; rv:60.0) Gecko/20100101 Firefox/60.0", "body": { "blocked": "https://evil.com/evil.js", "directive": "script-src", "policy": "script-src 'self'; object-src 'none'", "status": 200, "referrer": "https://evil.com/" } }
+// Report is the struct for generic reports via the Reporting API.
 type Report struct {
 	Type      string `json:"type"`
 	Age       int    `json:"age"`
@@ -35,6 +35,8 @@ type Report struct {
 	} `json:"body"`
 }
 
+// ParseReport takes a content-type header and a body json string and parses it
+// into valid Go structs.
 func ParseReport(ct, body string) (interface{}, error) {
 	media, _, err := mime.ParseMediaType(ct)
 	if err != nil {
