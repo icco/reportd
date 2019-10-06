@@ -68,5 +68,5 @@ func ParseReport(ct, body string) (interface{}, error) {
 		//		return data, nil
 	}
 
-	return nil, fmt.Errorf("not a valid content-type")
+	return nil, fmt.Errorf("\"%s\" is not a valid content-type", media)
 }
