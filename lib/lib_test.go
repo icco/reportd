@@ -9,7 +9,7 @@ import (
 type test struct {
 	ContentType string
 	JSON        string
-	Expect      interface{}
+	Expect      []Report
 }
 
 func TestParseReport(t *testing.T) {

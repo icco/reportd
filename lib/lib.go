@@ -7,9 +7,18 @@ import (
 	"time"
 )
 
+// Report is a simple interface for types exported by ParseReport.
+type Report interface {
+	IsReport() bool
+}
+
 // ExpectCTReport is the struct for Expect-CT errors.
 type ExpectCTReport struct {
 	ExpectCTReport ExpectCTSubReport `json:"expect-ct-report"`
+}
+
+func (e ExpectCTReport) IsReport() bool {
+	return true
 }
 
 // ExpectCTSubReport is the internal datastructure of an ExpectCTReport.
@@ -23,8 +32,8 @@ type ExpectCTSubReport struct {
 	ValidatedCertificateChain []string  `json:"validated-certificate-chain"`
 }
 
-// Report is the struct for generic reports via the Reporting API.
-type Report struct {
+// ReportToReport is the struct for generic reports via the Reporting API.
+type ReportToReport struct {
 	Type      string `json:"type"`
 	Age       int    `json:"age"`
 	URL       string `json:"url"`
@@ -38,9 +47,13 @@ type Report struct {
 	} `json:"body"`
 }
 
+func (r ReportToReport) IsReport() bool {
+	return true
+}
+
 // ParseReport takes a content-type header and a body json string and parses it
 // into valid Go structs.
-func ParseReport(ct, body string) (interface{}, error) {
+func ParseReport(ct, body string) ([]Report, error) {
 	media, _, err := mime.ParseMediaType(ct)
 	if err != nil {
 		return nil, err
@@ -48,7 +61,7 @@ func ParseReport(ct, body string) (interface{}, error) {
 
 	switch media {
 	case "application/reports+json":
-		var data []Report
+		var data []ReportToReport
 		err := json.Unmarshal([]byte(body), &data)
 		if err != nil {
 			return nil, err
@@ -60,7 +73,7 @@ func ParseReport(ct, body string) (interface{}, error) {
 		if err != nil {
 			return nil, err
 		}
-		return data, nil
+		return []Report{data}, nil
 		// https://www.w3.org/TR/CSP3/#violation
 		//	case "application/csp-report":
 		//		var data CSPReport
