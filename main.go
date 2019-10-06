@@ -75,7 +75,7 @@ func main() {
 		}
 
 		// Log the report.
-		log.WithFields(logrus.Fields{"bucket": bucket, "data": data}).Warn("report recieved")
+		log.WithFields(logrus.Fields{"json": bodyStr, "bucket": bucket, "data": data}).Warn("report recieved")
 	})
 
 	log.Fatal(http.ListenAndServe(":"+port, r))
