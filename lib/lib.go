@@ -9,15 +9,18 @@ import (
 
 // ExpectCTReport is the struct for Expect-CT errors.
 type ExpectCTReport struct {
-	ExpectCTReport struct {
-		DateTime                  time.Time `json:"date-time"`
-		EffectiveExpirationDate   time.Time `json:"effective-expiration-date"`
-		Hostname                  string    `json:"hostname"`
-		Port                      int       `json:"port"`
-		Scts                      []string  `json:"scts"`
-		ServedCertificateChain    []string  `json:"served-certificate-chain"`
-		ValidatedCertificateChain []string  `json:"validated-certificate-chain"`
-	} `json:"expect-ct-report"`
+	ExpectCTReport ExpectCTSubReport `json:"expect-ct-report"`
+}
+
+// ExpectCTSubReport is the internal datastructure of an ExpectCTReport.
+type ExpectCTSubReport struct {
+	DateTime                  time.Time `json:"date-time"`
+	EffectiveExpirationDate   time.Time `json:"effective-expiration-date"`
+	Hostname                  string    `json:"hostname"`
+	Port                      int       `json:"port"`
+	Scts                      []string  `json:"scts"`
+	ServedCertificateChain    []string  `json:"served-certificate-chain"`
+	ValidatedCertificateChain []string  `json:"validated-certificate-chain"`
 }
 
 // Report is the struct for generic reports via the Reporting API.
