@@ -20,6 +20,22 @@ type ExpectCTReport struct {
 	} `json:"expect-ct-report"`
 }
 
+// CSPReport is the struct for CSP errors.
+type CSPReport struct {
+	CSPReport struct {
+		DocumentURI        string `json:"document-uri"`
+		Referer            string `json:"referrer"`
+		ViolatedDirective  string `json:"violated-directive"`
+		EffectiveDirective string `json:"effective-directive"`
+		OriginalPolicy     string `json:"original-policy"`
+		BlockedURI         string `json:"blocked-uri"`
+		StatusCode         int    `json:"status-code"`
+		SourceFile         string `json:"source-file"`
+		LineNumber         int    `json:"line-number"`
+		ColumnNumber       int    `json:"column-number"`
+	} `json:"csp-report"`
+}
+
 // Report is the struct for generic reports via the Reporting API.
 type Report struct {
 	Type      string `json:"type"`
@@ -59,13 +75,13 @@ func ParseReport(ct, body string) (interface{}, error) {
 		}
 		return data, nil
 		// https://www.w3.org/TR/CSP3/#violation
-		//	case "application/csp-report":
-		//		var data CSPReport
-		//		err := json.Unmarshal([]byte(body), &data)
-		//		if err != nil {
-		//			return nil, err
-		//		}
-		//		return data, nil
+	case "application/csp-report":
+		var data CSPReport
+		err := json.Unmarshal([]byte(body), &data)
+		if err != nil {
+			return nil, err
+		}
+		return data, nil
 	}
 
 	return nil, fmt.Errorf("\"%s\" is not a valid content-type", media)
