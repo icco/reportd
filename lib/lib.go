@@ -37,17 +37,38 @@ type CSPReport struct {
 }
 
 // Report is the struct for generic reports via the Reporting API.
+// TODO: There are multiple ways browsers send the field statuscode!
 type Report struct {
 	Type      string `json:"type"`
 	Age       int    `json:"age"`
 	URL       string `json:"url"`
 	UserAgent string `json:"user_agent"`
 	Body      struct {
-		Blocked   string `json:"blocked"`
-		Directive string `json:"directive"`
-		Policy    string `json:"policy"`
-		Status    int    `json:"status"`
-		Referrer  string `json:"referrer"`
+		AnticipatedRemoval int64   `json:"anticipatedRemoval,omitempty"`
+		Blocked            string  `json:"blocked,omitempty"`
+		BlockedURL         string  `json:"blockedURL,omitempty"`
+		ColumnNumber       string  `json:"columnNumber,omitempty"`
+		Directive          string  `json:"directive,omitempty"`
+		Disposition        string  `json:"disposition,omitempty"`
+		DocumentURL        string  `json:"documentURL,omitempty"`
+		EffectiveDirective string  `json:"effectiveDirective,omitempty"`
+		ElapsedTime        int64   `json:"elapsed_time,omitempty"`
+		ID                 string  `json:"id,omitempty"`
+		LineNumber         int64   `json:"lineNumber,omitempty"`
+		Message            string  `json:"message,omitempty"`
+		Method             string  `json:"method,omitempty"`
+		OriginalPolicy     string  `json:"originalPolicy,omitempty"`
+		Phase              string  `json:"phase,omitempty"`
+		Policy             string  `json:"policy,omitempty"`
+		Protocol           string  `json:"protocol,omitempty"`
+		Reason             string  `json:"reason,omitempty"`
+		Referrer           string  `json:"referrer,omitempty"`
+		SamplingFraction   float64 `json:"sampling_fraction,omitempty"`
+		ServerIP           string  `json:"server_ip,omitempty"`
+		SourceFile         string  `json:"sourceFile,omitempty"`
+		Status             int64   `json:"status,omitempty"`
+		StatusCode         int64   `json:"status_code,omitempty"`
+		Type               string  `json:"type,omitempty"`
 	} `json:"body"`
 }
 
