@@ -1,6 +1,7 @@
 package lib
 
 import (
+	"reflect"
 	"strconv"
 	"testing"
 	"time"
@@ -9,7 +10,7 @@ import (
 type test struct {
 	ContentType string
 	JSON        string
-	Expect      []Report
+	Expect      *Report
 }
 
 func TestParseReport(t *testing.T) {
@@ -17,9 +18,11 @@ func TestParseReport(t *testing.T) {
 		test{
 			ContentType: "application/expect-ct-report+json",
 			JSON:        `{"expect-ct-report":{"date-time":"2019-10-06T15:09:06.894Z","effective-expiration-date":"2019-10-06T15:09:06.894Z","hostname":"expect-ct-report.test","port":443,"scts":[],"served-certificate-chain":[],"validated-certificate-chain":[]}}`,
-			Expect: ExpectCTReport{
-				ExpectCTReport: ExpectCTSubReport{
-					DateTime: time.Now(),
+			Expect: &Report{
+				ExpectCT: &ExpectCTReport{
+					ExpectCTReport: ExpectCTSubReport{
+						DateTime: time.Now(),
+					},
 				},
 			},
 		},
@@ -38,7 +41,7 @@ func TestParseReport(t *testing.T) {
 				t.Error("data should not be nil")
 			}
 
-			if data != tc.Expect {
+			if reflect.DeepEqual(data, tc.Expect) {
 				t.Errorf("data is not accurate: %+v != %+v", data, tc.Expect)
 			}
 		})
