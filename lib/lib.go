@@ -55,10 +55,10 @@ type ReportToReport struct {
 	URL       string `json:"url"`
 	UserAgent string `json:"user_agent"`
 	Body      struct {
-		AnticipatedRemoval int64   `json:"anticipatedRemoval,omitempty"`
+		AnticipatedRemoval float64 `json:"anticipatedRemoval,omitempty"`
 		Blocked            string  `json:"blocked,omitempty"`
 		BlockedURL         string  `json:"blockedURL,omitempty"`
-		ColumnNumber       string  `json:"columnNumber,omitempty"`
+		ColumnNumber       int64   `json:"columnNumber,omitempty"`
 		Directive          string  `json:"directive,omitempty"`
 		Disposition        string  `json:"disposition,omitempty"`
 		DocumentURL        string  `json:"documentURL,omitempty"`
