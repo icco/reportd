@@ -44,18 +44,19 @@ type Report struct {
 	UserAgent string `json:"user_agent"`
 	Body      struct {
 		Blocked          string  `json:"blocked"`
-		Directive        string  `json:"directive"`
-		ElapsedTime      int     `json:"elapsed_time"`
-		Method           string  `json:"method"`
-		Phase            string  `json:"phase"`
-		Policy           string  `json:"policy"`
-		Protocol         string  `json:"protocol"`
-		Referrer         string  `json:"referrer"`
-		SamplingFraction float64 `json:"sampling_fraction"`
-		ServerIP         string  `json:"server_ip"`
-		Status           int     `json:"status"`
-		StatusCode       int     `json:"status_code"`
-		Type             string  `json:"type"`
+		Directive        string  `json:"directive,omitempty"`
+		ElapsedTime      int     `json:"elapsed_time,omitempty"`
+		Method           string  `json:"method,omitempty"`
+		Phase            string  `json:"phase,omitempty"`
+		Policy           string  `json:"policy,omitempty"`
+		Protocol         string  `json:"protocol,omitempty"`
+		Reason           string  `json:"reason,omitempty"`
+		Referrer         string  `json:"referrer,omitempty"`
+		SamplingFraction float64 `json:"sampling_fraction,omitempty"`
+		ServerIP         string  `json:"server_ip,omitempty"`
+		Status           int     `json:"status,omitempty"`
+		StatusCode       int     `json:"status_code,omitempty"`
+		Type             string  `json:"type,omitempty"`
 	} `json:"body"`
 }
 
