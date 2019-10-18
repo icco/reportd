@@ -37,26 +37,34 @@ type CSPReport struct {
 }
 
 // Report is the struct for generic reports via the Reporting API.
+// TODO: There are multiple ways browsers send the field statuscode!
 type Report struct {
 	Type      string `json:"type"`
 	Age       int    `json:"age"`
 	URL       string `json:"url"`
 	UserAgent string `json:"user_agent"`
 	Body      struct {
-		Blocked          string  `json:"blocked"`
-		Directive        string  `json:"directive,omitempty"`
-		ElapsedTime      int     `json:"elapsed_time,omitempty"`
-		Method           string  `json:"method,omitempty"`
-		Phase            string  `json:"phase,omitempty"`
-		Policy           string  `json:"policy,omitempty"`
-		Protocol         string  `json:"protocol,omitempty"`
-		Reason           string  `json:"reason,omitempty"`
-		Referrer         string  `json:"referrer,omitempty"`
-		SamplingFraction float64 `json:"sampling_fraction,omitempty"`
-		ServerIP         string  `json:"server_ip,omitempty"`
-		Status           int     `json:"status,omitempty"`
-		StatusCode       int     `json:"status_code,omitempty"`
-		Type             string  `json:"type,omitempty"`
+		Blocked            string  `json:"blocked,omitempty"`
+		BlockedURL         string  `json:"blockedURL,omitempty"`
+		Directive          string  `json:"directive,omitempty"`
+		Disposition        string  `json:"disposition,omitempty"`
+		DocumentURL        string  `json:"documentURL,omitempty"`
+		EffectiveDirective string  `json:"effective-directive,omitempty"`
+		ElapsedTime        int     `json:"elapsed_time,omitempty"`
+		LineNumber         int     `json:"line-number,omitempty"`
+		Method             string  `json:"method,omitempty"`
+		OriginalPolicy     string  `json:"original-policy,omitempty"`
+		Phase              string  `json:"phase,omitempty"`
+		Policy             string  `json:"policy,omitempty"`
+		Protocol           string  `json:"protocol,omitempty"`
+		Reason             string  `json:"reason,omitempty"`
+		Referrer           string  `json:"referrer,omitempty"`
+		SamplingFraction   float64 `json:"sampling_fraction,omitempty"`
+		ServerIP           string  `json:"server_ip,omitempty"`
+		SourceFile         string  `json:"source-file,omitempty"`
+		Status             int     `json:"status,omitempty"`
+		StatusCode         int     `json:"status_code,omitempty"`
+		Type               string  `json:"type,omitempty"`
 	} `json:"body"`
 }
 
