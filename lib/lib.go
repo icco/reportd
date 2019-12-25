@@ -1,12 +1,14 @@
 package lib
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"mime"
 	"time"
 
 	"cloud.google.com/go/bigquery"
+	"github.com/pkg/errors"
 )
 
 // Report is a simple interface for types exported by ParseReport.
