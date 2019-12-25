@@ -2,7 +2,6 @@ package main
 
 import (
 	"bytes"
-	"flag"
 	"net/http"
 	"os"
 	"time"
@@ -12,6 +11,7 @@ import (
 	"github.com/go-chi/cors"
 	sdLogging "github.com/icco/logrus-stackdriver-formatter"
 	"github.com/icco/reportd/lib"
+	"github.com/namsral/flag"
 	"github.com/sirupsen/logrus"
 )
 
