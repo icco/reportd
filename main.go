@@ -11,14 +11,20 @@ import (
 	"github.com/go-chi/cors"
 	sdLogging "github.com/icco/logrus-stackdriver-formatter"
 	"github.com/icco/reportd/lib"
+	"github.com/namsral/flag"
 	"github.com/sirupsen/logrus"
 )
 
 var (
-	log = InitLogging()
+	log     = InitLogging()
+	project = flag.String("project", "", "Project ID containing the bigquery dataset to upload to.")
+	dataset = flag.String("dataset", "", "The bigquery dataset to upload to.")
+	table   = flag.String("table", "", "The bigquery table to upload to.")
 )
 
 func main() {
+	flag.Parse()
+
 	port := "8080"
 	if fromEnv := os.Getenv("PORT"); fromEnv != "" {
 		port = fromEnv
@@ -82,6 +88,12 @@ func main() {
 			"user-agent":   r.UserAgent(),
 			"report":       data,
 		}).Warn("report recieved")
+
+		if err := lib.WriteToBigQuery(r.Context(), *project, *dataset, *table, []*lib.Report{data}); err != nil {
+			log.WithError(err).WithFields(logrus.Fields{"dataset": *dataset, "project": *project, "table": *table}).Error("error during upload")
+			http.Error(w, "uploading error", 500)
+			return
+		}
 	})
 
 	log.Fatal(http.ListenAndServe(":"+port, r))

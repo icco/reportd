@@ -1,10 +1,14 @@
 package lib
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"mime"
 	"time"
+
+	"cloud.google.com/go/bigquery"
+	"github.com/pkg/errors"
 )
 
 // Report is a simple interface for types exported by ParseReport.
@@ -116,4 +120,18 @@ func ParseReport(ct, body string) (*Report, error) {
 	}
 
 	return nil, fmt.Errorf("\"%s\" is not a valid content-type", media)
+}
+
+func WriteToBigQuery(ctx context.Context, project, dataset, table string, reports []*Report) error {
+	client, err := bigquery.NewClient(ctx, project)
+	if err != nil {
+		return errors.Wrap(err, "connecting to bq")
+	}
+	ins := client.Dataset(dataset).Table(table).Inserter()
+
+	if err := ins.Put(ctx, reports); err != nil {
+		return errors.Wrap(err, "uploading to bq")
+	}
+
+	return nil
 }
