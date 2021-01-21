@@ -3,14 +3,18 @@ module github.com/icco/reportd
 go 1.13
 
 require (
-	cloud.google.com/go/bigquery v1.3.0
-	github.com/felixge/httpsnoop v1.0.1 // indirect
-	github.com/go-chi/chi v4.0.2+incompatible
-	github.com/go-chi/cors v1.0.0
+	cloud.google.com/go/bigquery v1.15.0
+	github.com/go-chi/chi v4.1.2+incompatible
+	github.com/go-chi/cors v1.1.1
+	github.com/hellofresh/logging-go v0.4.0 // indirect
 	github.com/icco/logrus-stackdriver-formatter v0.3.0
-	github.com/konsorten/go-windows-terminal-sequences v1.0.2 // indirect
 	github.com/namsral/flag v1.7.4-pre
-	github.com/pkg/errors v0.8.1
-	github.com/sirupsen/logrus v1.4.2
-	golang.org/x/sys v0.0.0-20191001151750-bb3f8db39f24 // indirect
+	github.com/pkg/errors v0.9.1
+	github.com/sirupsen/logrus v1.7.0
+	golang.org/x/net v0.0.0-20210119194325-5f4716e94777 // indirect
+	golang.org/x/oauth2 v0.0.0-20210113205817-d3ed898aa8a3 // indirect
+	golang.org/x/text v0.3.5 // indirect
+	golang.org/x/tools v0.1.0 // indirect
+	google.golang.org/genproto v0.0.0-20210120162456-f5e8c5e2aaf2 // indirect
+	google.golang.org/grpc v1.35.0 // indirect
 )
