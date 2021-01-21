@@ -1,8 +1,9 @@
-FROM golang:1.13-alpine
+FROM golang:1.15-alpine
 
 ENV GOPROXY="https://proxy.golang.org"
 ENV GO111MODULE="on"
 ENV NAT_ENV="production"
+
 ENV PROJECT="icco-cloud"
 ENV DATASET="reportd"
 ENV TABLE="reports"
