@@ -124,7 +124,7 @@ func main() {
 			"analytics":    data,
 		}).Warn("analytics recieved")
 
-		if err := lib.WriteAnalyticsToBigQuery(r.Context(), *project, *dataset, *aTable, []*lib.Report{data}); err != nil {
+		if err := lib.WriteAnalyticsToBigQuery(r.Context(), *project, *dataset, *aTable, []*lib.WebVital{data}); err != nil {
 			log.WithError(err).WithFields(logrus.Fields{"dataset": *dataset, "project": *project, "table": *aTable}).Error("error during upload")
 			http.Error(w, "uploading error", 500)
 			return
