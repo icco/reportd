@@ -76,7 +76,6 @@ func main() {
 		buf.ReadFrom(r.Body)
 		bodyStr := buf.String()
 		ct := r.Header.Get("content-type")
-
 		data, err := lib.ParseReport(ct, bodyStr)
 		if err != nil {
 			log.WithError(err).WithFields(logrus.Fields{"content-type": ct, "user-agent": r.UserAgent(), "json": bodyStr}).Error("error seen during parse")
@@ -87,7 +86,6 @@ func main() {
 		// Log the report.
 		log.WithFields(logrus.Fields{
 			"content-type": ct,
-			"json":         bodyStr,
 			"bucket":       bucket,
 			"user-agent":   r.UserAgent(),
 			"report":       data,
@@ -102,15 +100,10 @@ func main() {
 
 	r.Post("/analytics/{bucket}", func(w http.ResponseWriter, r *http.Request) {
 		bucket := chi.URLParam(r, "bucket")
-
-		buf := new(bytes.Buffer)
-		buf.ReadFrom(r.Body)
-		bodyStr := buf.String()
 		ct := r.Header.Get("content-type")
-
-		data, err := lib.ParseAnalytics(ct, bodyStr)
+		data, err := lib.ParseAnalytics(r.Body)
 		if err != nil {
-			log.WithError(err).WithFields(logrus.Fields{"content-type": ct, "user-agent": r.UserAgent(), "json": bodyStr}).Error("error seen during parse")
+			log.WithError(err).WithFields(logrus.Fields{"content-type": ct, "user-agent": r.UserAgent()}).Error("error seen during parse")
 			http.Error(w, "processing error", 500)
 			return
 		}
@@ -118,7 +111,6 @@ func main() {
 		// Log the report.
 		log.WithFields(logrus.Fields{
 			"content-type": ct,
-			"json":         bodyStr,
 			"bucket":       bucket,
 			"user-agent":   r.UserAgent(),
 			"analytics":    data,

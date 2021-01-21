@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"io"
 
 	"cloud.google.com/go/bigquery"
 )
@@ -32,9 +33,9 @@ type WebVital struct {
 	Entries []interface{} `json:"entries"`
 }
 
-func ParseAnalytics(body []byte) (*WebVital, error) {
+func ParseAnalytics(body io.Reader) (*WebVital, error) {
 	var data WebVital
-	if err := json.Unmarshal(body, &data); err != nil {
+	if err := json.NewDecoder(body).Decode(&data); err != nil {
 		return nil, fmt.Errorf("could not unmarshal: %w", err)
 	}
 	return &data, nil

@@ -53,13 +53,13 @@ func TestParseReport(t *testing.T) {
 func TestParseReportParsesReportTo(t *testing.T) {
 	tests := []test{}
 
-	files, err := ioutil.ReadDir("./examples")
+	files, err := ioutil.ReadDir("./reports-examples")
 	if err != nil {
 		t.Error(err)
 	}
 
 	for _, file := range files {
-		json, err := ioutil.ReadFile(filepath.Join(".", "examples", file.Name()))
+		json, err := ioutil.ReadFile(filepath.Join(".", "reports-examples", file.Name()))
 		if err != nil {
 			t.Error(err)
 		}
