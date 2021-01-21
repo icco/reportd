@@ -17,9 +17,10 @@ import (
 
 var (
 	log     = InitLogging()
-	project = flag.String("project", "", "Project ID containing the bigquery dataset to upload to.")
-	dataset = flag.String("dataset", "", "The bigquery dataset to upload to.")
-	table   = flag.String("table", "", "The bigquery table to upload to.")
+	project = flag.String("project", os.Getenv("PROJECT_ID"), "Project ID containing the bigquery dataset to upload to.")
+	dataset = flag.String("dataset", os.Getenv("DATASET"), "The bigquery dataset to upload to.")
+	aTable  = flag.String("analytics_table", os.Getenv("ANALYTICS_TABLE"), "The bigquery table to upload analytics to.")
+	rTable  = flag.String("reports_table", os.Getenv("REPORTS_TABLE"), "The bigquery table to upload reports to.")
 )
 
 func main() {
@@ -64,6 +65,9 @@ func main() {
 	r.Options("/report/{bucket}", func(w http.ResponseWriter, r *http.Request) {
 		w.Write([]byte(""))
 	})
+	r.Options("/analytics/{bucket}", func(w http.ResponseWriter, r *http.Request) {
+		w.Write([]byte(""))
+	})
 
 	r.Post("/report/{bucket}", func(w http.ResponseWriter, r *http.Request) {
 		bucket := chi.URLParam(r, "bucket")
@@ -89,8 +93,39 @@ func main() {
 			"report":       data,
 		}).Warn("report recieved")
 
-		if err := lib.WriteToBigQuery(r.Context(), *project, *dataset, *table, []*lib.Report{data}); err != nil {
-			log.WithError(err).WithFields(logrus.Fields{"dataset": *dataset, "project": *project, "table": *table}).Error("error during upload")
+		if err := lib.WriteReportToBigQuery(r.Context(), *project, *dataset, *rTable, []*lib.Report{data}); err != nil {
+			log.WithError(err).WithFields(logrus.Fields{"dataset": *dataset, "project": *project, "table": *rTable}).Error("error during upload")
+			http.Error(w, "uploading error", 500)
+			return
+		}
+	})
+
+	r.Post("/analytics/{bucket}", func(w http.ResponseWriter, r *http.Request) {
+		bucket := chi.URLParam(r, "bucket")
+
+		buf := new(bytes.Buffer)
+		buf.ReadFrom(r.Body)
+		bodyStr := buf.String()
+		ct := r.Header.Get("content-type")
+
+		data, err := lib.ParseAnalytics(ct, bodyStr)
+		if err != nil {
+			log.WithError(err).WithFields(logrus.Fields{"content-type": ct, "user-agent": r.UserAgent(), "json": bodyStr}).Error("error seen during parse")
+			http.Error(w, "processing error", 500)
+			return
+		}
+
+		// Log the report.
+		log.WithFields(logrus.Fields{
+			"content-type": ct,
+			"json":         bodyStr,
+			"bucket":       bucket,
+			"user-agent":   r.UserAgent(),
+			"analytics":    data,
+		}).Warn("analytics recieved")
+
+		if err := lib.WriteAnalyticsToBigQuery(r.Context(), *project, *dataset, *aTable, []*lib.Report{data}); err != nil {
+			log.WithError(err).WithFields(logrus.Fields{"dataset": *dataset, "project": *project, "table": *aTable}).Error("error during upload")
 			http.Error(w, "uploading error", 500)
 			return
 		}

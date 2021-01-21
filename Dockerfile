@@ -4,9 +4,11 @@ ENV GOPROXY="https://proxy.golang.org"
 ENV GO111MODULE="on"
 ENV NAT_ENV="production"
 
-ENV PROJECT="icco-cloud"
+ENV PROJECT_ID="icco-cloud"
 ENV DATASET="reportd"
-ENV TABLE="reports"
+
+ENV ANALYTICS_TABLE="analytics"
+ENV REPORTS_TABLE="reportd"
 
 EXPOSE 8080
 
