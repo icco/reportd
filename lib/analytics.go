@@ -25,12 +25,6 @@ type WebVital struct {
 	// multiple values sent for the same metric, or to group multiple deltas
 	// together and calculate a total.
 	ID string `json:"id"`
-
-	// Any performance entries used in the metric value calculation.
-	// Note, entries will be added to the array as the value changes.
-	//
-	// TODO: Find an example of this, and implement struct.
-	Entries []interface{} `json:"entries"`
 }
 
 func ParseAnalytics(body io.Reader) (*WebVital, error) {
