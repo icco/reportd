@@ -2,12 +2,10 @@ package lib
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
-	"log"
-	"mime"
 
 	"cloud.google.com/go/bigquery"
-	"github.com/pkg/errors"
 )
 
 type WebVital struct {
@@ -19,7 +17,7 @@ type WebVital struct {
 
 	// The delta between the current value and the last-reported value.
 	// On the first report, `delta` and `value` will always be the same.
-	delta float64 `json:"delta"`
+	Delta float64 `json:"delta"`
 
 	// A unique ID representing this particular metric that's specific to the
 	// current page. This ID can be used by an analytics tool to dedupe
@@ -29,28 +27,28 @@ type WebVital struct {
 
 	// Any performance entries used in the metric value calculation.
 	// Note, entries will be added to the array as the value changes.
+	//
+	// TODO: Find an example of this, and implement struct.
 	Entries []interface{} `json:"entries"`
 }
 
-func ParseAnalytics(ct, body string) (*WebVital, error) {
-	media, _, err := mime.ParseMediaType(ct)
-	if err != nil {
-		return nil, err
+func ParseAnalytics(body []byte) (*WebVital, error) {
+	var data WebVital
+	if err := json.Unmarshal(body, &data); err != nil {
+		return nil, fmt.Errorf("could not unmarshal: %w", err)
 	}
-	log.Printf("media: %+v", media)
-
-	return nil, fmt.Errorf("could not parse")
+	return &data, nil
 }
 
 func WriteAnalyticsToBigQuery(ctx context.Context, project, dataset, table string, data []*WebVital) error {
 	client, err := bigquery.NewClient(ctx, project)
 	if err != nil {
-		return errors.Wrap(err, "connecting to bq")
+		return fmt.Errorf("connecting to bq: %w", err)
 	}
 
 	ins := client.Dataset(dataset).Table(table).Inserter()
 	if err := ins.Put(ctx, data); err != nil {
-		return errors.Wrap(err, "uploading to bq")
+		return fmt.Errorf("uploading to bq: %w", err)
 	}
 
 	return nil
