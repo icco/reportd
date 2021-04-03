@@ -9,6 +9,7 @@ import (
 	"cloud.google.com/go/bigquery"
 )
 
+// WebVital is a a version of https://web.dev/vitals/.
 type WebVital struct {
 	// The name of the metric (in acronym form).
 	Name string `json:"name"`
@@ -27,6 +28,7 @@ type WebVital struct {
 	ID string `json:"id"`
 }
 
+// ParseAnalytics parses a webvitals request body.
 func ParseAnalytics(body io.Reader) (*WebVital, error) {
 	var data WebVital
 	if err := json.NewDecoder(body).Decode(&data); err != nil {
@@ -35,6 +37,7 @@ func ParseAnalytics(body io.Reader) (*WebVital, error) {
 	return &data, nil
 }
 
+// WriteAnalyticsToBigQuery saves a webvital to bq.
 func WriteAnalyticsToBigQuery(ctx context.Context, project, dataset, table string, data []*WebVital) error {
 	client, err := bigquery.NewClient(ctx, project)
 	if err != nil {
