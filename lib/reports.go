@@ -15,7 +15,7 @@ import (
 type Report struct {
 	ExpectCT *ExpectCTReport
 	CSP      *CSPReport
-	ReportTo *[]ReportToReport
+	ReportTo []*ReportToReport
 }
 
 // ExpectCTReport is the struct for Expect-CT errors.
@@ -97,12 +97,12 @@ func ParseReport(ct, body string) (*Report, error) {
 
 	switch media {
 	case "application/reports+json":
-		var data []ReportToReport
+		var data []*ReportToReport
 		err := json.Unmarshal([]byte(body), &data)
 		if err != nil {
 			return nil, err
 		}
-		return &Report{ReportTo: &data}, nil
+		return &Report{ReportTo: data}, nil
 	case "application/expect-ct-report+json":
 		var data ExpectCTReport
 		err := json.Unmarshal([]byte(body), &data)
