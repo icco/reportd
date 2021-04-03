@@ -8,7 +8,7 @@ ENV PROJECT_ID="icco-cloud"
 ENV DATASET="reportd"
 
 ENV ANALYTICS_TABLE="analytics"
-ENV REPORTS_TABLE="reportd"
+ENV REPORTS_TABLE="reports"
 
 EXPOSE 8080
 
