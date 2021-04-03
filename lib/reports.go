@@ -122,6 +122,31 @@ func ParseReport(ct, body string) (*Report, error) {
 	return nil, fmt.Errorf("\"%s\" is not a valid content-type", media)
 }
 
+// UpdateReportsBQSchema updates the bigquery schema if fields are added.
+func UpdateReportsBQSchema(ctx context.Context, project, dataset, table string) error {
+	client, err := bigquery.NewClient(ctx, project)
+	if err != nil {
+		return fmt.Errorf("connecting to bq: %w", err)
+	}
+
+	t := client.Dataset(dataset).Table(table)
+	md, err := t.Metadata(ctx)
+	if err != nil {
+		return fmt.Errorf("getting table meta: %w", err)
+	}
+
+	s, err := bigquery.InferSchema(Report{})
+	if err != nil {
+		return fmt.Errorf("infer schema: %w", err)
+	}
+
+	if _, err := t.Update(ctx, bigquery.TableMetadataToUpdate{Schema: s}, md.ETag); err != nil {
+		return fmt.Errorf("updating table: %w", err)
+	}
+
+	return nil
+}
+
 // WriteReportToBigQuery saves a copy of a report to BQ.
 func WriteReportToBigQuery(ctx context.Context, project, dataset, table string, reports []*Report) error {
 	client, err := bigquery.NewClient(ctx, project)

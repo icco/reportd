@@ -2,6 +2,7 @@ package main
 
 import (
 	"bytes"
+	"context"
 	"fmt"
 	"net/http"
 	"os"
@@ -33,6 +34,15 @@ func main() {
 		port = fromEnv
 	}
 	log.Infow("Starting up", "host", fmt.Sprintf("http://localhost:%s", port))
+
+	ctx := context.Background()
+	if err := lib.UpdateReportsBQSchema(ctx, *project, *dataset, *rTable); err != nil {
+		log.Errorw("report table update", zap.Error(err))
+	}
+
+	if err := lib.UpdateAnalyticsBQSchema(ctx, *project, *dataset, *aTable); err != nil {
+		log.Errorw("analytics table update", zap.Error(err))
+	}
 
 	r := chi.NewRouter()
 

@@ -37,8 +37,8 @@ func ParseAnalytics(body io.Reader) (*WebVital, error) {
 	return &data, nil
 }
 
-// WriteAnalyticsToBigQuery saves a webvital to bq.
-func WriteAnalyticsToBigQuery(ctx context.Context, project, dataset, table string, data []*WebVital) error {
+// UpdateAnalyticsBQSchema updates the bigquery schema if fields are added.
+func UpdateAnalyticsBQSchema(ctx context.Context, project, dataset, table string) error {
 	client, err := bigquery.NewClient(ctx, project)
 	if err != nil {
 		return fmt.Errorf("connecting to bq: %w", err)
@@ -59,6 +59,17 @@ func WriteAnalyticsToBigQuery(ctx context.Context, project, dataset, table strin
 		return fmt.Errorf("updating table: %w", err)
 	}
 
+	return nil
+}
+
+// WriteAnalyticsToBigQuery saves a webvital to bq.
+func WriteAnalyticsToBigQuery(ctx context.Context, project, dataset, table string, data []*WebVital) error {
+	client, err := bigquery.NewClient(ctx, project)
+	if err != nil {
+		return fmt.Errorf("connecting to bq: %w", err)
+	}
+
+	t := client.Dataset(dataset).Table(table)
 	ins := t.Inserter()
 	if err := ins.Put(ctx, data); err != nil {
 		return fmt.Errorf("uploading to bq: %w", err)
