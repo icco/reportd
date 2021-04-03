@@ -1,4 +1,16 @@
 language: go
 
 go:
-- 1.15.x
+- 1.16
+env:
+  global:
+    - GO111MODULE=on
+script:
+  - go test -v -cover ./...
+  - go vet ./...
+  - go run golang.org/x/lint/golint -set_exit_status ./...
+  - go run github.com/fzipp/gocyclo/cmd/gocyclo -avg .
+notifications:
+  email:
+    on_success: change
+    on_failure: change
