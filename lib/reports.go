@@ -13,9 +13,9 @@ import (
 
 // Report is a simple interface for types exported by ParseReport.
 type Report struct {
-	ExpectCT *ExpectCTReport   `bigquery:",nullable"`
-	CSP      *CSPReport        `bigquery:",nullable"`
-	ReportTo []*ReportToReport `bigquery:",nullable"`
+	ExpectCT *ExpectCTReport
+	CSP      *CSPReport
+	ReportTo []*ReportToReport
 }
 
 // ExpectCTReport is the struct for Expect-CT errors.
