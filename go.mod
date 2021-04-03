@@ -1,6 +1,6 @@
 module github.com/icco/reportd
 
-go 1.13
+go 1.14
 
 require (
 	cloud.google.com/go v0.81.0 // indirect
@@ -12,7 +12,6 @@ require (
 	github.com/icco/gutil v0.0.0-20210403015147-9324102e0f6c
 	github.com/namsral/flag v1.7.4-pre
 	github.com/pkg/errors v0.9.1
-	github.com/sirupsen/logrus v1.8.1
 	go.uber.org/zap v1.16.0
 	golang.org/x/mod v0.4.2 // indirect
 	golang.org/x/net v0.0.0-20210331212208-0fccb6fa2b5c // indirect
