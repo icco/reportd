@@ -2,6 +2,7 @@ package main
 
 import (
 	"bytes"
+	"fmt"
 	"net/http"
 	"os"
 	"time"
@@ -12,7 +13,6 @@ import (
 	"github.com/icco/gutil/logging"
 	"github.com/icco/reportd/lib"
 	"github.com/namsral/flag"
-	"github.com/sirupsen/logrus"
 	"go.uber.org/zap"
 )
 
@@ -32,12 +32,12 @@ func main() {
 	if fromEnv := os.Getenv("PORT"); fromEnv != "" {
 		port = fromEnv
 	}
-	log.Printf("Starting up on http://localhost:%s", port)
+	log.Infow("Starting up", "host", fmt.Sprintf("http://localhost:%s", port))
 
 	r := chi.NewRouter()
 
 	r.Use(middleware.RealIP)
-	r.Use(logging.Middleware(log.Desugar(), project))
+	r.Use(logging.Middleware(log.Desugar(), *project))
 
 	r.Use(cors.New(cors.Options{
 		AllowCredentials:   true,
@@ -79,7 +79,7 @@ func main() {
 		ct := r.Header.Get("content-type")
 		data, err := lib.ParseReport(ct, bodyStr)
 		if err != nil {
-			log.WithError(err).WithFields(logrus.Fields{"content-type": ct, "user-agent": r.UserAgent(), "json": bodyStr}).Error("error seen during parse")
+			log.Errorw("error seen during parse", "content-type", ct, "user-agent", r.UserAgent(), "json", bodyStr, zap.Error(err))
 			http.Error(w, "processing error", 500)
 			return
 		}
