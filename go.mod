@@ -5,11 +5,11 @@ go 1.14
 require (
 	cloud.google.com/go v0.81.0 // indirect
 	cloud.google.com/go/bigquery v1.16.0
-	github.com/go-chi/chi v1.5.4
+	github.com/go-chi/chi/v5 v5.0.2
 	github.com/go-chi/cors v1.2.0
 	github.com/golang/groupcache v0.0.0-20210331224755-41bb18bfe9da // indirect
 	github.com/golang/protobuf v1.5.2 // indirect
-	github.com/icco/gutil v0.0.0-20210403015147-9324102e0f6c
+	github.com/icco/gutil v0.0.0-20210403015724-09144c640035
 	github.com/namsral/flag v1.7.4-pre
 	github.com/pkg/errors v0.9.1
 	go.uber.org/zap v1.16.0
