@@ -44,7 +44,22 @@ func WriteAnalyticsToBigQuery(ctx context.Context, project, dataset, table strin
 		return fmt.Errorf("connecting to bq: %w", err)
 	}
 
-	ins := client.Dataset(dataset).Table(table).Inserter()
+	t := client.Dataset(dataset).Table(table)
+	md, err := t.Metadata(ctx)
+	if err != nil {
+		return fmt.Errorf("getting table meta: %w", err)
+	}
+
+	s, err := bigquery.InferSchema(WebVital{})
+	if err != nil {
+		return fmt.Errorf("infer schema: %w", err)
+	}
+
+	if _, err := t.Update(ctx, bigquery.TableMetadataToUpdate{Schema: s}, md.ETag); err != nil {
+		return fmt.Errorf("updating table: %w", err)
+	}
+
+	ins := t.Inserter()
 	if err := ins.Put(ctx, data); err != nil {
 		return fmt.Errorf("uploading to bq: %w", err)
 	}
