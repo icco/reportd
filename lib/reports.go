@@ -122,6 +122,7 @@ func ParseReport(ct, body string) (*Report, error) {
 	return nil, fmt.Errorf("\"%s\" is not a valid content-type", media)
 }
 
+// WriteReportToBigQuery saves a copy of a report to BQ.
 func WriteReportToBigQuery(ctx context.Context, project, dataset, table string, reports []*Report) error {
 	client, err := bigquery.NewClient(ctx, project)
 	if err != nil {

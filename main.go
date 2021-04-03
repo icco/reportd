@@ -2,6 +2,7 @@ package main
 
 import (
 	"bytes"
+	"fmt"
 	"net/http"
 	"os"
 	"time"
@@ -9,14 +10,15 @@ import (
 	"github.com/go-chi/chi"
 	"github.com/go-chi/chi/middleware"
 	"github.com/go-chi/cors"
-	sdLogging "github.com/icco/logrus-stackdriver-formatter"
+	"github.com/icco/gutil/logging"
 	"github.com/icco/reportd/lib"
 	"github.com/namsral/flag"
-	"github.com/sirupsen/logrus"
+	"go.uber.org/zap"
 )
 
 var (
-	log     = InitLogging()
+	service = "reportd"
+	log     = logging.Must(logging.NewLogger(service))
 	project = flag.String("project", os.Getenv("PROJECT_ID"), "Project ID containing the bigquery dataset to upload to.")
 	dataset = flag.String("dataset", os.Getenv("DATASET"), "The bigquery dataset to upload to.")
 	aTable  = flag.String("analytics_table", os.Getenv("ANALYTICS_TABLE"), "The bigquery table to upload analytics to.")
@@ -30,14 +32,12 @@ func main() {
 	if fromEnv := os.Getenv("PORT"); fromEnv != "" {
 		port = fromEnv
 	}
-	log.Printf("Starting up on http://localhost:%s", port)
+	log.Infow("Starting up", "host", fmt.Sprintf("http://localhost:%s", port))
 
 	r := chi.NewRouter()
 
-	r.Use(middleware.RequestID)
 	r.Use(middleware.RealIP)
-	r.Use(sdLogging.LoggingMiddleware(log))
-	r.Use(middleware.Recoverer)
+	r.Use(logging.Middleware(log.Desugar(), *project))
 
 	r.Use(cors.New(cors.Options{
 		AllowCredentials:   true,
@@ -65,6 +65,7 @@ func main() {
 	r.Options("/report/{bucket}", func(w http.ResponseWriter, r *http.Request) {
 		w.Write([]byte(""))
 	})
+
 	r.Options("/analytics/{bucket}", func(w http.ResponseWriter, r *http.Request) {
 		w.Write([]byte(""))
 	})
@@ -78,21 +79,16 @@ func main() {
 		ct := r.Header.Get("content-type")
 		data, err := lib.ParseReport(ct, bodyStr)
 		if err != nil {
-			log.WithError(err).WithFields(logrus.Fields{"content-type": ct, "user-agent": r.UserAgent(), "json": bodyStr}).Error("error seen during parse")
+			log.Errorw("error seen during parse", "content-type", ct, "user-agent", r.UserAgent(), "json", bodyStr, zap.Error(err))
 			http.Error(w, "processing error", 500)
 			return
 		}
 
 		// Log the report.
-		log.WithFields(logrus.Fields{
-			"content-type": ct,
-			"bucket":       bucket,
-			"user-agent":   r.UserAgent(),
-			"report":       data,
-		}).Warn("report recieved")
+		log.Infow("report recieved", "content-type", ct, "bucket", bucket, "user-agent", r.UserAgent(), "report", data)
 
 		if err := lib.WriteReportToBigQuery(r.Context(), *project, *dataset, *rTable, []*lib.Report{data}); err != nil {
-			log.WithError(err).WithFields(logrus.Fields{"dataset": *dataset, "project": *project, "table": *rTable}).Error("error during upload")
+			log.Errorw("error during upload", "dataset", *dataset, "project", *project, "table", *rTable, zap.Error(err))
 			http.Error(w, "uploading error", 500)
 			return
 		}
@@ -103,21 +99,15 @@ func main() {
 		ct := r.Header.Get("content-type")
 		data, err := lib.ParseAnalytics(r.Body)
 		if err != nil {
-			log.WithError(err).WithFields(logrus.Fields{"content-type": ct, "user-agent": r.UserAgent()}).Error("error seen during parse")
+			log.Errorw("error seen during parse", zap.Error(err), "content-type", ct, "user-agent", r.UserAgent())
 			http.Error(w, "processing error", 500)
 			return
 		}
 
 		// Log the report.
-		log.WithFields(logrus.Fields{
-			"content-type": ct,
-			"bucket":       bucket,
-			"user-agent":   r.UserAgent(),
-			"analytics":    data,
-		}).Warn("analytics recieved")
-
+		log.Infow("analytics recieved", "content-type", ct, "bucket", bucket, "user-agent", r.UserAgent(), "analytics", data)
 		if err := lib.WriteAnalyticsToBigQuery(r.Context(), *project, *dataset, *aTable, []*lib.WebVital{data}); err != nil {
-			log.WithError(err).WithFields(logrus.Fields{"dataset": *dataset, "project": *project, "table": *aTable}).Error("error during upload")
+			log.Errorw("error during upload", "dataset", *dataset, "project", *project, "table", *aTable, zap.Error(err))
 			http.Error(w, "uploading error", 500)
 			return
 		}
