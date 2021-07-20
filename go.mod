@@ -3,19 +3,15 @@ module github.com/icco/reportd
 go 1.14
 
 require (
-	cloud.google.com/go v0.81.0 // indirect
-	cloud.google.com/go/bigquery v1.16.0
-	github.com/go-chi/chi/v5 v5.0.2
+	cloud.google.com/go v0.87.0 // indirect
+	cloud.google.com/go/bigquery v1.19.0
+	github.com/go-chi/chi/v5 v5.0.3
 	github.com/go-chi/cors v1.2.0
-	github.com/golang/groupcache v0.0.0-20210331224755-41bb18bfe9da // indirect
-	github.com/golang/protobuf v1.5.2 // indirect
-	github.com/icco/gutil v0.0.0-20210403025205-f4d44dcca9ed
+	github.com/icco/gutil v0.0.0-20210706020035-d1bef041b1ac
 	github.com/namsral/flag v1.7.4-pre
 	github.com/pkg/errors v0.9.1
-	go.uber.org/zap v1.16.0
-	golang.org/x/mod v0.4.2 // indirect
-	golang.org/x/net v0.0.0-20210331212208-0fccb6fa2b5c // indirect
-	golang.org/x/oauth2 v0.0.0-20210402161424-2e8d93401602 // indirect
-	golang.org/x/sys v0.0.0-20210402192133-700132347e07 // indirect
-	golang.org/x/text v0.3.6 // indirect
+	go.uber.org/atomic v1.9.0 // indirect
+	go.uber.org/zap v1.18.1
+	golang.org/x/net v0.0.0-20210716203947-853a461950ff // indirect
+	google.golang.org/genproto v0.0.0-20210719143636-1d5a45f8e492 // indirect
 )
