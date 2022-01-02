@@ -4,20 +4,28 @@ import (
 	"io/ioutil"
 	"path/filepath"
 	"reflect"
-	"strconv"
 	"testing"
 	"time"
 )
 
-type test struct {
+func TestGetReportsSchema(t *testing.T) {
+	_, err := getReportSchema()
+	if err != nil {
+		t.Error(err)
+	}
+}
+
+type reportTest struct {
+	Name        string
 	ContentType string
 	JSON        string
 	Expect      *Report
 }
 
 func TestParseReport(t *testing.T) {
-	tests := []test{
-		test{
+	tests := []reportTest{
+		{
+			Name:        "expect-ct-report",
 			ContentType: "application/expect-ct-report+json",
 			JSON:        `{"expect-ct-report":{"date-time":"2019-10-06T15:09:06.894Z","effective-expiration-date":"2019-10-06T15:09:06.894Z","hostname":"expect-ct-report.test","port":443,"scts":[],"served-certificate-chain":[],"validated-certificate-chain":[]}}`,
 			Expect: &Report{
@@ -30,9 +38,9 @@ func TestParseReport(t *testing.T) {
 		},
 	}
 
-	for i, tc := range tests {
+	for _, tc := range tests {
 		tc := tc
-		t.Run(strconv.Itoa(i+1), func(t *testing.T) {
+		t.Run(tc.Name, func(t *testing.T) {
 			t.Parallel()
 			data, err := ParseReport(tc.ContentType, tc.JSON)
 			if err != nil {
@@ -51,7 +59,7 @@ func TestParseReport(t *testing.T) {
 }
 
 func TestParseReportParsesReportTo(t *testing.T) {
-	tests := []test{}
+	var tests []reportTest
 
 	files, err := ioutil.ReadDir("./reports-examples")
 	if err != nil {
@@ -64,15 +72,16 @@ func TestParseReportParsesReportTo(t *testing.T) {
 			t.Error(err)
 		}
 
-		tests = append(tests, test{
+		tests = append(tests, reportTest{
+			Name:        file.Name(),
 			ContentType: "application/reports+json",
 			JSON:        string(json),
 		})
 	}
 
-	for i, tc := range tests {
+	for _, tc := range tests {
 		tc := tc
-		t.Run(strconv.Itoa(i+1), func(t *testing.T) {
+		t.Run(tc.Name, func(t *testing.T) {
 			t.Parallel()
 			data, err := ParseReport(tc.ContentType, tc.JSON)
 			if err != nil {

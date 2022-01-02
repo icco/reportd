@@ -9,6 +9,8 @@ import (
 )
 
 // WebVital is a a version of https://web.dev/vitals/.
+//
+// See also https://nextjs.org/docs/advanced-features/measuring-performance#build-your-own.
 type WebVital struct {
 	// The name of the metric (in acronym form).
 	Name string `json:"name"`
@@ -25,6 +27,9 @@ type WebVital struct {
 	// multiple values sent for the same metric, or to group multiple deltas
 	// together and calculate a total.
 	ID string `json:"id"`
+
+	// Type of metric (web-vital or custom)
+	Label string `json:"label"`
 }
 
 // ParseAnalytics parses a webvitals request body.
@@ -49,7 +54,7 @@ func UpdateAnalyticsBQSchema(ctx context.Context, project, dataset, table string
 		return fmt.Errorf("getting table meta: %w", err)
 	}
 
-	s, err := bigquery.InferSchema(WebVital{})
+	s, err := getAnalyticsSchema()
 	if err != nil {
 		return fmt.Errorf("infer schema: %w", err)
 	}
@@ -59,6 +64,10 @@ func UpdateAnalyticsBQSchema(ctx context.Context, project, dataset, table string
 	}
 
 	return nil
+}
+
+func getAnalyticsSchema() (bigquery.Schema, error) {
+	return bigquery.InferSchema(WebVital{})
 }
 
 // WriteAnalyticsToBigQuery saves a webvital to bq.
