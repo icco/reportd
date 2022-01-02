@@ -97,28 +97,25 @@ func ParseReport(ct, body string) (*Report, error) {
 	switch media {
 	case "application/reports+json":
 		var data []*ReportToReport
-		err := json.Unmarshal([]byte(body), &data)
-		if err != nil {
+		if err := json.Unmarshal([]byte(body), &data); err != nil {
 			return nil, err
 		}
 		return &Report{ReportTo: data}, nil
 	case "application/expect-ct-report+json":
 		var data ExpectCTReport
-		err := json.Unmarshal([]byte(body), &data)
-		if err != nil {
+		if err := json.Unmarshal([]byte(body), &data); err != nil {
 			return nil, err
 		}
 		return &Report{ExpectCT: &data}, nil
 	case "application/csp-report":
 		var data CSPReport
-		err := json.Unmarshal([]byte(body), &data)
-		if err != nil {
+		if err := json.Unmarshal([]byte(body), &data); err != nil {
 			return nil, err
 		}
 		return &Report{CSP: &data}, nil
 	}
 
-	return nil, fmt.Errorf("\"%s\" is not a valid content-type", media)
+	return nil, fmt.Errorf("%q is not a valid content-type", media)
 }
 
 // UpdateReportsBQSchema updates the bigquery schema if fields are added.
