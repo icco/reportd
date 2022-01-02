@@ -9,15 +9,17 @@ import (
 	"time"
 )
 
-type test struct {
+type reportTest struct {
+	Name        string
 	ContentType string
 	JSON        string
 	Expect      *Report
 }
 
 func TestParseReport(t *testing.T) {
-	tests := []test{
+	tests := []reportTest{
 		test{
+			Name:        "expect-ct-report",
 			ContentType: "application/expect-ct-report+json",
 			JSON:        `{"expect-ct-report":{"date-time":"2019-10-06T15:09:06.894Z","effective-expiration-date":"2019-10-06T15:09:06.894Z","hostname":"expect-ct-report.test","port":443,"scts":[],"served-certificate-chain":[],"validated-certificate-chain":[]}}`,
 			Expect: &Report{
@@ -30,9 +32,9 @@ func TestParseReport(t *testing.T) {
 		},
 	}
 
-	for i, tc := range tests {
+	for _, tc := range tests {
 		tc := tc
-		t.Run(strconv.Itoa(i+1), func(t *testing.T) {
+		t.Run(tc.Name, func(t *testing.T) {
 			t.Parallel()
 			data, err := ParseReport(tc.ContentType, tc.JSON)
 			if err != nil {
@@ -51,7 +53,7 @@ func TestParseReport(t *testing.T) {
 }
 
 func TestParseReportParsesReportTo(t *testing.T) {
-	tests := []test{}
+	var tests []testReport
 
 	files, err := ioutil.ReadDir("./reports-examples")
 	if err != nil {
@@ -65,14 +67,15 @@ func TestParseReportParsesReportTo(t *testing.T) {
 		}
 
 		tests = append(tests, test{
+			Name:        file.Name(),
 			ContentType: "application/reports+json",
 			JSON:        string(json),
 		})
 	}
 
-	for i, tc := range tests {
+	for _, tc := range tests {
 		tc := tc
-		t.Run(strconv.Itoa(i+1), func(t *testing.T) {
+		t.Run(tc.Name, func(t *testing.T) {
 			t.Parallel()
 			data, err := ParseReport(tc.ContentType, tc.JSON)
 			if err != nil {

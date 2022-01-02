@@ -7,8 +7,13 @@ import (
 	"testing"
 )
 
+type analyticsTest struct {
+	Name string
+	JSON string
+}
+
 func TestParseAnalyticsParsesWebVitals(t *testing.T) {
-	tests := []test{}
+	var tests analyticsTest
 
 	files, err := ioutil.ReadDir("./analytics-examples")
 	if err != nil {
@@ -22,14 +27,14 @@ func TestParseAnalyticsParsesWebVitals(t *testing.T) {
 		}
 
 		tests = append(tests, test{
-			ContentType: "application/json",
-			JSON:        string(json),
+			Name: file.Name(),
+			JSON: string(json),
 		})
 	}
 
-	for i, tc := range tests {
+	for _, tc := range tests {
 		tc := tc
-		t.Run(strconv.Itoa(i+1), func(t *testing.T) {
+		t.Run(tc.Name, func(t *testing.T) {
 			t.Parallel()
 			data, err := ParseReport(tc.ContentType, tc.JSON)
 			if err != nil {
