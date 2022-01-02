@@ -107,9 +107,12 @@ func main() {
 	r.Post("/analytics/{bucket}", func(w http.ResponseWriter, r *http.Request) {
 		bucket := chi.URLParam(r, "bucket")
 		ct := r.Header.Get("content-type")
-		data, err := lib.ParseAnalytics(r.Body)
+		buf := new(bytes.Buffer)
+		buf.ReadFrom(r.Body)
+		bodyStr := buf.String()
+		data, err := lib.ParseAnalytics(bodyStr)
 		if err != nil {
-			log.Errorw("error seen during analytics parse", zap.Error(err), "content-type", ct, "user-agent", r.UserAgent())
+			log.Errorw("error seen during analytics parse", zap.Error(err), "content-type", ct, "user-agent", r.UserAgent(), "bodyJson", bodyStr)
 			http.Error(w, "processing error", 500)
 			return
 		}
