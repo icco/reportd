@@ -8,7 +8,6 @@ import (
 	"time"
 
 	"cloud.google.com/go/bigquery"
-	"github.com/pkg/errors"
 )
 
 // Report is a simple interface for types exported by ParseReport.
@@ -151,12 +150,12 @@ func UpdateReportsBQSchema(ctx context.Context, project, dataset, table string) 
 func WriteReportToBigQuery(ctx context.Context, project, dataset, table string, reports []*Report) error {
 	client, err := bigquery.NewClient(ctx, project)
 	if err != nil {
-		return errors.Wrap(err, "connecting to bq")
+		return fmt.Errorf("connecting to bq: %w", err)
 	}
 
 	ins := client.Dataset(dataset).Table(table).Inserter()
 	if err := ins.Put(ctx, reports); err != nil {
-		return errors.Wrap(err, "uploading to bq")
+		return fmt.Errorf("uploading to bq: %w", err)
 	}
 
 	return nil

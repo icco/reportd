@@ -13,7 +13,7 @@ require (
 	github.com/go-chi/cors v1.2.0
 	github.com/icco/gutil v0.0.0-20211212224553-1d468206bb48
 	github.com/namsral/flag v1.7.4-pre
-	github.com/pkg/errors v0.9.1
+	github.com/pkg/errors v0.9.1 // indirect
 	go.uber.org/atomic v1.9.0 // indirect
 	go.uber.org/multierr v1.7.0 // indirect
 	go.uber.org/zap v1.19.1
