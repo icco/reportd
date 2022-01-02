@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"io"
 
 	"cloud.google.com/go/bigquery"
 )
@@ -29,9 +28,9 @@ type WebVital struct {
 }
 
 // ParseAnalytics parses a webvitals request body.
-func ParseAnalytics(body io.Reader) (*WebVital, error) {
+func ParseAnalytics(body string) (*WebVital, error) {
 	var data WebVital
-	if err := json.NewDecoder(body).Decode(&data); err != nil {
+	if err := json.Unmarshal([]byte(body), &data); err != nil {
 		return nil, fmt.Errorf("could not unmarshal: %w", err)
 	}
 	return &data, nil

@@ -89,7 +89,7 @@ func main() {
 		ct := r.Header.Get("content-type")
 		data, err := lib.ParseReport(ct, bodyStr)
 		if err != nil {
-			log.Errorw("error seen during parse", "content-type", ct, "user-agent", r.UserAgent(), "json", bodyStr, zap.Error(err))
+			log.Errorw("error seen during report parse", "content-type", ct, "user-agent", r.UserAgent(), "bodyJson", bodyStr, zap.Error(err))
 			http.Error(w, "processing error", 500)
 			return
 		}
@@ -98,7 +98,7 @@ func main() {
 		log.Infow("report recieved", "content-type", ct, "bucket", bucket, "user-agent", r.UserAgent(), "report", data)
 
 		if err := lib.WriteReportToBigQuery(r.Context(), *project, *dataset, *rTable, []*lib.Report{data}); err != nil {
-			log.Errorw("error during upload", "dataset", *dataset, "project", *project, "table", *rTable, zap.Error(err))
+			log.Errorw("error during analytics upload", "dataset", *dataset, "project", *project, "table", *rTable, "bodyJson", bodyStr, zap.Error(err))
 			http.Error(w, "uploading error", 500)
 			return
 		}
@@ -107,9 +107,12 @@ func main() {
 	r.Post("/analytics/{bucket}", func(w http.ResponseWriter, r *http.Request) {
 		bucket := chi.URLParam(r, "bucket")
 		ct := r.Header.Get("content-type")
-		data, err := lib.ParseAnalytics(r.Body)
+		buf := new(bytes.Buffer)
+		buf.ReadFrom(r.Body)
+		bodyStr := buf.String()
+		data, err := lib.ParseAnalytics(bodyStr)
 		if err != nil {
-			log.Errorw("error seen during parse", zap.Error(err), "content-type", ct, "user-agent", r.UserAgent())
+			log.Errorw("error seen during analytics parse", zap.Error(err), "content-type", ct, "user-agent", r.UserAgent(), "bodyJson", bodyStr)
 			http.Error(w, "processing error", 500)
 			return
 		}
@@ -117,7 +120,7 @@ func main() {
 		// Log the report.
 		log.Infow("analytics recieved", "content-type", ct, "bucket", bucket, "user-agent", r.UserAgent(), "analytics", data)
 		if err := lib.WriteAnalyticsToBigQuery(r.Context(), *project, *dataset, *aTable, []*lib.WebVital{data}); err != nil {
-			log.Errorw("error during upload", "dataset", *dataset, "project", *project, "table", *aTable, zap.Error(err))
+			log.Errorw("error during analytics upload", "dataset", *dataset, "project", *project, "table", *aTable, "bodyJson", bodyStr, zap.Error(err))
 			http.Error(w, "uploading error", 500)
 			return
 		}
