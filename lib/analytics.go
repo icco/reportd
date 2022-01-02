@@ -9,6 +9,8 @@ import (
 )
 
 // WebVital is a a version of https://web.dev/vitals/.
+//
+// See also https://nextjs.org/docs/advanced-features/measuring-performance#build-your-own.
 type WebVital struct {
 	// The name of the metric (in acronym form).
 	Name string `json:"name"`
@@ -25,6 +27,9 @@ type WebVital struct {
 	// multiple values sent for the same metric, or to group multiple deltas
 	// together and calculate a total.
 	ID string `json:"id"`
+
+	// Type of metric (web-vital or custom)
+	Label string `json:"label"`
 }
 
 // ParseAnalytics parses a webvitals request body.
