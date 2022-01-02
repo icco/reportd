@@ -4,7 +4,6 @@ import (
 	"io/ioutil"
 	"path/filepath"
 	"reflect"
-	"strconv"
 	"testing"
 	"time"
 )
@@ -53,7 +52,7 @@ func TestParseReport(t *testing.T) {
 }
 
 func TestParseReportParsesReportTo(t *testing.T) {
-	var tests []testReport
+	var tests []reportTest
 
 	files, err := ioutil.ReadDir("./reports-examples")
 	if err != nil {

@@ -3,7 +3,6 @@ package lib
 import (
 	"io/ioutil"
 	"path/filepath"
-	"strconv"
 	"testing"
 )
 
