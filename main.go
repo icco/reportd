@@ -89,7 +89,7 @@ func main() {
 		ct := r.Header.Get("content-type")
 		data, err := lib.ParseReport(ct, bodyStr)
 		if err != nil {
-			log.Errorw("error seen during parse", "content-type", ct, "user-agent", r.UserAgent(), "json", bodyStr, zap.Error(err))
+			log.Errorw("error seen during report parse", "content-type", ct, "user-agent", r.UserAgent(), "json", bodyStr, zap.Error(err))
 			http.Error(w, "processing error", 500)
 			return
 		}
@@ -109,7 +109,7 @@ func main() {
 		ct := r.Header.Get("content-type")
 		data, err := lib.ParseAnalytics(r.Body)
 		if err != nil {
-			log.Errorw("error seen during parse", zap.Error(err), "content-type", ct, "user-agent", r.UserAgent())
+			log.Errorw("error seen during analytics parse", zap.Error(err), "content-type", ct, "user-agent", r.UserAgent())
 			http.Error(w, "processing error", 500)
 			return
 		}
