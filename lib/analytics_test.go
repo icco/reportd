@@ -12,7 +12,7 @@ type analyticsTest struct {
 }
 
 func TestParseAnalyticsParsesWebVitals(t *testing.T) {
-	var tests analyticsTest
+	var tests []analyticsTest
 
 	files, err := ioutil.ReadDir("./analytics-examples")
 	if err != nil {
@@ -25,7 +25,7 @@ func TestParseAnalyticsParsesWebVitals(t *testing.T) {
 			t.Error(err)
 		}
 
-		tests = append(tests, test{
+		tests = append(tests, analyticsTest{
 			Name: file.Name(),
 			JSON: string(json),
 		})
@@ -35,7 +35,7 @@ func TestParseAnalyticsParsesWebVitals(t *testing.T) {
 		tc := tc
 		t.Run(tc.Name, func(t *testing.T) {
 			t.Parallel()
-			data, err := ParseReport(tc.ContentType, tc.JSON)
+			data, err := ParseAnalytics(tc.JSON)
 			if err != nil {
 				t.Error(err)
 			}

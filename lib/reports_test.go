@@ -65,7 +65,7 @@ func TestParseReportParsesReportTo(t *testing.T) {
 			t.Error(err)
 		}
 
-		tests = append(tests, test{
+		tests = append(tests, reportTest{
 			Name:        file.Name(),
 			ContentType: "application/reports+json",
 			JSON:        string(json),
