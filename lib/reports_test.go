@@ -17,7 +17,7 @@ type reportTest struct {
 
 func TestParseReport(t *testing.T) {
 	tests := []reportTest{
-		test{
+		{
 			Name:        "expect-ct-report",
 			ContentType: "application/expect-ct-report+json",
 			JSON:        `{"expect-ct-report":{"date-time":"2019-10-06T15:09:06.894Z","effective-expiration-date":"2019-10-06T15:09:06.894Z","hostname":"expect-ct-report.test","port":443,"scts":[],"served-certificate-chain":[],"validated-certificate-chain":[]}}`,
