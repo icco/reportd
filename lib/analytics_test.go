@@ -6,6 +6,13 @@ import (
 	"testing"
 )
 
+func TestGetAnalyticsSchema(t *testing.T) {
+	_, err := getAnalyticsSchema()
+	if err != nil {
+		t.Error(err)
+	}
+}
+
 type analyticsTest struct {
 	Name string
 	JSON string

@@ -8,6 +8,13 @@ import (
 	"time"
 )
 
+func TestGetReportsSchema(t *testing.T) {
+	_, err := getReportSchema()
+	if err != nil {
+		t.Error(err)
+	}
+}
+
 type reportTest struct {
 	Name        string
 	ContentType string

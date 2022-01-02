@@ -54,7 +54,7 @@ func UpdateAnalyticsBQSchema(ctx context.Context, project, dataset, table string
 		return fmt.Errorf("getting table meta: %w", err)
 	}
 
-	s, err := bigquery.InferSchema(WebVital{})
+	s, err := getAnalyticsSchema()
 	if err != nil {
 		return fmt.Errorf("infer schema: %w", err)
 	}
@@ -64,6 +64,10 @@ func UpdateAnalyticsBQSchema(ctx context.Context, project, dataset, table string
 	}
 
 	return nil
+}
+
+func getAnalyticsSchema() (bigquery.Schema, error) {
+	return bigquery.InferSchema(WebVital{})
 }
 
 // WriteAnalyticsToBigQuery saves a webvital to bq.

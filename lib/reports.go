@@ -12,9 +12,9 @@ import (
 
 // Report is a simple interface for types exported by ParseReport.
 type Report struct {
-	ExpectCT *ExpectCTReport   `bigquery:",nullable"`
-	CSP      *CSPReport        `bigquery:",nullable"`
-	ReportTo []*ReportToReport `bigquery:",nullable"`
+	ExpectCT *ExpectCTReport `bigquery:",nullable"`
+	CSP      *CSPReport      `bigquery:",nullable"`
+	ReportTo []*ReportToReport
 }
 
 // ExpectCTReport is the struct for Expect-CT errors.
@@ -131,7 +131,7 @@ func UpdateReportsBQSchema(ctx context.Context, project, dataset, table string) 
 		return fmt.Errorf("getting table meta: %w", err)
 	}
 
-	s, err := bigquery.InferSchema(Report{})
+	s, err := getReportSchema()
 	if err != nil {
 		return fmt.Errorf("infer schema: %w", err)
 	}
@@ -141,6 +141,10 @@ func UpdateReportsBQSchema(ctx context.Context, project, dataset, table string) 
 	}
 
 	return nil
+}
+
+func getReportSchema() (bigquery.Schema, error) {
+	return bigquery.InferSchema(Report{})
 }
 
 // WriteReportToBigQuery saves a copy of a report to BQ.
