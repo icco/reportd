@@ -19,6 +19,9 @@ type Report struct {
 
 	// When we recorded this metric.
 	Time bigquery.NullDateTime
+
+	// What service this is for.
+	Service bigquery.NullString
 }
 
 // ExpectCTReport is the struct for Expect-CT errors.
@@ -92,8 +95,10 @@ type ReportToReport struct {
 
 // ParseReport takes a content-type header and a body json string and parses it
 // into valid Go structs.
-func ParseReport(ct, body string) (*Report, error) {
+func ParseReport(ct, body, srv string) (*Report, error) {
 	now := bigquery.NullDateTime{DateTime: civil.DateTimeOf(time.Now()), Valid: true}
+	service := bigquery.NullString{StringVal: srv, Valid: true}
+
 	media, _, err := mime.ParseMediaType(ct)
 	if err != nil {
 		return nil, err
@@ -105,19 +110,19 @@ func ParseReport(ct, body string) (*Report, error) {
 		if err := json.Unmarshal([]byte(body), &data); err != nil {
 			return nil, err
 		}
-		return &Report{ReportTo: data, Time: now}, nil
+		return &Report{ReportTo: data, Time: now, Service: service}, nil
 	case "application/expect-ct-report+json":
 		var data ExpectCTReport
 		if err := json.Unmarshal([]byte(body), &data); err != nil {
 			return nil, err
 		}
-		return &Report{ExpectCT: &data, Time: now}, nil
+		return &Report{ExpectCT: &data, Time: now, Service: service}, nil
 	case "application/csp-report":
 		var data CSPReport
 		if err := json.Unmarshal([]byte(body), &data); err != nil {
 			return nil, err
 		}
-		return &Report{CSP: &data, Time: now}, nil
+		return &Report{CSP: &data, Time: now, Service: service}, nil
 	}
 
 	return nil, fmt.Errorf("%q is not a valid content-type", media)

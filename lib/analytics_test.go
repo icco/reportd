@@ -42,7 +42,7 @@ func TestParseAnalyticsParsesWebVitals(t *testing.T) {
 		tc := tc
 		t.Run(tc.Name, func(t *testing.T) {
 			t.Parallel()
-			data, err := ParseAnalytics(tc.JSON)
+			data, err := ParseAnalytics(tc.JSON, "test")
 			if err != nil {
 				t.Error(err)
 			}

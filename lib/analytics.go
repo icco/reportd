@@ -35,10 +35,13 @@ type WebVital struct {
 
 	// When we recorded this metric.
 	Time bigquery.NullDateTime
+
+	// What service this is for.
+	Service bigquery.NullString
 }
 
 // ParseAnalytics parses a webvitals request body.
-func ParseAnalytics(body string) (*WebVital, error) {
+func ParseAnalytics(body, service string) (*WebVital, error) {
 	now := civil.DateTimeOf(time.Now())
 	var data WebVital
 	if err := json.Unmarshal([]byte(body), &data); err != nil {
@@ -46,6 +49,8 @@ func ParseAnalytics(body string) (*WebVital, error) {
 	}
 
 	data.Time = bigquery.NullDateTime{DateTime: now, Valid: true}
+	data.Service = bigquery.NullString{StringVal: service, Valid: true}
+
 	return &data, nil
 }
 

@@ -42,7 +42,7 @@ func TestParseReport(t *testing.T) {
 		tc := tc
 		t.Run(tc.Name, func(t *testing.T) {
 			t.Parallel()
-			data, err := ParseReport(tc.ContentType, tc.JSON)
+			data, err := ParseReport(tc.ContentType, tc.JSON, "test")
 			if err != nil {
 				t.Error(err)
 			}
@@ -83,7 +83,7 @@ func TestParseReportParsesReportTo(t *testing.T) {
 		tc := tc
 		t.Run(tc.Name, func(t *testing.T) {
 			t.Parallel()
-			data, err := ParseReport(tc.ContentType, tc.JSON)
+			data, err := ParseReport(tc.ContentType, tc.JSON, "test")
 			if err != nil {
 				t.Error(err)
 			}
