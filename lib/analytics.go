@@ -29,7 +29,7 @@ type WebVital struct {
 	ID string `json:"id"`
 
 	// Type of metric (web-vital or custom)
-	Label string `json:"label",bigquery:",nullable"`
+	Label bigquery.NullString `json:"label"`
 }
 
 // ParseAnalytics parses a webvitals request body.
