@@ -87,7 +87,8 @@ func main() {
 		buf.ReadFrom(r.Body)
 		bodyStr := buf.String()
 		ct := r.Header.Get("content-type")
-		data, err := lib.ParseReport(ct, bodyStr)
+
+		data, err := lib.ParseReport(ct, bodyStr, bucket)
 		if err != nil {
 			log.Errorw("error seen during report parse", "content-type", ct, "user-agent", r.UserAgent(), "bodyJson", bodyStr, zap.Error(err))
 			http.Error(w, "processing error", 500)
@@ -110,7 +111,7 @@ func main() {
 		buf := new(bytes.Buffer)
 		buf.ReadFrom(r.Body)
 		bodyStr := buf.String()
-		data, err := lib.ParseAnalytics(bodyStr)
+		data, err := lib.ParseAnalytics(bodyStr, bucket)
 		if err != nil {
 			log.Errorw("error seen during analytics parse", zap.Error(err), "content-type", ct, "user-agent", r.UserAgent(), "bodyJson", bodyStr)
 			http.Error(w, "processing error", 500)
