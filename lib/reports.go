@@ -93,7 +93,7 @@ type ReportToReport struct {
 // ParseReport takes a content-type header and a body json string and parses it
 // into valid Go structs.
 func ParseReport(ct, body string) (*Report, error) {
-	now := civil.DateTimeOf(time.Now())
+	now := bigquery.NullDateTime{DateTime: civil.DateTimeOf(time.Now()), Valid: true}
 	media, _, err := mime.ParseMediaType(ct)
 	if err != nil {
 		return nil, err
@@ -105,19 +105,19 @@ func ParseReport(ct, body string) (*Report, error) {
 		if err := json.Unmarshal([]byte(body), &data); err != nil {
 			return nil, err
 		}
-		return &Report{ReportTo: data, Time: &now}, nil
+		return &Report{ReportTo: data, Time: now}, nil
 	case "application/expect-ct-report+json":
 		var data ExpectCTReport
 		if err := json.Unmarshal([]byte(body), &data); err != nil {
 			return nil, err
 		}
-		return &Report{ExpectCT: &data, Time: &now}, nil
+		return &Report{ExpectCT: &data, Time: now}, nil
 	case "application/csp-report":
 		var data CSPReport
 		if err := json.Unmarshal([]byte(body), &data); err != nil {
 			return nil, err
 		}
-		return &Report{CSP: &data, Time: &now}, nil
+		return &Report{CSP: &data, Time: now}, nil
 	}
 
 	return nil, fmt.Errorf("%q is not a valid content-type", media)

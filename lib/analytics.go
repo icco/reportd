@@ -45,7 +45,7 @@ func ParseAnalytics(body string) (*WebVital, error) {
 		return nil, fmt.Errorf("could not unmarshal: %w", err)
 	}
 
-	data.Time = &now
+	data.Time = bigquery.NullDateTime{DateTime: now, Valid: true}
 	return &data, nil
 }
 
