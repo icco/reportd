@@ -49,7 +49,7 @@ func ParseAnalytics(body, service string) (*WebVital, error) {
 	}
 
 	data.Time = bigquery.NullDateTime{DateTime: now, Valid: true}
-	data.Service = service
+	data.Service = bigquery.NullString{StringVal: service, Valid: true}
 
 	return &data, nil
 }

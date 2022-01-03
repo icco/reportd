@@ -95,8 +95,10 @@ type ReportToReport struct {
 
 // ParseReport takes a content-type header and a body json string and parses it
 // into valid Go structs.
-func ParseReport(ct, body, service string) (*Report, error) {
+func ParseReport(ct, body, srv string) (*Report, error) {
 	now := bigquery.NullDateTime{DateTime: civil.DateTimeOf(time.Now()), Valid: true}
+	service := bigquery.NullString{StringVal: srv, Valid: true}
+
 	media, _, err := mime.ParseMediaType(ct)
 	if err != nil {
 		return nil, err
