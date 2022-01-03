@@ -4,8 +4,10 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"time"
 
 	"cloud.google.com/go/bigquery"
+	"cloud.google.com/go/civil"
 )
 
 // WebVital is a a version of https://web.dev/vitals/.
@@ -28,16 +30,22 @@ type WebVital struct {
 	// together and calculate a total.
 	ID string `json:"id"`
 
-	// Type of metric (web-vital or custom)
+	// Type of metric (web-vital or custom).
 	Label bigquery.NullString `json:"label"`
+
+	// When we recorded this metric.
+	Time bigquery.NullDateTime
 }
 
 // ParseAnalytics parses a webvitals request body.
 func ParseAnalytics(body string) (*WebVital, error) {
+	now := civil.DateTimeOf(time.Now())
 	var data WebVital
 	if err := json.Unmarshal([]byte(body), &data); err != nil {
 		return nil, fmt.Errorf("could not unmarshal: %w", err)
 	}
+
+	data.Time = &now
 	return &data, nil
 }
 
