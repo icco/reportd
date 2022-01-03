@@ -3,6 +3,7 @@ module github.com/icco/reportd
 go 1.14
 
 require (
+	cloud.google.com/go v0.99.0
 	cloud.google.com/go/bigquery v1.25.0
 	github.com/census-instrumentation/opencensus-proto v0.3.0 // indirect
 	github.com/cespare/xxhash/v2 v2.1.2 // indirect
