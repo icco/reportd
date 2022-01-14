@@ -48,7 +48,7 @@ func main() {
 	r := chi.NewRouter()
 
 	r.Use(middleware.RealIP)
-	r.Use(otel.Middleware())
+	r.Use(otel.Middleware)
 	r.Use(logging.Middleware(log.Desugar(), *project))
 
 	r.Use(cors.New(cors.Options{
