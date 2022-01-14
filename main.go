@@ -45,6 +45,10 @@ func main() {
 		log.Errorw("analytics table update", zap.Error(err))
 	}
 
+	if err := otel.Init(ctx, log, *project, service); err != nil {
+		log.Errorw("could not init opentelemetry", zap.Error(err))
+	}
+
 	r := chi.NewRouter()
 
 	r.Use(middleware.RealIP)
