@@ -7,7 +7,7 @@ require (
 	cloud.google.com/go/bigquery v1.26.0
 	github.com/go-chi/chi/v5 v5.0.7
 	github.com/go-chi/cors v1.2.0
-	github.com/icco/gutil v0.0.0-20220115171937-06fb917087d7
+	github.com/icco/gutil v0.0.0-20220117013958-c851cb44991d
 	github.com/namsral/flag v1.7.4-pre
 	go.uber.org/zap v1.20.0
 )
