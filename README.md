@@ -1,8 +1,7 @@
 # reportd
 
-[![GoDoc](https://godoc.org/github.com/icco/reportd?status.svg)](https://godoc.org/github.com/icco/reportd)
+[![GoDoc](https://godoc.org/github.com/icco/reportd?status.svg)](https://godoc.org/github.com/icco/reportd) 
 [![Go Report Card](https://goreportcard.com/badge/github.com/icco/reportd)](https://goreportcard.com/report/github.com/icco/reportd)
-[![Build Status](https://app.travis-ci.com/icco/reportd.svg?branch=main)](https://app.travis-ci.com/icco/reportd)
 
 A service for receiving CSP reports and others.
 
