@@ -172,6 +172,6 @@ func WriteReportToBigQuery(ctx context.Context, project, dataset, table string, 
 	return nil
 }
 
-func GetReports(ctx context.Context, project, dataset, table string) error {
-	return fmt.Errorf("not implemented")
+func GetReports(ctx context.Context, project, dataset, table string) ([]*Report, error) {
+	return nil, fmt.Errorf("not implemented")
 }
