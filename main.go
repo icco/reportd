@@ -8,7 +8,7 @@ import (
 	"os"
 	"time"
 
-	"github.com/go-chi/chi/v5"
+	chi "github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
 	"github.com/go-chi/cors"
 	"github.com/icco/gutil/logging"
@@ -79,6 +79,13 @@ func main() {
 		w.Write([]byte(""))
 	})
 
+	r.Get("/report/{bucket}", func(w http.ResponseWriter, r *http.Request) {
+		bucket := chi.URLParam(r, "bucket")
+		newURL := fmt.Sprintf("/view/%s", bucket)
+
+		http.Redirect(w, r, newURL, http.StatusPermanentRedirect)
+	})
+
 	r.Post("/report/{bucket}", func(w http.ResponseWriter, r *http.Request) {
 		bucket := chi.URLParam(r, "bucket")
 
@@ -102,6 +109,13 @@ func main() {
 			http.Error(w, "uploading error", 500)
 			return
 		}
+	})
+
+	r.Get("/analytics/{bucket}", func(w http.ResponseWriter, r *http.Request) {
+		bucket := chi.URLParam(r, "bucket")
+		newURL := fmt.Sprintf("/view/%s", bucket)
+
+		http.Redirect(w, r, newURL, http.StatusPermanentRedirect)
 	})
 
 	r.Post("/analytics/{bucket}", func(w http.ResponseWriter, r *http.Request) {
