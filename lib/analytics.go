@@ -40,6 +40,18 @@ type WebVital struct {
 	Service bigquery.NullString
 }
 
+func (wv *WebVital) Validate() error {
+	if !wv.Service.Valid {
+		return fmt.Errorf("service is null")
+	}
+
+	if wv.Service.StringVal == "" {
+		return fmt.Errorf("service is empty")
+	}
+
+	return nil
+}
+
 // ParseAnalytics parses a webvitals request body.
 func ParseAnalytics(body, service string) (*WebVital, error) {
 	now := civil.DateTimeOf(time.Now())
@@ -85,6 +97,12 @@ func getAnalyticsSchema() (bigquery.Schema, error) {
 
 // WriteAnalyticsToBigQuery saves a webvital to bq.
 func WriteAnalyticsToBigQuery(ctx context.Context, project, dataset, table string, data []*WebVital) error {
+	for _, d := range data {
+		if err := d.Validate(); err != nil {
+			return fmt.Errorf("validating data: %w", err)
+		}
+	}
+
 	client, err := bigquery.NewClient(ctx, project)
 	if err != nil {
 		return fmt.Errorf("connecting to bq: %w", err)
