@@ -98,3 +98,7 @@ func WriteAnalyticsToBigQuery(ctx context.Context, project, dataset, table strin
 
 	return nil
 }
+
+func GetAnalytics(ctx context.Context, project, dataset, table string) error {
+	return fmt.Errorf("not implemented")
+}
