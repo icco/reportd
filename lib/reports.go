@@ -196,7 +196,7 @@ func GetReports(ctx context.Context, project, dataset, table string) ([]*Report,
 	}
 
 	t := client.Dataset(dataset).Table(table)
-	q := client.Query(fmt.Sprintf("SELECT * FROM `%s` AS t WHERE DATE(t.Time) = CURRENT_DATE();", t.FullyQualifiedName()))
+	q := client.Query(fmt.Sprintf("SELECT * FROM `%s` AS t WHERE CAST(reports.Time as TIMESTAMP) BETWEEN TIMESTAMP_SUB(CURRENT_TIMESTAMP(), INTERVAL 7 DAY) AND CURRENT_TIMESTAMP() ORDER BY t.Time DESC;", t.FullyQualifiedName()))
 	it, err := q.Read(ctx)
 	if err != nil {
 		return nil, err
