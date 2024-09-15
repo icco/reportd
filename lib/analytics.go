@@ -124,8 +124,8 @@ func GetAnalytics(ctx context.Context, project, dataset, table string) ([]*WebVi
 		return nil, fmt.Errorf("connecting to bq: %w", err)
 	}
 
-	q := client.Query("SELECT * FROM `icco-cloud.reportd.analytics` AS t WHERE DATE(t.Time) = CURRENT_DATE();")
-	q.Parameters = []bigquery.QueryParameter{}
+	t := client.Dataset(dataset).Table(table)
+	q := client.Query(fmt.Sprintf("SELECT * FROM `%s` AS t WHERE DATE(t.Time) = CURRENT_DATE();", t.FullyQualifiedName()))
 	it, err := q.Read(ctx)
 	if err != nil {
 		return nil, err

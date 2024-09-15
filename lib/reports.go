@@ -9,6 +9,7 @@ import (
 
 	"cloud.google.com/go/bigquery"
 	"cloud.google.com/go/civil"
+	"google.golang.org/api/iterator"
 )
 
 // Report is a simple interface for types exported by ParseReport.
@@ -173,5 +174,31 @@ func WriteReportToBigQuery(ctx context.Context, project, dataset, table string, 
 }
 
 func GetReports(ctx context.Context, project, dataset, table string) ([]*Report, error) {
-	return nil, fmt.Errorf("not implemented")
+	client, err := bigquery.NewClient(ctx, project)
+	if err != nil {
+		return nil, fmt.Errorf("connecting to bq: %w", err)
+	}
+
+	t := client.Dataset(dataset).Table(table)
+	q := client.Query(fmt.Sprintf("SELECT * FROM `%s` AS t WHERE DATE(t.Time) = CURRENT_DATE();", t.FullyQualifiedName()))
+	it, err := q.Read(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	var ret []*Report
+	for {
+		var r Report
+		err := it.Next(&r)
+		if err == iterator.Done {
+			break
+		}
+		if err != nil {
+			return nil, fmt.Errorf("couldn't get Report: %w", err)
+		}
+
+		ret = append(ret, &r)
+	}
+
+	return ret, nil
 }
