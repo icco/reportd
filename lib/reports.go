@@ -9,6 +9,7 @@ import (
 
 	"cloud.google.com/go/bigquery"
 	"cloud.google.com/go/civil"
+	"google.golang.org/api/iterator"
 )
 
 // Report is a simple interface for types exported by ParseReport.
@@ -22,6 +23,18 @@ type Report struct {
 
 	// What service this is for.
 	Service bigquery.NullString
+}
+
+func (r *Report) Validate() error {
+	if !r.Service.Valid {
+		return fmt.Errorf("service is null")
+	}
+
+	if r.Service.StringVal == "" {
+		return fmt.Errorf("service is empty")
+	}
+
+	return nil
 }
 
 // ExpectCTReport is the struct for Expect-CT errors.
@@ -104,28 +117,32 @@ func ParseReport(ct, body, srv string) (*Report, error) {
 		return nil, err
 	}
 
+	var r *Report
+
 	switch media {
 	case "application/reports+json":
 		var data []*ReportToReport
 		if err := json.Unmarshal([]byte(body), &data); err != nil {
 			return nil, err
 		}
-		return &Report{ReportTo: data, Time: now, Service: service}, nil
+		r = &Report{ReportTo: data, Time: now, Service: service}
 	case "application/expect-ct-report+json":
 		var data ExpectCTReport
 		if err := json.Unmarshal([]byte(body), &data); err != nil {
 			return nil, err
 		}
-		return &Report{ExpectCT: &data, Time: now, Service: service}, nil
+		r = &Report{ExpectCT: &data, Time: now, Service: service}
 	case "application/csp-report":
 		var data CSPReport
 		if err := json.Unmarshal([]byte(body), &data); err != nil {
 			return nil, err
 		}
-		return &Report{CSP: &data, Time: now, Service: service}, nil
+		r = &Report{CSP: &data, Time: now, Service: service}
+	default:
+		return nil, fmt.Errorf("%q is not a valid content-type", media)
 	}
 
-	return nil, fmt.Errorf("%q is not a valid content-type", media)
+	return r, r.Validate()
 }
 
 // UpdateReportsBQSchema updates the bigquery schema if fields are added.
@@ -173,5 +190,31 @@ func WriteReportToBigQuery(ctx context.Context, project, dataset, table string, 
 }
 
 func GetReports(ctx context.Context, project, dataset, table string) ([]*Report, error) {
-	return nil, fmt.Errorf("not implemented")
+	client, err := bigquery.NewClient(ctx, project)
+	if err != nil {
+		return nil, fmt.Errorf("connecting to bq: %w", err)
+	}
+
+	t := client.Dataset(dataset).Table(table)
+	q := client.Query(fmt.Sprintf("SELECT * FROM `%s` AS t WHERE CAST(reports.Time as TIMESTAMP) BETWEEN TIMESTAMP_SUB(CURRENT_TIMESTAMP(), INTERVAL 7 DAY) AND CURRENT_TIMESTAMP() ORDER BY t.Time DESC;", t.FullyQualifiedName()))
+	it, err := q.Read(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	var ret []*Report
+	for {
+		var r Report
+		err := it.Next(&r)
+		if err == iterator.Done {
+			break
+		}
+		if err != nil {
+			return nil, fmt.Errorf("couldn't get Report: %w", err)
+		}
+
+		ret = append(ret, &r)
+	}
+
+	return ret, nil
 }

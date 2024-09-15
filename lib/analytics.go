@@ -8,6 +8,7 @@ import (
 
 	"cloud.google.com/go/bigquery"
 	"cloud.google.com/go/civil"
+	"google.golang.org/api/iterator"
 )
 
 // WebVital is a a version of https://web.dev/vitals/.
@@ -38,6 +39,18 @@ type WebVital struct {
 
 	// What service this is for.
 	Service bigquery.NullString
+}
+
+func (wv *WebVital) Validate() error {
+	if !wv.Service.Valid {
+		return fmt.Errorf("service is null")
+	}
+
+	if wv.Service.StringVal == "" {
+		return fmt.Errorf("service is empty")
+	}
+
+	return nil
 }
 
 // ParseAnalytics parses a webvitals request body.
@@ -85,6 +98,12 @@ func getAnalyticsSchema() (bigquery.Schema, error) {
 
 // WriteAnalyticsToBigQuery saves a webvital to bq.
 func WriteAnalyticsToBigQuery(ctx context.Context, project, dataset, table string, data []*WebVital) error {
+	for _, d := range data {
+		if err := d.Validate(); err != nil {
+			return fmt.Errorf("validating data: %w", err)
+		}
+	}
+
 	client, err := bigquery.NewClient(ctx, project)
 	if err != nil {
 		return fmt.Errorf("connecting to bq: %w", err)
@@ -100,5 +119,31 @@ func WriteAnalyticsToBigQuery(ctx context.Context, project, dataset, table strin
 }
 
 func GetAnalytics(ctx context.Context, project, dataset, table string) ([]*WebVital, error) {
-	return nil, fmt.Errorf("not implemented")
+	client, err := bigquery.NewClient(ctx, project)
+	if err != nil {
+		return nil, fmt.Errorf("connecting to bq: %w", err)
+	}
+
+	t := client.Dataset(dataset).Table(table)
+	q := client.Query(fmt.Sprintf("SELECT * FROM `%s` AS t WHERE CAST(reports.Time as TIMESTAMP) BETWEEN TIMESTAMP_SUB(CURRENT_TIMESTAMP(), INTERVAL 7 DAY) AND CURRENT_TIMESTAMP() ORDER BY t.Time DESC;", t.FullyQualifiedName()))
+	it, err := q.Read(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	var ret []*WebVital
+	for {
+		var wv WebVital
+		err := it.Next(&wv)
+		if err == iterator.Done {
+			break
+		}
+		if err != nil {
+			return nil, fmt.Errorf("couldn't get WebVital: %w", err)
+		}
+
+		ret = append(ret, &wv)
+	}
+
+	return ret, nil
 }
