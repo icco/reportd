@@ -8,6 +8,7 @@ import (
 
 	"cloud.google.com/go/bigquery"
 	"cloud.google.com/go/civil"
+	"google.golang.org/api/iterator"
 )
 
 // WebVital is a a version of https://web.dev/vitals/.
@@ -118,5 +119,31 @@ func WriteAnalyticsToBigQuery(ctx context.Context, project, dataset, table strin
 }
 
 func GetAnalytics(ctx context.Context, project, dataset, table string) ([]*WebVital, error) {
-	return nil, fmt.Errorf("not implemented")
+	client, err := bigquery.NewClient(ctx, project)
+	if err != nil {
+		return nil, fmt.Errorf("connecting to bq: %w", err)
+	}
+
+	q := client.Query("SELECT * FROM `icco-cloud.reportd.analytics` AS t WHERE DATE(t.Time) = CURRENT_DATE();")
+	q.Parameters = []bigquery.QueryParameter{}
+	it, err := q.Read(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	var ret []*WebVital
+	for {
+		var wv WebVital
+		err := it.Next(&wv)
+		if err == iterator.Done {
+			break
+		}
+		if err != nil {
+			return nil, fmt.Errorf("couldn't get WebVital: %w", err)
+		}
+
+		ret = append(ret, &wv)
+	}
+
+	return ret, nil
 }
