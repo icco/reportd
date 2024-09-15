@@ -25,6 +25,18 @@ type Report struct {
 	Service bigquery.NullString
 }
 
+func (r *Report) Validate() error {
+	if !r.Service.Valid {
+		return fmt.Errorf("service is null")
+	}
+
+	if r.Service.StringVal == "" {
+		return fmt.Errorf("service is empty")
+	}
+
+	return nil
+}
+
 // ExpectCTReport is the struct for Expect-CT errors.
 type ExpectCTReport struct {
 	ExpectCTReport ExpectCTSubReport `json:"expect-ct-report"`
@@ -105,28 +117,32 @@ func ParseReport(ct, body, srv string) (*Report, error) {
 		return nil, err
 	}
 
+	var r *Report
+
 	switch media {
 	case "application/reports+json":
 		var data []*ReportToReport
 		if err := json.Unmarshal([]byte(body), &data); err != nil {
 			return nil, err
 		}
-		return &Report{ReportTo: data, Time: now, Service: service}, nil
+		r = &Report{ReportTo: data, Time: now, Service: service}
 	case "application/expect-ct-report+json":
 		var data ExpectCTReport
 		if err := json.Unmarshal([]byte(body), &data); err != nil {
 			return nil, err
 		}
-		return &Report{ExpectCT: &data, Time: now, Service: service}, nil
+		r = &Report{ExpectCT: &data, Time: now, Service: service}
 	case "application/csp-report":
 		var data CSPReport
 		if err := json.Unmarshal([]byte(body), &data); err != nil {
 			return nil, err
 		}
-		return &Report{CSP: &data, Time: now, Service: service}, nil
+		r = &Report{CSP: &data, Time: now, Service: service}
+	default:
+		return nil, fmt.Errorf("%q is not a valid content-type", media)
 	}
 
-	return nil, fmt.Errorf("%q is not a valid content-type", media)
+	return r, r.Validate()
 }
 
 // UpdateReportsBQSchema updates the bigquery schema if fields are added.
