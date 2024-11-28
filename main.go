@@ -3,6 +3,7 @@ package main
 import (
 	"bytes"
 	"context"
+	"encoding/json"
 	"fmt"
 	"net/http"
 	"os"
@@ -13,6 +14,7 @@ import (
 	"github.com/go-chi/cors"
 	"github.com/icco/gutil/logging"
 	"github.com/icco/reportd/lib"
+	"github.com/icco/reportd/static"
 	"github.com/namsral/flag"
 	"go.uber.org/zap"
 )
@@ -61,8 +63,25 @@ func main() {
 	r.Use(middleware.Timeout(30 * time.Second))
 
 	r.Get("/", func(w http.ResponseWriter, r *http.Request) {
+		index, err := static.Get("index.html")
+		if err != nil {
+			http.Error(w, "could not load index", 500)
+			return
+		}
+
 		w.Header().Set("Content-Type", "text/html")
-		w.Write([]byte(`hi! Please see <a href="https://github.com/icco/reportd">github.com/icco/reportd</a> for more information.`))
+		w.Write(index)
+	})
+
+	r.Get("/sparklines.js", func(w http.ResponseWriter, r *http.Request) {
+		js, err := static.Get("sparklines.js")
+		if err != nil {
+			http.Error(w, "could not load sparklines.js", 500)
+			return
+		}
+
+		w.Header().Set("Content-Type", "application/javascript")
+		w.Write(js)
 	})
 
 	r.Get("/healthz", func(w http.ResponseWriter, r *http.Request) {
@@ -111,11 +130,47 @@ func main() {
 		}
 	})
 
-	r.Get("/analytics/{bucket}", func(w http.ResponseWriter, r *http.Request) {
-		bucket := chi.URLParam(r, "bucket")
-		newURL := fmt.Sprintf("/view/%s", bucket)
+	r.Get("/analytics", func(w http.ResponseWriter, r *http.Request) {
+		ctx := r.Context()
 
-		http.Redirect(w, r, newURL, http.StatusPermanentRedirect)
+		data, err := lib.GetAnalyticsServices(ctx, *project, *dataset, *aTable)
+		if err != nil {
+			log.Errorw("error seen during analytics services get", zap.Error(err))
+			http.Error(w, "processing error", 500)
+			return
+		}
+
+		resp, err := json.Marshal(data)
+		if err != nil {
+			log.Errorw("error seen during analytics marshal", zap.Error(err))
+			http.Error(w, "processing error", 500)
+			return
+		}
+
+		w.Header().Set("Content-Type", "application/json")
+		w.Write(resp)
+	})
+
+	r.Get("/analytics/{bucket}", func(w http.ResponseWriter, r *http.Request) {
+		ctx := r.Context()
+		bucket := chi.URLParam(r, "bucket")
+
+		data, err := lib.GetAnalytics(ctx, bucket, *project, *dataset, *aTable)
+		if err != nil {
+			log.Errorw("error seen during analytics get", zap.Error(err), "bucket", bucket)
+			http.Error(w, "processing error", 500)
+			return
+		}
+
+		resp, err := json.Marshal(data)
+		if err != nil {
+			log.Errorw("error seen during analytics marshal", zap.Error(err), "bucket", bucket)
+			http.Error(w, "processing error", 500)
+			return
+		}
+
+		w.Header().Set("Content-Type", "application/json")
+		w.Write(resp)
 	})
 
 	r.Post("/analytics/{bucket}", func(w http.ResponseWriter, r *http.Request) {

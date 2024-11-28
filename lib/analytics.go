@@ -41,6 +41,18 @@ type WebVital struct {
 	Service bigquery.NullString
 }
 
+type WebVitalSummary struct {
+	// The name of the metric (in acronym form).
+	Name string `json:"name"`
+
+	// The current value of the metric.
+	Value float64 `json:"value"`
+
+	Service string `json:"service"`
+
+	Date time.Time `json:"date"`
+}
+
 func (wv *WebVital) Validate() error {
 	if !wv.Service.Valid {
 		return fmt.Errorf("service is null")
@@ -118,31 +130,71 @@ func WriteAnalyticsToBigQuery(ctx context.Context, project, dataset, table strin
 	return nil
 }
 
-func GetAnalytics(ctx context.Context, project, dataset, table string) ([]*WebVital, error) {
+func GetAnalytics(ctx context.Context, site, project, dataset, table string) ([]*WebVitalSummary, error) {
 	client, err := bigquery.NewClient(ctx, project)
 	if err != nil {
 		return nil, fmt.Errorf("connecting to bq: %w", err)
 	}
 
 	t := client.Dataset(dataset).Table(table)
-	q := client.Query(fmt.Sprintf("SELECT * FROM `%s` AS t WHERE CAST(reports.Time as TIMESTAMP) BETWEEN TIMESTAMP_SUB(CURRENT_TIMESTAMP(), INTERVAL 7 DAY) AND CURRENT_TIMESTAMP() ORDER BY t.Time DESC;", t.FullyQualifiedName()))
+	query := fmt.Sprintf(
+		"SELECT DATE(Time) AS Day, Service, Name, AVG(Value) AS AverageValue "+
+			"FROM `%s` "+
+			"WHERE Service = @site AND Time >= DATE_SUB(CURRENT_DATE(), INTERVAL 24 MONTH) "+
+			"GROUP BY 1, 2, 3 "+
+			"ORDER BY Day DESC;",
+		t.FullyQualifiedName())
+	q := client.Query(query)
+	q.Parameters = []bigquery.QueryParameter{
+		{Name: "site", Value: site},
+	}
 	it, err := q.Read(ctx)
 	if err != nil {
 		return nil, err
 	}
 
-	var ret []*WebVital
+	var ret []*WebVitalSummary
 	for {
-		var wv WebVital
+		var wv WebVitalSummary
 		err := it.Next(&wv)
 		if err == iterator.Done {
 			break
 		}
 		if err != nil {
-			return nil, fmt.Errorf("couldn't get WebVital: %w", err)
+			return nil, fmt.Errorf("couldn't get WebVitalSummary: %w", err)
 		}
 
 		ret = append(ret, &wv)
+	}
+
+	return ret, nil
+}
+
+func GetAnalyticsServices(ctx context.Context, project, dataset, table string) ([]string, error) {
+	client, err := bigquery.NewClient(ctx, project)
+	if err != nil {
+		return nil, fmt.Errorf("connecting to bq: %w", err)
+	}
+
+	t := client.Dataset(dataset).Table(table)
+	q := client.Query(fmt.Sprintf("SELECT DISTINCT Service FROM `%s` WHERE Service IS NOT NULL;", t.FullyQualifiedName()))
+	it, err := q.Read(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	var ret []string
+	for {
+		var s string
+		err := it.Next(&s)
+		if err == iterator.Done {
+			break
+		}
+		if err != nil {
+			return nil, fmt.Errorf("couldn't get Services: %w", err)
+		}
+
+		ret = append(ret, s)
 	}
 
 	return ret, nil

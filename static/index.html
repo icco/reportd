@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta http-equiv="X-UA-Compatible" content="ie=edge">
+  <title>ReportD</title>
+  <link href="https://unpkg.com/tailwindcss@^2/dist/tailwind.min.css" rel="stylesheet">
+  <style>
+    body {
+      max-width: 1200px;
+    }
+  </style>
+</head>
+
+<body class="mx-auto p-6 md:p-24 bg-black text-white">
+
+  <header class="mb-10">
+    <h1 class="text-3xl font-bold">ReportD</h1>
+    <p class="text-gray-500">
+      All the code for this project is available on <a class="underline"
+        href="https://github.com/icco/reportd">github.com/icco/reportd</a>.
+    </p>
+  </header>
+
+  <main>
+    <!--
+    <section class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-12 mb-16">
+      <div class="border-b border-gray-700 pb-2 mb-10">
+        <h2 class="text-xl font-medium">Site A</h2>
+      </div>
+      <div class="flex flex-col gap-6">
+        <div id="some-chart-1" data-sparkline="true" data-points="14,19,7" data-width="300" data-height="20"
+          data-colors="white,purple,orange,gray,yellow" data-type="stacked"></div>
+        <div>
+          <button onclick="update()"
+            class="border border-gray-600 bg-gray-800 hover:bg-gray-700 rounded px-3 py-1">Manually update</button>
+        </div>
+        <script>
+          function update() {
+            const chart = document.querySelector('#some-chart-1');
+            chart.dataset.points = generateRandomData(5); // refer to function bellow.
+            chart.dispatchEvent(new Event('update'));
+          }
+        </script>
+      </div>
+
+      <div class="flex flex-col gap-4">
+        <div id="some-chart-2" data-sparkline="true" data-points="15,3,17,15,7,11,11,5,0,16,1,13,1,12,13,8,16,4,0,0"
+          data-width="300" data-height="30" data-colors="white" data-stroke-width="2" data-type="line"></div>
+        <div class="text-gray-400 italic">Updates every 1 second</div>
+      </div>
+
+      <div class="flex flex-col gap-4">
+        <div id="some-chart-3" data-sparkline="true" data-points="18,13,19,14,14,3,4,8,7,9,2,8,0,20,7,3,2,5,12,15"
+          data-width="300" data-height="30" data-gap="5"></div>
+        <div class="text-gray-400 italic">Updates every 2 seconds</div>
+        <script>
+          setInterval(() => {
+            const chart = document.querySelector('#some-chart-3');
+            chart.dataset.points = generateRandomData(20); // refer to function bellow.
+            chart.dispatchEvent(new Event('update'));
+          }, 2000);
+        </script>
+      </div>
+    </section>
+-->
+  </main>
+  <script>
+    setInterval(() => {
+      const chart = document.querySelector('#some-chart-2');
+      chart.dataset.points = generateRandomData(40); // refer to function bellow.
+      chart.dispatchEvent(new Event('update'));
+    }, 1000);
+  </script>
+  <!-- sparklines.js from https://github.com/mitjafelicijan/sparklines -->
+  <script src="sparklines.js" defer></script>
+</body>
+
+</html>
