@@ -3,6 +3,7 @@ package main
 import (
 	"bytes"
 	"context"
+	_ "embed"
 	"fmt"
 	"net/http"
 	"os"
@@ -24,6 +25,9 @@ var (
 	dataset = flag.String("dataset", os.Getenv("DATASET"), "The bigquery dataset to upload to.")
 	aTable  = flag.String("analytics_table", os.Getenv("ANALYTICS_TABLE"), "The bigquery table to upload analytics to.")
 	rTable  = flag.String("reports_table", os.Getenv("REPORTS_TABLE"), "The bigquery table to upload reports to.")
+
+	//go:embed index.html
+	indexHTML []byte
 )
 
 func main() {
@@ -62,7 +66,7 @@ func main() {
 
 	r.Get("/", func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "text/html")
-		w.Write([]byte(`hi! Please see <a href="https://github.com/icco/reportd">github.com/icco/reportd</a> for more information.`))
+		w.Write(indexHTML)
 	})
 
 	r.Get("/healthz", func(w http.ResponseWriter, r *http.Request) {
