@@ -118,14 +118,22 @@ func WriteAnalyticsToBigQuery(ctx context.Context, project, dataset, table strin
 	return nil
 }
 
-func GetAnalytics(ctx context.Context, project, dataset, table string) ([]*WebVital, error) {
+func GetAnalytics(ctx context.Context, site, project, dataset, table string) ([]*WebVital, error) {
 	client, err := bigquery.NewClient(ctx, project)
 	if err != nil {
 		return nil, fmt.Errorf("connecting to bq: %w", err)
 	}
 
 	t := client.Dataset(dataset).Table(table)
-	q := client.Query(fmt.Sprintf("SELECT * FROM `%s` AS t WHERE CAST(reports.Time as TIMESTAMP) BETWEEN TIMESTAMP_SUB(CURRENT_TIMESTAMP(), INTERVAL 7 DAY) AND CURRENT_TIMESTAMP() ORDER BY t.Time DESC;", t.FullyQualifiedName()))
+	query := fmt.Sprintf(
+		"SELECT * FROM `%s` AS t "+
+			" WHERE CAST(reports.Time as TIMESTAMP) BETWEEN TIMESTAMP_SUB(CURRENT_TIMESTAMP(), INTERVAL 7 DAY) AND CURRENT_TIMESTAMP() AND t.Service = @site "+
+			" ORDER BY t.Time DESC;",
+		t.FullyQualifiedName())
+	q := client.Query(query)
+	q.Parameters = []bigquery.QueryParameter{
+		{Name: "site", Value: site},
+	}
 	it, err := q.Read(ctx)
 	if err != nil {
 		return nil, err

@@ -3,6 +3,7 @@ package main
 import (
 	"bytes"
 	"context"
+	"encoding/json"
 	"fmt"
 	"net/http"
 	"os"
@@ -130,10 +131,25 @@ func main() {
 	})
 
 	r.Get("/analytics/{bucket}", func(w http.ResponseWriter, r *http.Request) {
+		ctx := r.Context()
 		bucket := chi.URLParam(r, "bucket")
-		newURL := fmt.Sprintf("/view/%s", bucket)
 
-		http.Redirect(w, r, newURL, http.StatusPermanentRedirect)
+		data, err := lib.GetAnalytics(ctx, bucket, *project, *dataset, *aTable)
+		if err != nil {
+			log.Errorw("error seen during analytics get", zap.Error(err), "bucket", bucket)
+			http.Error(w, "processing error", 500)
+			return
+		}
+
+		resp, err := json.Marshal(data)
+		if err != nil {
+			log.Errorw("error seen during analytics marshal", zap.Error(err), "bucket", bucket)
+			http.Error(w, "processing error", 500)
+			return
+		}
+
+		w.Header().Set("Content-Type", "application/json")
+		w.Write(resp)
 	})
 
 	r.Post("/analytics/{bucket}", func(w http.ResponseWriter, r *http.Request) {

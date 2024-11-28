@@ -26,10 +26,10 @@
 
   <main>
 
-    <div class="border-b border-gray-700 pb-2 mb-10">
-      <h2 class="text-xl font-medium">Site A</h2>
-    </div>
     <section class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-12 mb-16">
+      <div class="border-b border-gray-700 pb-2 mb-10">
+        <h2 class="text-xl font-medium">Site A</h2>
+      </div>
       <div class="flex flex-col gap-6">
         <div id="some-chart-1" data-sparkline="true" data-points="14,19,7" data-width="300" data-height="20"
           data-colors="white,purple,orange,gray,yellow" data-type="stacked"></div>
@@ -50,13 +50,6 @@
         <div id="some-chart-2" data-sparkline="true" data-points="15,3,17,15,7,11,11,5,0,16,1,13,1,12,13,8,16,4,0,0"
           data-width="300" data-height="30" data-colors="white" data-stroke-width="2" data-type="line"></div>
         <div class="text-gray-400 italic">Updates every 1 second</div>
-        <script>
-          setInterval(() => {
-            const chart = document.querySelector('#some-chart-2');
-            chart.dataset.points = generateRandomData(40); // refer to function bellow.
-            chart.dispatchEvent(new Event('update'));
-          }, 1000);
-        </script>
       </div>
 
       <div class="flex flex-col gap-4">
@@ -72,19 +65,15 @@
         </script>
       </div>
     </section>
-
-    <script>
-      function generateRandomData(numOfSlices) {
-        const randomValues = [];
-        for (let i = 0; i < numOfSlices; i++) {
-          const randomValue = Math.floor(Math.random() * (100 - 10 + 1)) + 10;
-          randomValues.push(randomValue);
-        }
-        return randomValues.join(',');
-      }
-    </script>
   </main>
 
+  <script>
+    setInterval(() => {
+      const chart = document.querySelector('#some-chart-2');
+      chart.dataset.points = generateRandomData(40); // refer to function bellow.
+      chart.dispatchEvent(new Event('update'));
+    }, 1000);
+  </script>
   <!-- sparklines.js from https://github.com/mitjafelicijan/sparklines -->
   <script src="sparklines.js" defer></script>
 </body>
