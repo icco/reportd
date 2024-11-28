@@ -50,7 +50,7 @@ type WebVitalSummary struct {
 
 	Service string `json:"service"`
 
-	Date time.Time `json:"date"`
+	Day bigquery.NullDate `json:"date"`
 }
 
 func (wv *WebVital) Validate() error {
@@ -137,17 +137,24 @@ func GetAnalytics(ctx context.Context, site, project, dataset, table string) ([]
 	}
 
 	t := client.Dataset(dataset).Table(table)
+	tableID, err := t.Identifier(bigquery.StandardSQLID)
+	if err != nil {
+		return nil, fmt.Errorf("getting table id: %w", err)
+	}
+
 	query := fmt.Sprintf(
-		"SELECT DATE(Time) AS Day, Service, Name, AVG(Value) AS AverageValue "+
+		"SELECT DATE(Time) AS Day, Service, Name, AVG(Value) AS Value "+
 			"FROM `%s` "+
 			"WHERE Service = @site AND Time >= DATE_SUB(CURRENT_DATE(), INTERVAL 24 MONTH) "+
 			"GROUP BY 1, 2, 3 "+
 			"ORDER BY Day DESC;",
-		t.FullyQualifiedName())
+		tableID,
+	)
 	q := client.Query(query)
 	q.Parameters = []bigquery.QueryParameter{
 		{Name: "site", Value: site},
 	}
+	log.Debugw("query prepped", "query", q)
 	it, err := q.Read(ctx)
 	if err != nil {
 		return nil, err
@@ -177,7 +184,13 @@ func GetAnalyticsServices(ctx context.Context, project, dataset, table string) (
 	}
 
 	t := client.Dataset(dataset).Table(table)
-	q := client.Query(fmt.Sprintf("SELECT DISTINCT Service FROM `%s` WHERE Service IS NOT NULL;", t.FullyQualifiedName()))
+	tableID, err := t.Identifier(bigquery.StandardSQLID)
+	if err != nil {
+		return nil, fmt.Errorf("getting table id: %w", err)
+	}
+
+	q := client.Query(fmt.Sprintf("SELECT DISTINCT Service FROM `%s` WHERE Service IS NOT NULL;", tableID))
+	log.Debugw("query prepped", "query", q)
 	it, err := q.Read(ctx)
 	if err != nil {
 		return nil, err
@@ -185,8 +198,8 @@ func GetAnalyticsServices(ctx context.Context, project, dataset, table string) (
 
 	var ret []string
 	for {
-		var s string
-		err := it.Next(&s)
+		var row []bigquery.Value
+		err := it.Next(&row)
 		if err == iterator.Done {
 			break
 		}
@@ -194,7 +207,7 @@ func GetAnalyticsServices(ctx context.Context, project, dataset, table string) (
 			return nil, fmt.Errorf("couldn't get Services: %w", err)
 		}
 
-		ret = append(ret, s)
+		ret = append(ret, row[0].(string))
 	}
 
 	return ret, nil

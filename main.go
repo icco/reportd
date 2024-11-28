@@ -22,20 +22,37 @@ import (
 var (
 	service = "reportd"
 	log     = logging.Must(logging.NewLogger(service))
-	project = flag.String("project", os.Getenv("PROJECT_ID"), "Project ID containing the bigquery dataset to upload to.")
-	dataset = flag.String("dataset", os.Getenv("DATASET"), "The bigquery dataset to upload to.")
-	aTable  = flag.String("analytics_table", os.Getenv("ANALYTICS_TABLE"), "The bigquery table to upload analytics to.")
-	rTable  = flag.String("reports_table", os.Getenv("REPORTS_TABLE"), "The bigquery table to upload reports to.")
 )
 
 func main() {
-	flag.Parse()
+	fs := flag.NewFlagSetWithEnvPrefix(os.Args[0], "REPORTD", 0)
+	project := fs.String("project", "", "Project ID containing the bigquery dataset to upload to.")
+	dataset := fs.String("dataset", "", "The bigquery dataset to upload to.")
+	aTable := fs.String("analytics_table", "", "The bigquery table to upload analytics to.")
+	rTable := fs.String("reports_table", "", "The bigquery table to upload reports to.")
+	fs.Parse(os.Args[1:])
 
 	port := "8080"
 	if fromEnv := os.Getenv("PORT"); fromEnv != "" {
 		port = fromEnv
 	}
 	log.Infow("Starting up", "host", fmt.Sprintf("http://localhost:%s", port))
+
+	if *project == "" {
+		log.Fatalw("project is required")
+	}
+
+	if *dataset == "" {
+		log.Fatalw("dataset is required")
+	}
+
+	if *aTable == "" {
+		log.Fatalw("analytics_table is required")
+	}
+
+	if *rTable == "" {
+		log.Fatalw("reports_table is required")
+	}
 
 	ctx := context.Background()
 	if err := lib.UpdateReportsBQSchema(ctx, *project, *dataset, *rTable); err != nil {

@@ -12,3 +12,4 @@
 *.out
 reportd
 .DS_Store
+.env
