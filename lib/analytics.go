@@ -169,3 +169,33 @@ func GetAnalytics(ctx context.Context, site, project, dataset, table string) ([]
 
 	return ret, nil
 }
+
+func GetAnalyticsServices(ctx context.Context, project, dataset, table string) ([]string, error) {
+	client, err := bigquery.NewClient(ctx, project)
+	if err != nil {
+		return nil, fmt.Errorf("connecting to bq: %w", err)
+	}
+
+	t := client.Dataset(dataset).Table(table)
+	q := client.Query(fmt.Sprintf("SELECT DISTINCT Service FROM `%s` WHERE Service IS NOT NULL;", t.FullyQualifiedName()))
+	it, err := q.Read(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	var ret []string
+	for {
+		var s string
+		err := it.Next(&s)
+		if err == iterator.Done {
+			break
+		}
+		if err != nil {
+			return nil, fmt.Errorf("couldn't get Services: %w", err)
+		}
+
+		ret = append(ret, s)
+	}
+
+	return ret, nil
+}
