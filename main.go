@@ -130,6 +130,27 @@ func main() {
 		}
 	})
 
+	r.Get("/analytics", func(w http.ResponseWriter, r *http.Request) {
+		ctx := r.Context()
+
+		data, err := lib.GetAnalyticsServices(ctx, *project, *dataset, *aTable)
+		if err != nil {
+			log.Errorw("error seen during analytics services get", zap.Error(err))
+			http.Error(w, "processing error", 500)
+			return
+		}
+
+		resp, err := json.Marshal(data)
+		if err != nil {
+			log.Errorw("error seen during analytics marshal", zap.Error(err))
+			http.Error(w, "processing error", 500)
+			return
+		}
+
+		w.Header().Set("Content-Type", "application/json")
+		w.Write(resp)
+	})
+
 	r.Get("/analytics/{bucket}", func(w http.ResponseWriter, r *http.Request) {
 		ctx := r.Context()
 		bucket := chi.URLParam(r, "bucket")
