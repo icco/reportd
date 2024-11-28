@@ -143,11 +143,12 @@ func GetAnalytics(ctx context.Context, site, project, dataset, table string) ([]
 			"WHERE Service = @site AND Time >= DATE_SUB(CURRENT_DATE(), INTERVAL 24 MONTH) "+
 			"GROUP BY 1, 2, 3 "+
 			"ORDER BY Day DESC;",
-		t.FullyQualifiedName())
+		t.TableID)
 	q := client.Query(query)
 	q.Parameters = []bigquery.QueryParameter{
 		{Name: "site", Value: site},
 	}
+	log.Debugw("query prepped", "query", q)
 	it, err := q.Read(ctx)
 	if err != nil {
 		return nil, err
@@ -178,6 +179,7 @@ func GetAnalyticsServices(ctx context.Context, project, dataset, table string) (
 
 	t := client.Dataset(dataset).Table(table)
 	q := client.Query(fmt.Sprintf("SELECT DISTINCT Service FROM `%s` WHERE Service IS NOT NULL;", t.FullyQualifiedName()))
+	log.Debugw("query prepped", "query", q)
 	it, err := q.Read(ctx)
 	if err != nil {
 		return nil, err
