@@ -1,7 +1,7 @@
 package lib
 
 import (
-	"io/ioutil"
+	"os"
 	"path/filepath"
 	"testing"
 )
@@ -21,13 +21,13 @@ type analyticsTest struct {
 func TestParseAnalyticsParsesWebVitals(t *testing.T) {
 	var tests []analyticsTest
 
-	files, err := ioutil.ReadDir("./analytics-examples")
+	files, err := os.ReadDir("./analytics-examples")
 	if err != nil {
 		t.Error(err)
 	}
 
 	for _, file := range files {
-		json, err := ioutil.ReadFile(filepath.Join(".", "analytics-examples", file.Name()))
+		json, err := os.ReadFile(filepath.Join(".", "analytics-examples", file.Name()))
 		if err != nil {
 			t.Error(err)
 		}
