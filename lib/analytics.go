@@ -198,8 +198,8 @@ func GetAnalyticsServices(ctx context.Context, project, dataset, table string) (
 
 	var ret []string
 	for {
-		var s string
-		err := it.Next(&s)
+		var row []bigquery.Value
+		err := it.Next(&row)
 		if err == iterator.Done {
 			break
 		}
@@ -207,7 +207,7 @@ func GetAnalyticsServices(ctx context.Context, project, dataset, table string) (
 			return nil, fmt.Errorf("couldn't get Services: %w", err)
 		}
 
-		ret = append(ret, s)
+		ret = append(ret, row[0].(string))
 	}
 
 	return ret, nil
