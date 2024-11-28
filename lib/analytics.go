@@ -41,6 +41,18 @@ type WebVital struct {
 	Service bigquery.NullString
 }
 
+type WebVitalSummary struct {
+	// The name of the metric (in acronym form).
+	Name string `json:"name"`
+
+	// The current value of the metric.
+	Value float64 `json:"value"`
+
+	Service string `json:"service"`
+
+	Date time.Time `json:"date"`
+}
+
 func (wv *WebVital) Validate() error {
 	if !wv.Service.Valid {
 		return fmt.Errorf("service is null")
@@ -118,7 +130,7 @@ func WriteAnalyticsToBigQuery(ctx context.Context, project, dataset, table strin
 	return nil
 }
 
-func GetAnalytics(ctx context.Context, site, project, dataset, table string) ([]*WebVital, error) {
+func GetAnalytics(ctx context.Context, site, project, dataset, table string) ([]*WebVitalSummary, error) {
 	client, err := bigquery.NewClient(ctx, project)
 	if err != nil {
 		return nil, fmt.Errorf("connecting to bq: %w", err)
@@ -126,9 +138,11 @@ func GetAnalytics(ctx context.Context, site, project, dataset, table string) ([]
 
 	t := client.Dataset(dataset).Table(table)
 	query := fmt.Sprintf(
-		"SELECT * FROM `%s` AS t "+
-			" WHERE CAST(reports.Time as TIMESTAMP) BETWEEN TIMESTAMP_SUB(CURRENT_TIMESTAMP(), INTERVAL 7 DAY) AND CURRENT_TIMESTAMP() AND t.Service = @site "+
-			" ORDER BY t.Time DESC;",
+		"SELECT DATE(Time) AS Day, Service, Name, AVG(Value) AS AverageValue "+
+			"FROM `%s` "+
+			"WHERE Service = @site AND Time >= DATE_SUB(CURRENT_DATE(), INTERVAL 24 MONTH) "+
+			"GROUP BY 1, 2, 3 "+
+			"ORDER BY Day DESC;",
 		t.FullyQualifiedName())
 	q := client.Query(query)
 	q.Parameters = []bigquery.QueryParameter{
@@ -139,15 +153,15 @@ func GetAnalytics(ctx context.Context, site, project, dataset, table string) ([]
 		return nil, err
 	}
 
-	var ret []*WebVital
+	var ret []*WebVitalSummary
 	for {
-		var wv WebVital
+		var wv WebVitalSummary
 		err := it.Next(&wv)
 		if err == iterator.Done {
 			break
 		}
 		if err != nil {
-			return nil, fmt.Errorf("couldn't get WebVital: %w", err)
+			return nil, fmt.Errorf("couldn't get WebVitalSummary: %w", err)
 		}
 
 		ret = append(ret, &wv)
