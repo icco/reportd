@@ -27,7 +27,6 @@ var (
 	rTable  = flag.String("reports_table", os.Getenv("REPORTS_TABLE"), "The bigquery table to upload reports to.")
 
 	//go:embed index.html
-	indexHTML []byte
 )
 
 func main() {
