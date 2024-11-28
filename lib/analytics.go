@@ -50,7 +50,7 @@ type WebVitalSummary struct {
 
 	Service string `json:"service"`
 
-	Date time.Time `json:"date"`
+	Day bigquery.NullDate `json:"date"`
 }
 
 func (wv *WebVital) Validate() error {
@@ -143,7 +143,7 @@ func GetAnalytics(ctx context.Context, site, project, dataset, table string) ([]
 	}
 
 	query := fmt.Sprintf(
-		"SELECT DATE(Time) AS Day, Service, Name, AVG(Value) AS AverageValue "+
+		"SELECT DATE(Time) AS Day, Service, Name, AVG(Value) AS Value "+
 			"FROM `%s` "+
 			"WHERE Service = @site AND Time >= DATE_SUB(CURRENT_DATE(), INTERVAL 24 MONTH) "+
 			"GROUP BY 1, 2, 3 "+
