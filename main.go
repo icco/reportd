@@ -3,7 +3,6 @@ package main
 import (
 	"bytes"
 	"context"
-	_ "embed"
 	"fmt"
 	"net/http"
 	"os"
@@ -14,6 +13,7 @@ import (
 	"github.com/go-chi/cors"
 	"github.com/icco/gutil/logging"
 	"github.com/icco/reportd/lib"
+	"github.com/icco/reportd/static"
 	"github.com/namsral/flag"
 	"go.uber.org/zap"
 )
@@ -25,8 +25,6 @@ var (
 	dataset = flag.String("dataset", os.Getenv("DATASET"), "The bigquery dataset to upload to.")
 	aTable  = flag.String("analytics_table", os.Getenv("ANALYTICS_TABLE"), "The bigquery table to upload analytics to.")
 	rTable  = flag.String("reports_table", os.Getenv("REPORTS_TABLE"), "The bigquery table to upload reports to.")
-
-	//go:embed index.html
 )
 
 func main() {
@@ -64,8 +62,25 @@ func main() {
 	r.Use(middleware.Timeout(30 * time.Second))
 
 	r.Get("/", func(w http.ResponseWriter, r *http.Request) {
+		index, err := static.Get("index.html")
+		if err != nil {
+			http.Error(w, "could not load index", 500)
+			return
+		}
+
 		w.Header().Set("Content-Type", "text/html")
-		w.Write(indexHTML)
+		w.Write(index)
+	})
+
+	r.Get("/sparklines.js", func(w http.ResponseWriter, r *http.Request) {
+		js, err := static.Get("sparklines.js")
+		if err != nil {
+			http.Error(w, "could not load sparklines.js", 500)
+			return
+		}
+
+		w.Header().Set("Content-Type", "application/javascript")
+		w.Write(js)
 	})
 
 	r.Get("/healthz", func(w http.ResponseWriter, r *http.Request) {
