@@ -4,7 +4,7 @@ import (
 	"embed"
 )
 
-//go:embed *.js *.html
+//go:embed *
 var files embed.FS
 
 // Get returns the file contents of a file in the static directory.
