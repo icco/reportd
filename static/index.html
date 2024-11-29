@@ -66,13 +66,27 @@
       </div>
     </section>
 -->
+    <div id="analytics" class=""></div>
   </main>
   <script>
-    setInterval(() => {
-      const chart = document.querySelector('#some-chart-2');
-      chart.dataset.points = generateRandomData(40); // refer to function bellow.
-      chart.dispatchEvent(new Event('update'));
-    }, 1000);
+    fetch('/analytics')
+      .then(response => response.json())
+      .then(data => {
+        data.forEach(element => {
+          document.getElementById('analytics').innerHTML += `
+    <section class="">
+      <div class="border-b border-gray-700 pb-2 mb-10">
+        <h2 class="text-xl font-medium">${element}</h2>
+      </div>
+      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-12 mb-16">
+        <div class="flex flex-col gap-6">
+          <div id="${element}-chart" data-sparkline="true" data-points="82,35,74,65,75,87,52,93,71,95,15,81,52,45,30,39,63,45,89,30" data-width="300" data-height="30" data-gap="5"></div>
+        </div>
+      </div>
+    </section>
+          `;
+        });
+      });
   </script>
   <!-- sparklines.js from https://github.com/mitjafelicijan/sparklines -->
   <script src="https://cdn.jsdelivr.net/gh/mitjafelicijan/sparklines/sparklines.min.js" defer></script>
