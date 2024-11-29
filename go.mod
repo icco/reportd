@@ -11,6 +11,7 @@ require (
 	github.com/go-chi/cors v1.2.1
 	github.com/icco/gutil v0.0.0-20231226055340-e0dfddaad70c
 	github.com/namsral/flag v1.7.4-pre
+	github.com/unrolled/render v1.7.0
 	go.uber.org/zap v1.27.0
 	google.golang.org/api v0.209.0
 )
@@ -22,6 +23,7 @@ require (
 	cloud.google.com/go/iam v1.2.2 // indirect
 	github.com/apache/arrow/go/v15 v15.0.2 // indirect
 	github.com/felixge/httpsnoop v1.0.4 // indirect
+	github.com/fsnotify/fsnotify v1.8.0 // indirect
 	github.com/go-logr/logr v1.4.2 // indirect
 	github.com/go-logr/stdr v1.2.2 // indirect
 	github.com/goccy/go-json v0.10.3 // indirect
