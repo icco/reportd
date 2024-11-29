@@ -6,7 +6,8 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta http-equiv="X-UA-Compatible" content="ie=edge">
   <title>ReportD</title>
-  <link href="https://unpkg.com/tailwindcss@^2/dist/tailwind.min.css" rel="stylesheet">
+  <script src="https://cdn.tailwindcss.com?plugins=forms,typography,aspect-ratio,line-clamp,container-queries"></script>
+
   <style>
     body {
       max-width: 1200px;
@@ -25,19 +26,14 @@
   </header>
 
   <main>
-    <div id="services" class="">
-  {{range $element:= .Services}}
-    <section class="">
-      <div class="border-b border-gray-700 pb-2 mb-10">
-        <h2 class="text-xl font-medium">{{ $element }}</h2>
-      </div>
-      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-12 mb-16">
-        <div class="flex flex-col gap-6">
-          <a href="/view/{{ $element }}" class="">View Data</a>
-        </div>
-      </div>
-    </section>
-    {{end}}
+    <div id="services" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-12 mb-16">
+      {{range $element:= .Services}}
+        <section class="">
+          <div class="flex flex-col gap-6">
+            <a href="/view/{{ $element }}" class="">{{ $element }}</a>
+          </div>
+        </section>
+      {{end}}
     </div>
   </main>
 </body>
