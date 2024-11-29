@@ -90,17 +90,6 @@ func main() {
 		w.Write(index)
 	})
 
-	r.Get("/sparklines.js", func(w http.ResponseWriter, r *http.Request) {
-		js, err := static.Get("sparklines.js")
-		if err != nil {
-			http.Error(w, "could not load sparklines.js", 500)
-			return
-		}
-
-		w.Header().Set("Content-Type", "application/javascript")
-		w.Write(js)
-	})
-
 	r.Get("/healthz", func(w http.ResponseWriter, r *http.Request) {
 		w.Write([]byte("ok."))
 	})
