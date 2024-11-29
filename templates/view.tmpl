@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+    <title>ReportD - {{ .Bucket }}</title>
+    <link href="https://unpkg.com/tailwindcss@^2/dist/tailwind.min.css" rel="stylesheet">
+    <style>
+      body { max-width: 1200px; }
+    </style>
+  </head>
+  <body class="mx-auto p-6 md:p-24 bg-black text-white">
+
+    <header class="mb-10">
+      <h1 class="text-3xl font-bold">ReportD - {{ .Bucket }}</h1>
+      <div class="hidden" id="name">{{ .Bucket }}</div>
+    </header>
+
+    <div class="border-b border-gray-700 pb-2 mb-10">
+      <h2 class="text-xl font-medium">Analytics</h2>
+      <p class="text-gray-500">Data sent from Web Vitals.</p>
+    </div>
+    <section class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-12 mb-16">
+      <div id="FID"  data-sparkline="true" data-points="1,2,3,4,5,6,7" data-width="300" data-height="50"></div>
+      <div id="FCP"  data-sparkline="true" data-points="1,2,3,4,5,6,7" data-width="300" data-height="50"></div>
+      <div id="CLS"  data-sparkline="true" data-points="1,2,3,4,5,6,7" data-width="300" data-height="50"></div>
+      <div id="LCP"  data-sparkline="true" data-points="1,2,3,4,5,6,7" data-width="300" data-height="50"></div>
+      <div id="TTFB" data-sparkline="true" data-points="1,2,3,4,5,6,7" data-width="300" data-height="50"></div>
+      <div id="INP"  data-sparkline="true" data-points="1,2,3,4,5,6,7" data-width="300" data-height="50"></div>
+    </section>
+
+    <div class="border-b border-gray-700 pb-2 mb-10">
+      <h2 class="text-xl font-medium">Reports</h2>
+      <p class="text-gray-500">Data sent from Report-To API.</p>
+    </div>
+    <section class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-12 mb-16">
+    </section>
+
+  <!-- sparklines.js from https://github.com/mitjafelicijan/sparklines -->
+  <script src="https://cdn.jsdelivr.net/gh/mitjafelicijan/sparklines/sparklines.min.js" defer></script>
+  <script>
+    const name = document.querySelector('#name').textContent;
+    fetch(`/analytics/${name}`)
+      .then(response => response.json())
+      .then(data => {
+      console.log(data);
+        let out = {};
+        data.forEach(item => {
+          if (!out[item.name]) out[item.name] = [];
+          if (item.value > 0) {
+            out[item.name].push(item.value);
+          }
+        });
+        console.log(out);
+        Object.keys(out).forEach(key => {
+          const chart = document.querySelector(`#${key}`);
+          if (!chart) return;
+
+          while (out[key].length < 30) out[key].push(1);
+
+          chart.dataset.points = out[key].join(',');
+          chart.dispatchEvent(new Event('update'));
+        });
+      });
+  </script>
+</body>
+
+</html>

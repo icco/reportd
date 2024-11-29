@@ -16,6 +16,7 @@ import (
 	"github.com/icco/reportd/lib"
 	"github.com/icco/reportd/static"
 	"github.com/namsral/flag"
+	"github.com/unrolled/render"
 	"go.uber.org/zap"
 )
 
@@ -90,15 +91,19 @@ func main() {
 		w.Write(index)
 	})
 
-	r.Get("/sparklines.js", func(w http.ResponseWriter, r *http.Request) {
-		js, err := static.Get("sparklines.js")
-		if err != nil {
-			http.Error(w, "could not load sparklines.js", 500)
+	r.Get("/view/{bucket}", func(w http.ResponseWriter, r *http.Request) {
+		bucket := chi.URLParam(r, "bucket")
+		re := render.New()
+
+		if err := re.HTML(w, http.StatusOK, "view", struct {
+			Bucket string
+		}{
+			Bucket: bucket,
+		}); err != nil {
+			log.Errorw("error rendering view", zap.Error(err))
+			http.Error(w, "could not render view", 500)
 			return
 		}
-
-		w.Header().Set("Content-Type", "application/javascript")
-		w.Write(js)
 	})
 
 	r.Get("/healthz", func(w http.ResponseWriter, r *http.Request) {
@@ -147,12 +152,12 @@ func main() {
 		}
 	})
 
-	r.Get("/analytics", func(w http.ResponseWriter, r *http.Request) {
+	r.Get("/services", func(w http.ResponseWriter, r *http.Request) {
 		ctx := r.Context()
 
-		data, err := lib.GetAnalyticsServices(ctx, *project, *dataset, *aTable)
+		data, err := lib.GetServices(ctx, *project, *dataset, *aTable, *rTable)
 		if err != nil {
-			log.Errorw("error seen during analytics services get", zap.Error(err))
+			log.Errorw("error seen during services get", zap.Error(err))
 			http.Error(w, "processing error", 500)
 			return
 		}

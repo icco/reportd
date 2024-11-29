@@ -16,6 +16,15 @@ This service will log the reports recieved from a variety of `report-uri` and `r
 
 To start sending reports, target https://reportd.natwelch.com/reports/$yourservicename
 
+### TODO
+
+We need to add support for the following:
+
+ - COEP: https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Cross-Origin-Embedder-Policy
+ - COOP: https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Cross-Origin-Opener-Policy
+
+Also need to add support for Reporting API v1. see migration policy https://developer.chrome.com/blog/reporting-api-migration
+
 ## Analytics
 
 This service will log the reports recieved for web-vitals. We have only tested with next.js. See https://nextjs.org/docs/advanced-features/measuring-performance and https://web.dev/vitals/ for more information.
