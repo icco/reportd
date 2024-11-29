@@ -16,6 +16,7 @@ import (
 	"github.com/icco/reportd/lib"
 	"github.com/icco/reportd/static"
 	"github.com/namsral/flag"
+	"github.com/unrolled/render"
 	"go.uber.org/zap"
 )
 
@@ -88,6 +89,17 @@ func main() {
 
 		w.Header().Set("Content-Type", "text/html")
 		w.Write(index)
+	})
+
+	r.Get("/view/{bucket}", func(w http.ResponseWriter, r *http.Request) {
+		bucket := chi.URLParam(r, "bucket")
+		re := render.New()
+
+		re.HTML(w, http.StatusOK, "view", struct {
+			Bucket string
+		}{
+			Bucket: bucket,
+		})
 	})
 
 	r.Get("/healthz", func(w http.ResponseWriter, r *http.Request) {
