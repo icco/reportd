@@ -25,14 +25,14 @@
   </header>
 
   <main>
-    <div id="analytics" class=""></div>
+    <div id="services" class=""></div>
   </main>
   <script>
-    fetch('/analytics')
+    fetch('/services')
       .then(response => response.json())
       .then(data => {
         data.forEach(element => {
-          document.getElementById('analytics').innerHTML += `
+          document.getElementById('services').innerHTML += `
     <section class="">
       <div class="border-b border-gray-700 pb-2 mb-10">
         <h2 class="text-xl font-medium">${element}</h2>
