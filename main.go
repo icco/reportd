@@ -14,7 +14,6 @@ import (
 	"github.com/go-chi/cors"
 	"github.com/icco/gutil/logging"
 	"github.com/icco/reportd/lib"
-	"github.com/icco/reportd/static"
 	"github.com/namsral/flag"
 	"github.com/unrolled/render"
 	"go.uber.org/zap"
@@ -81,14 +80,22 @@ func main() {
 	r.Use(middleware.Timeout(30 * time.Second))
 
 	r.Get("/", func(w http.ResponseWriter, r *http.Request) {
-		index, err := static.Get("index.html")
+		re := render.New()
+		services, err := lib.GetServices(r.Context(), *project, *dataset, *aTable, *rTable)
 		if err != nil {
-			http.Error(w, "could not load index", 500)
+			log.Errorw("error getting services", zap.Error(err))
+			http.Error(w, "could not get services", 500)
 			return
 		}
-
-		w.Header().Set("Content-Type", "text/html")
-		w.Write(index)
+		if err := re.HTML(w, http.StatusOK, "index", struct {
+			Services []string
+		}{
+			Services: services,
+		}); err != nil {
+			log.Errorw("error rendering index", zap.Error(err))
+			http.Error(w, "could not render index", 500)
+			return
+		}
 	})
 
 	r.Get("/view/{bucket}", func(w http.ResponseWriter, r *http.Request) {

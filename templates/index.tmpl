@@ -25,28 +25,21 @@
   </header>
 
   <main>
-    <div id="services" class=""></div>
-  </main>
-  <script>
-    fetch('/services')
-      .then(response => response.json())
-      .then(data => {
-        data.forEach(element => {
-          document.getElementById('services').innerHTML += `
+    <div id="services" class="">
+  {{range $element:= .Services}}
     <section class="">
       <div class="border-b border-gray-700 pb-2 mb-10">
-        <h2 class="text-xl font-medium">${element}</h2>
+        <h2 class="text-xl font-medium">{{ $element }}</h2>
       </div>
       <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-12 mb-16">
         <div class="flex flex-col gap-6">
-          <a href="/view/${element}" class="">View Data</a>
+          <a href="/view/{{ $element }}" class="">View Data</a>
         </div>
       </div>
     </section>
-          `;
-        });
-      });
-  </script>
+    {{end}}
+    </div>
+  </main>
 </body>
 
 </html>
