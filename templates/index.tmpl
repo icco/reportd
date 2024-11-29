@@ -1,41 +1,42 @@
 <!DOCTYPE html>
 <html lang="en">
 
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <meta http-equiv="X-UA-Compatible" content="ie=edge">
-  <title>ReportD</title>
-  <script src="https://cdn.tailwindcss.com?plugins=forms,typography,aspect-ratio,line-clamp,container-queries"></script>
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+    <title>ReportD</title>
+    <script
+      src="https://cdn.tailwindcss.com?plugins=forms,typography,aspect-ratio,line-clamp,container-queries"></script>
 
-  <style>
-    body {
-      max-width: 1200px;
-    }
-  </style>
-</head>
+    <style>
+      body {
+        max-width: 1200px;
+      }
+    </style>
+  </head>
 
-<body class="mx-auto p-6 md:p-24 bg-black text-white">
+  <body class="mx-auto p-6 md:p-24 bg-black text-white">
 
-  <header class="mb-10">
-    <h1 class="text-3xl font-bold">ReportD</h1>
-    <p class="text-gray-500">
-      All the code for this project is available on <a class="underline"
-        href="https://github.com/icco/reportd">github.com/icco/reportd</a>.
-    </p>
-  </header>
+    <header class="mb-10">
+      <h1 class="text-3xl font-bold">ReportD</h1>
+      <p class="text-gray-500">
+        All the code for this project is available on <a class="underline"
+          href="https://github.com/icco/reportd">github.com/icco/reportd</a>.
+      </p>
+    </header>
 
-  <main>
-    <div id="services" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-12 mb-16">
-      {{range $element:= .Services}}
+    <main>
+      <div id="services" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-12 mb-16">
+        {{range $element:= .Services}}
         <section class="">
           <div class="flex flex-col gap-6">
             <a href="/view/{{ $element }}" class="">{{ $element }}</a>
           </div>
         </section>
-      {{end}}
-    </div>
-  </main>
-</body>
+        {{end}}
+      </div>
+    </main>
+  </body>
 
 </html>
