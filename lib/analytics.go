@@ -145,7 +145,7 @@ func GetAnalytics(ctx context.Context, site, project, dataset, table string) ([]
 	query := fmt.Sprintf(
 		"SELECT DATE(Time) AS Day, Service, Name, AVG(Value) AS Value "+
 			"FROM `%s` "+
-			"WHERE Service = @site AND Time >= DATE_SUB(CURRENT_DATE(), INTERVAL 24 MONTH) "+
+			"WHERE Service = @site AND Time >= DATE_SUB(CURRENT_DATE(), INTERVAL 3 MONTH) "+
 			"GROUP BY 1, 2, 3 "+
 			"ORDER BY Day DESC;",
 		tableID,

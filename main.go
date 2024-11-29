@@ -95,11 +95,15 @@ func main() {
 		bucket := chi.URLParam(r, "bucket")
 		re := render.New()
 
-		re.HTML(w, http.StatusOK, "view", struct {
+		if err := re.HTML(w, http.StatusOK, "view", struct {
 			Bucket string
 		}{
 			Bucket: bucket,
-		})
+		}); err != nil {
+			log.Errorw("error rendering view", zap.Error(err))
+			http.Error(w, "could not render view", 500)
+			return
+		}
 	})
 
 	r.Get("/healthz", func(w http.ResponseWriter, r *http.Request) {
