@@ -63,7 +63,7 @@
       <h2 class="text-xl font-medium">Reports</h2>
       <p class="text-gray-500">Data sent from Report-To API.</p>
     </div>
-    <section class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-12 mb-16">
+    <section id="reports" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-12 mb-16">
     </section>
 
     <!-- sparklines.js from https://github.com/mitjafelicijan/sparklines -->
@@ -93,6 +93,17 @@
             chart.dataset.points = out[key].join(',');
             chart.dispatchEvent(new Event('update'));
           });
+        });
+    </script>
+    <script>
+      fetch(`/reports/${name}`)
+        .then(response => response.json())
+        .then(data => {
+          if (!data) {
+            document.querySelector('#reports').innerHTML = '<p>No data available.</p>';
+            return;
+          }
+          console.log(data);
         });
     </script>
   </body>

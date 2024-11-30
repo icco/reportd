@@ -127,7 +127,7 @@ func main() {
 		w.Write([]byte(""))
 	})
 
-	r.Get("/report/{bucket}", func(w http.ResponseWriter, r *http.Request) {
+	r.Get("/reports/{bucket}", func(w http.ResponseWriter, r *http.Request) {
 		ctx := r.Context()
 		bucket := chi.URLParam(r, "bucket")
 
