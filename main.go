@@ -131,7 +131,7 @@ func main() {
 		ctx := r.Context()
 		bucket := chi.URLParam(r, "bucket")
 
-		data, err := lib.GetReports(ctx, bucket, *project, *dataset, *rTable)
+		data, err := lib.GetReportCounts(ctx, bucket, *project, *dataset, *rTable)
 		if err != nil {
 			log.Errorw("error seen during reports get", zap.Error(err), "bucket", bucket)
 			http.Error(w, "processing error", 500)

@@ -189,7 +189,7 @@ func WriteReportToBigQuery(ctx context.Context, project, dataset, table string, 
 	return nil
 }
 
-func GetReports(ctx context.Context, site, project, dataset, table string) ([]*Report, error) {
+func GetReportCounts(ctx context.Context, site, project, dataset, table string) ([]*WebVitalSummary, error) {
 	client, err := bigquery.NewClient(ctx, project)
 	if err != nil {
 		return nil, fmt.Errorf("connecting to bq: %w", err)
@@ -201,7 +201,7 @@ func GetReports(ctx context.Context, site, project, dataset, table string) ([]*R
 		return nil, fmt.Errorf("getting table id: %w", err)
 	}
 	query := fmt.Sprintf(
-		"SELECT DATE(Time) AS Day, Service, COUNT(*) AS Value "+
+		"SELECT DATE(Time) AS Day, Service, CAST(COUNT(*) as FLOAT64) AS Value "+
 			"FROM `%s` "+
 			"WHERE Service = @site AND Time >= DATE_SUB(CURRENT_DATE(), INTERVAL 3 MONTH) "+
 			"GROUP BY 1, 2 "+
@@ -218,16 +218,18 @@ func GetReports(ctx context.Context, site, project, dataset, table string) ([]*R
 		return nil, err
 	}
 
-	var ret []*Report
+	var ret []*WebVitalSummary
 	for {
-		var r Report
+		var r WebVitalSummary
 		err := it.Next(&r)
 		if err == iterator.Done {
 			break
 		}
 		if err != nil {
-			return nil, fmt.Errorf("couldn't get Report: %w", err)
+			return nil, fmt.Errorf("couldn't get WebVitalSummary: %w", err)
 		}
+
+		r.Name = "count"
 
 		ret = append(ret, &r)
 	}
