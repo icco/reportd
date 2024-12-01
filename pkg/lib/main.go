@@ -3,6 +3,7 @@ package lib
 import (
 	"context"
 	"fmt"
+	"regexp"
 
 	"cloud.google.com/go/bigquery"
 	"github.com/icco/gutil/logging"
@@ -13,6 +14,30 @@ var (
 	service = "reportd"
 	log     = logging.Must(logging.NewLogger(service))
 )
+
+// ValidateService returns an error if the service name is invalid.
+// The service name must not be empty, must be less than 32 characters,
+// and must match the regex "^[a-zA-Z0-9_-]+$".
+func ValidateService(service string) error {
+	if service == "" {
+		return fmt.Errorf("service must not be empty")
+	}
+
+	if len(service) > 32 {
+		return fmt.Errorf("service must be less than 32 characters")
+	}
+
+	validRegex, err := regexp.Compile("^[a-zA-Z0-9_-]+$")
+	if err != nil {
+		return fmt.Errorf("compiling regex: %w", err)
+	}
+
+	if !validRegex.MatchString(service) {
+		return fmt.Errorf("service must match regex")
+	}
+
+	return nil
+}
 
 // GetServices returns the list of services present in the table.
 func GetServices(ctx context.Context, project, dataset, atable, rtable string) ([]string, error) {
