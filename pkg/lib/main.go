@@ -14,6 +14,14 @@ var (
 	log     = logging.Must(logging.NewLogger(service))
 )
 
+func ValidateService(service string) error {
+	if service == "" {
+		return fmt.Errorf("service must not be empty")
+	}
+
+	return nil
+}
+
 // GetServices returns the list of services present in the table.
 func GetServices(ctx context.Context, project, dataset, atable, rtable string) ([]string, error) {
 	client, err := bigquery.NewClient(ctx, project)
