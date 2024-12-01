@@ -6,8 +6,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta http-equiv="X-UA-Compatible" content="ie=edge">
     <title>ReportD - {{ .Bucket }}</title>
-    <script
-      src="https://cdn.tailwindcss.com?plugins=forms,typography,aspect-ratio,line-clamp,container-queries"></script>
+    <script src="https://cdn.tailwindcss.com?plugins=forms,typography,aspect-ratio,container-queries"></script>
 
     <style>
       body {
@@ -63,7 +62,11 @@
       <h2 class="text-xl font-medium">Reports</h2>
       <p class="text-gray-500">Data sent from Report-To API.</p>
     </div>
-    <section class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-12 mb-16">
+    <section id="reports" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-12 mb-16">
+      <div>
+        <h3 class="text-lg font-medium">Total Count</h3>
+        <div id="count" data-sparkline="true" data-points="1,2,3,4,5,6,7" data-width="300" data-height="50"></div>
+      </div>
     </section>
 
     <!-- sparklines.js from https://github.com/mitjafelicijan/sparklines -->
@@ -75,6 +78,32 @@
         .then(data => {
           if (!data) {
             document.querySelector('#analytics').innerHTML = '<p>No data available.</p>';
+            return;
+          }
+          let out = {};
+          data.forEach(item => {
+            if (!out[item.name]) out[item.name] = [];
+            if (item.value > 0) {
+              out[item.name].push(item.value);
+            }
+          });
+          Object.keys(out).forEach(key => {
+            const chart = document.querySelector(`#${key}`);
+            if (!chart) return;
+
+            while (out[key].length < 30) out[key].push(1);
+
+            chart.dataset.points = out[key].join(',');
+            chart.dispatchEvent(new Event('update'));
+          });
+        });
+    </script>
+    <script>
+      fetch(`/reports/${name}`)
+        .then(response => response.json())
+        .then(data => {
+          if (!data) {
+            document.querySelector('#reports').innerHTML = '<p>No data available.</p>';
             return;
           }
           let out = {};

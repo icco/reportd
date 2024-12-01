@@ -127,11 +127,26 @@ func main() {
 		w.Write([]byte(""))
 	})
 
-	r.Get("/report/{bucket}", func(w http.ResponseWriter, r *http.Request) {
+	r.Get("/reports/{bucket}", func(w http.ResponseWriter, r *http.Request) {
+		ctx := r.Context()
 		bucket := chi.URLParam(r, "bucket")
-		newURL := fmt.Sprintf("/view/%s", bucket)
 
-		http.Redirect(w, r, newURL, http.StatusPermanentRedirect)
+		data, err := lib.GetReportCounts(ctx, bucket, *project, *dataset, *rTable)
+		if err != nil {
+			log.Errorw("error seen during reports get", zap.Error(err), "bucket", bucket)
+			http.Error(w, "processing error", 500)
+			return
+		}
+
+		resp, err := json.Marshal(data)
+		if err != nil {
+			log.Errorw("error seen during reports marshal", zap.Error(err), "bucket", bucket)
+			http.Error(w, "processing error", 500)
+			return
+		}
+
+		w.Header().Set("Content-Type", "application/json")
+		w.Write(resp)
 	})
 
 	r.Post("/report/{bucket}", func(w http.ResponseWriter, r *http.Request) {
@@ -171,7 +186,7 @@ func main() {
 
 		resp, err := json.Marshal(data)
 		if err != nil {
-			log.Errorw("error seen during analytics marshal", zap.Error(err))
+			log.Errorw("error seen during services marshal", zap.Error(err))
 			http.Error(w, "processing error", 500)
 			return
 		}
