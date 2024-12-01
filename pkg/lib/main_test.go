@@ -20,12 +20,17 @@ func TestValidateService(t *testing.T) {
 		},
 		{
 			name:    "invalid service",
-			arg:     "reportd-",
+			arg:     "reportd ",
 			wantErr: true,
 		},
 		{
 			name:    "newline",
 			arg:     "reportd\n",
+			wantErr: true,
+		},
+		{
+			name:    "empty",
+			arg:     "",
 			wantErr: true,
 		},
 	}
