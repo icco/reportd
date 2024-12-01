@@ -1,6 +1,11 @@
 package reporting
 
-import "github.com/icco/gutil/logging"
+import (
+	"encoding/json"
+	"fmt"
+
+	"github.com/icco/gutil/logging"
+)
 
 var (
 	service = "reportd"
@@ -118,3 +123,44 @@ type SecurityReport_DeprecationReport struct {
 func (*SecurityReport_CspReport) isSecurityReport_ReportExtension() {}
 
 func (*SecurityReport_DeprecationReport) isSecurityReport_ReportExtension() {}
+
+func ParseReport(data []byte) (*SecurityReport, error) {
+	var r SecurityReport
+	if err := json.Unmarshal(data, &r); err != nil {
+		return nil, err
+	}
+
+	return &r, nil
+}
+
+func (r *SecurityReport) Validate() error {
+	if r.ReportChecksum == "" {
+		return fmt.Errorf("report_checksum is required")
+	}
+
+	if r.ReportTime == 0 {
+		return fmt.Errorf("report_time is required")
+	}
+
+	if r.ReportCount == 0 {
+		return fmt.Errorf("report_count is required")
+	}
+
+	if r.UserAgent == "" {
+		return fmt.Errorf("user_agent is required")
+	}
+
+	if r.BrowserName == "" {
+		return fmt.Errorf("browser_name is required")
+	}
+
+	if r.BrowserMajorVersion == 0 {
+		return fmt.Errorf("browser_major_version is required")
+	}
+
+	if r.Disposition == 0 {
+		return fmt.Errorf("disposition is required")
+	}
+
+	return nil
+}
