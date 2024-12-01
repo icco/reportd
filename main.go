@@ -13,6 +13,9 @@ import (
 	"github.com/go-chi/chi/v5/middleware"
 	"github.com/go-chi/cors"
 	"github.com/icco/gutil/logging"
+	"github.com/icco/reportd/pkg/analytics"
+	"github.com/icco/reportd/pkg/lib"
+	"github.com/icco/reportd/pkg/reportto"
 	"github.com/namsral/flag"
 	"github.com/unrolled/render"
 	"go.uber.org/zap"
@@ -54,11 +57,11 @@ func main() {
 	}
 
 	ctx := context.Background()
-	if err := lib.UpdateReportsBQSchema(ctx, *project, *dataset, *rTable); err != nil {
+	if err := reportto.UpdateReportsBQSchema(ctx, *project, *dataset, *rTable); err != nil {
 		log.Errorw("report table update", zap.Error(err))
 	}
 
-	if err := lib.UpdateAnalyticsBQSchema(ctx, *project, *dataset, *aTable); err != nil {
+	if err := analytics.UpdateAnalyticsBQSchema(ctx, *project, *dataset, *aTable); err != nil {
 		log.Errorw("analytics table update", zap.Error(err))
 	}
 
@@ -130,7 +133,7 @@ func main() {
 		ctx := r.Context()
 		bucket := chi.URLParam(r, "bucket")
 
-		data, err := lib.GetReportCounts(ctx, bucket, *project, *dataset, *rTable)
+		data, err := reportto.GetReportCounts(ctx, bucket, *project, *dataset, *rTable)
 		if err != nil {
 			log.Errorw("error seen during reports get", zap.Error(err), "bucket", bucket)
 			http.Error(w, "processing error", 500)
@@ -156,7 +159,7 @@ func main() {
 		bodyStr := buf.String()
 		ct := r.Header.Get("content-type")
 
-		data, err := lib.ParseReport(ct, bodyStr, bucket)
+		data, err := reportto.ParseReport(ct, bodyStr, bucket)
 		if err != nil {
 			log.Errorw("error seen during report parse", "content-type", ct, "user-agent", r.UserAgent(), "bodyJson", bodyStr, zap.Error(err))
 			http.Error(w, "processing error", 500)
@@ -166,7 +169,7 @@ func main() {
 		// Log the report.
 		log.Infow("report recieved", "content-type", ct, "bucket", bucket, "user-agent", r.UserAgent(), "report", data)
 
-		if err := lib.WriteReportToBigQuery(r.Context(), *project, *dataset, *rTable, []*lib.Report{data}); err != nil {
+		if err := reportto.WriteReportToBigQuery(r.Context(), *project, *dataset, *rTable, []*reportto.Report{data}); err != nil {
 			log.Errorw("error during report upload", "dataset", *dataset, "project", *project, "table", *rTable, "bodyJson", bodyStr, zap.Error(err))
 			http.Error(w, "uploading error", 500)
 			return
@@ -198,7 +201,7 @@ func main() {
 		ctx := r.Context()
 		bucket := chi.URLParam(r, "bucket")
 
-		data, err := lib.GetAnalytics(ctx, bucket, *project, *dataset, *aTable)
+		data, err := analytics.GetAnalytics(ctx, bucket, *project, *dataset, *aTable)
 		if err != nil {
 			log.Errorw("error seen during analytics get", zap.Error(err), "bucket", bucket)
 			http.Error(w, "processing error", 500)
@@ -222,7 +225,7 @@ func main() {
 		buf := new(bytes.Buffer)
 		buf.ReadFrom(r.Body)
 		bodyStr := buf.String()
-		data, err := lib.ParseAnalytics(bodyStr, bucket)
+		data, err := analytics.ParseAnalytics(bodyStr, bucket)
 		if err != nil {
 			log.Errorw("error seen during analytics parse", zap.Error(err), "content-type", ct, "user-agent", r.UserAgent(), "bodyJson", bodyStr)
 			http.Error(w, "processing error", 500)
@@ -231,7 +234,7 @@ func main() {
 
 		// Log the report.
 		log.Infow("analytics recieved", "content-type", ct, "bucket", bucket, "user-agent", r.UserAgent(), "analytics", data)
-		if err := lib.WriteAnalyticsToBigQuery(r.Context(), *project, *dataset, *aTable, []*lib.WebVital{data}); err != nil {
+		if err := analytics.WriteAnalyticsToBigQuery(r.Context(), *project, *dataset, *aTable, []*lib.WebVital{data}); err != nil {
 			log.Errorw("error during analytics upload", "dataset", *dataset, "project", *project, "table", *aTable, "bodyJson", bodyStr, zap.Error(err))
 			http.Error(w, "uploading error", 500)
 			return
