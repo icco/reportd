@@ -63,6 +63,10 @@
       <p class="text-gray-500">Data sent from Report-To API.</p>
     </div>
     <section id="reports" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-12 mb-16">
+      <div>
+        <h3 class="text-lg font-medium">Total Count</h3>
+        <div id="count" data-sparkline="true" data-points="1,2,3,4,5,6,7" data-width="300" data-height="50"></div>
+      </div>
     </section>
 
     <!-- sparklines.js from https://github.com/mitjafelicijan/sparklines -->
@@ -102,7 +106,22 @@
             document.querySelector('#reports').innerHTML = '<p>No data available.</p>';
             return;
           }
-          console.log(data);
+          let out = {};
+          data.forEach(item => {
+            if (!out[item.name]) out[item.name] = [];
+            if (item.value > 0) {
+              out[item.name].push(item.value);
+            }
+          });
+          Object.keys(out).forEach(key => {
+            const chart = document.querySelector(`#${key}`);
+            if (!chart) return;
+
+            while (out[key].length < 30) out[key].push(1);
+
+            chart.dataset.points = out[key].join(',');
+            chart.dispatchEvent(new Event('update'));
+          });
         });
     </script>
   </body>
