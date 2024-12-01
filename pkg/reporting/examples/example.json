@@ -1,14 +1,16 @@
-{
-  "type": "deprecation",
-  "age": 10,
-  "url": "https://example.com/",
-  "user_agent": "BarBrowser/98.0 (Mozilla/5.0 compatiblish)",
-  "body": {
-    "id": "websql",
-    "anticipatedRemoval": "1/1/2020",
-    "message": "WebSQL is deprecated and will be removed in Chrome 97 around January 2020",
-    "sourceFile": "https://example.com/index.js",
-    "lineNumber": 1234,
-    "columnNumber": 42
+[
+  {
+    "type": "deprecation",
+    "age": 10,
+    "url": "https://example.com/",
+    "user_agent": "BarBrowser/98.0 (Mozilla/5.0 compatiblish)",
+    "body": {
+      "id": "websql",
+      "anticipatedRemoval": "1/1/2020",
+      "message": "WebSQL is deprecated and will be removed in Chrome 97 around January 2020",
+      "sourceFile": "https://example.com/index.js",
+      "lineNumber": 1234,
+      "columnNumber": 42
+    }
   }
-}
+]
