@@ -1,8 +1,11 @@
 package reporting
 
 import (
+	"crypto/sha256"
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
+	"time"
 
 	"github.com/icco/gutil/logging"
 )
@@ -124,13 +127,22 @@ func (*SecurityReport_CspReport) isSecurityReport_ReportExtension() {}
 
 func (*SecurityReport_DeprecationReport) isSecurityReport_ReportExtension() {}
 
-func ParseReport(data []byte) (*SecurityReport, error) {
-	var r SecurityReport
-	if err := json.Unmarshal(data, &r); err != nil {
+func ParseReport(data []byte) ([]*SecurityReport, error) {
+	var buf []map[string]interface{}
+	if err := json.Unmarshal(data, &buf); err != nil {
 		return nil, err
 	}
 
-	return &r, nil
+	var reports []*SecurityReport
+	for _, b := range buf {
+		r, err := mapToSecurityReport(b)
+		if err != nil {
+			return nil, err
+		}
+		reports = append(reports, r)
+	}
+
+	return reports, nil
 }
 
 func (r *SecurityReport) Validate() error {
@@ -163,4 +175,139 @@ func (r *SecurityReport) Validate() error {
 	}
 
 	return nil
+}
+
+func mapToSHA256HexString(m map[string]interface{}) (string, error) {
+	deserialized, err := json.Marshal(m)
+	if err != nil {
+		return "", err
+	}
+	checksum := sha256.Sum256(deserialized)
+	return hex.EncodeToString(checksum[:]), nil
+}
+
+func mapToSecurityReport(m map[string]interface{}) (*SecurityReport, error) {
+	sr := &SecurityReport{}
+	now := time.Now().UnixMilli()
+	checksum, err := mapToSHA256HexString(m)
+	if err != nil {
+		return nil, err
+	}
+	sr.ReportChecksum = checksum
+	sr.ReportCount = int64(1)
+	sr.Disposition = SecurityReport_DISPOSITION_UNKNOWN
+
+	// the report has "age" field that is the offset from the report's timestamp.
+	// https://w3c.github.io/reporting/#serialize-reports
+	//
+	// NOTE: currently the report doesn't have "timestamp" field, so use server side
+	// current time.
+	if age, ok := m["age"].(float64); ok {
+		sr.ReportTime = now - int64(age)
+	}
+	if ua, ok := m["user_agent"].(string); ok {
+		sr.UserAgent = ua
+	}
+	var typ string
+	var body map[string]interface{}
+	var ok bool
+	if typ, ok = m["type"].(string); !ok {
+		return nil, fmt.Errorf("unexpected report type: %v", m)
+	}
+	if body, ok = m["body"].(map[string]interface{}); !ok {
+		return nil, fmt.Errorf("unexpected report type: %v", m)
+	}
+	switch typ {
+	case "csp-violation":
+		csp := &CspReport{}
+		if duri, ok := body["documentURL"].(string); ok {
+			csp.DocumentUri = duri
+		} else {
+			log.Warnf("unexpected documentURL: %#v", body["documentURL"])
+		}
+		if ref, ok := body["referrer"].(string); ok {
+			csp.Referrer = ref
+		} else {
+			log.Warnf("unexpected referrer: %#v", body["referrer"])
+		}
+		if buri, ok := body["blockedURL"].(string); ok {
+			csp.BlockedUri = buri
+		} else {
+			log.Warnf("unexpected blockedURL: %#v", body["blockedURL"])
+		}
+		if vd, ok := body["violatedDirective"].(string); ok {
+			csp.ViolatedDirective = vd
+		} else {
+			log.Warnf("unexpected violatedDirective: %#v", body["violatedDirective"])
+		}
+		if ed, ok := body["effectiveDirective"].(string); ok {
+			csp.EffectiveDirective = ed
+		} else {
+			log.Warnf("unexpected effectiveDirective: %#v", body["effectiveDirective"])
+		}
+		if sf, ok := body["sourceFile"].(string); ok {
+			csp.SourceFile = sf
+		} else {
+			log.Warnf("unexpected sourceFile: %#v", body["sourceFile"])
+		}
+		if ln, ok := body["lineNumber"].(float64); ok {
+			csp.LineNumber = int32(ln)
+		} else {
+			log.Warnf("unexpected lineNumber: %#v", body["lineNumber"])
+		}
+		if cn, ok := body["columnNumber"].(float64); ok {
+			csp.ColumnNumber = int32(cn)
+		} else {
+			log.Warnf("unexpected columnNumber: %#v", body["columnNumber"])
+		}
+		if ss, ok := body["scriptSample"].(string); ok {
+			csp.ScriptSample = ss
+		} else {
+			log.Warnf("unexpected scriptSample: %#v", body["scriptSample"])
+		}
+		sr.ReportExtension = &SecurityReport_CspReport{CspReport: csp}
+
+		switch body["disposition"].(string) {
+		case "enforce":
+			sr.Disposition = SecurityReport_ENFORCED
+		case "report":
+			sr.Disposition = SecurityReport_REPORTING
+		default:
+		}
+	case "deprecation":
+		dep := &DeprecationReport{}
+		if id, ok := body["id"].(string); ok {
+			dep.Id = id
+		} else {
+			log.Warnf("unexpected id: %#v", body["id"])
+		}
+		if ar, ok := body["anticipatedRemoval"].(string); ok {
+			dep.AnticipatedRemoval = ar
+		} else {
+			log.Warnf("unexpected anticipatedRemoval: %#v", body["anticipatedRemoval"])
+		}
+		if ln, ok := body["lineNumber"].(float64); ok {
+			dep.LineNumber = int32(ln)
+		} else {
+			log.Warnf("unexpected lineNumber: %#v", body["lineNumber"])
+		}
+		if cn, ok := body["columnNumber"].(float64); ok {
+			dep.ColumnNumber = int32(cn)
+		} else {
+			log.Warnf("unexpected columnNumber: %#v", body["columnNumber"])
+		}
+		if m, ok := body["message"].(string); ok {
+			dep.Message = m
+		} else {
+			log.Warnf("unexpected message: %#v", body["message"])
+		}
+		if sf, ok := body["sourceFile"].(string); ok {
+			dep.SourceFile = sf
+		} else {
+			log.Warnf("unexpected sourceFile: %#v", body["sourceFile"])
+		}
+		sr.ReportExtension = &SecurityReport_DeprecationReport{DeprecationReport: dep}
+	}
+
+	return sr, nil
 }
