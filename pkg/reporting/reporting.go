@@ -129,9 +129,9 @@ func (*SecurityReport_CspReport) isSecurityReport_ReportExtension() {}
 
 func (*SecurityReport_DeprecationReport) isSecurityReport_ReportExtension() {}
 
-func ParseReport(data []byte) ([]*SecurityReport, error) {
+func ParseReport(data string) ([]*SecurityReport, error) {
 	var buf []map[string]interface{}
-	if err := json.Unmarshal(data, &buf); err != nil {
+	if err := json.Unmarshal([]byte(data), &buf); err != nil {
 		return nil, err
 	}
 

@@ -5,7 +5,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"io"
 	"net/http"
 	"os"
 	"time"
@@ -253,21 +252,19 @@ func main() {
 			return
 		}
 
-		data, err := io.ReadAll(r.Body)
-		if err != nil {
-			log.Errorw("error on reading reporting data", zap.Error(err), "bucket", bucket)
-			http.Error(w, "uploading error", 500)
-			return
-		}
+		buf := new(bytes.Buffer)
+		buf.ReadFrom(r.Body)
+		bodyStr := buf.String()
 
 		log.Infow("reporting recieved", "content-type", contentType, "bucket", bucket, "user-agent", r.UserAgent())
-		reports, err := reporting.ParseReport(data)
+		reports, err := reporting.ParseReport(bodyStr)
 		if err != nil {
-			log.Errorw("error on parsing reporting data", zap.Error(err), "bucket", bucket)
+			log.Errorw("error on parsing reporting data", zap.Error(err), "bucket", bucket, "content-type", contentType, "body", bodyStr)
 			http.Error(w, "uploading error", 500)
 			return
 		}
 
+		log.Infow("reporting parsed", "reports", reports, "bucket", bucket, "content-type", contentType, "user-agent", r.UserAgent())
 		if err := reporting.WriteReportsToBigQuery(r.Context(), *project, *dataset, *rv2Table, reports); err != nil {
 			log.Errorw("error during reporting upload", "dataset", *dataset, "project", *project, "table", *rTable, zap.Error(err))
 			http.Error(w, "uploading error", 500)
