@@ -5,6 +5,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"io"
 	"net/http"
 	"os"
 	"time"
@@ -15,6 +16,7 @@ import (
 	"github.com/icco/gutil/logging"
 	"github.com/icco/reportd/pkg/analytics"
 	"github.com/icco/reportd/pkg/lib"
+	"github.com/icco/reportd/pkg/reporting"
 	"github.com/icco/reportd/pkg/reportto"
 	"github.com/namsral/flag"
 	"github.com/unrolled/render"
@@ -32,6 +34,7 @@ func main() {
 	dataset := fs.String("dataset", "", "The bigquery dataset to upload to.")
 	aTable := fs.String("analytics_table", "", "The bigquery table to upload analytics to.")
 	rTable := fs.String("reports_table", "", "The bigquery table to upload reports to.")
+	rv2Table := fs.String("reports_v2_table", "", "The bigquery table to upload reports to.")
 	fs.Parse(os.Args[1:])
 
 	port := "8080"
@@ -250,22 +253,26 @@ func main() {
 			return
 		}
 
-		//data, err := io.ReadAll(r.Body)
-		//if err != nil {
-		//	log.Errorw("error on reading reporting data", zap.Error(err), "bucket", bucket)
-		//	http.Error(w, "uploading error", 500)
-		//	return
-		//}
+		data, err := io.ReadAll(r.Body)
+		if err != nil {
+			log.Errorw("error on reading reporting data", zap.Error(err), "bucket", bucket)
+			http.Error(w, "uploading error", 500)
+			return
+		}
 
 		log.Infow("reporting recieved", "content-type", contentType, "bucket", bucket, "user-agent", r.UserAgent())
+		reports, err := reporting.ParseReport(data)
+		if err != nil {
+			log.Errorw("error on parsing reporting data", zap.Error(err), "bucket", bucket)
+			http.Error(w, "uploading error", 500)
+			return
+		}
 
-		//var buf lib.
-		//err = json.Unmarshal(data, &buf)
-		//if err != nil {
-		//log.Errorw("error on parsing JSON", zap.Error(err))
-		//http.Error(w, "uploading error", 500)
-		//return
-		//}
+		if err := reporting.WriteReportsToBigQuery(r.Context(), *project, *dataset, *rv2Table, reports); err != nil {
+			log.Errorw("error during reporting upload", "dataset", *dataset, "project", *project, "table", *rTable, zap.Error(err))
+			http.Error(w, "uploading error", 500)
+			return
+		}
 	})
 
 	log.Fatal(http.ListenAndServe(":"+port, r))

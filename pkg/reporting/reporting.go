@@ -1,12 +1,14 @@
 package reporting
 
 import (
+	"context"
 	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"time"
 
+	"cloud.google.com/go/bigquery"
 	"github.com/icco/gutil/logging"
 )
 
@@ -310,4 +312,20 @@ func mapToSecurityReport(m map[string]interface{}) (*SecurityReport, error) {
 	}
 
 	return sr, nil
+}
+
+func WriteReportsToBigQuery(ctx context.Context, project, dataset, table string, reports []*SecurityReport) error {
+	if len(reports) == 0 {
+		return nil
+	}
+	bq, err := bigquery.NewClient(ctx, project)
+	if err != nil {
+		return fmt.Errorf("connecting to bq: %w", err)
+	}
+
+	ins := bq.Dataset(dataset).Table(table).Inserter()
+	if err := ins.Put(ctx, reports); err != nil {
+		return fmt.Errorf("uploading to bq: %w", err)
+	}
+	return nil
 }
