@@ -1,4 +1,4 @@
-package lib
+package reportto
 
 import (
 	"os"
@@ -61,13 +61,13 @@ func TestParseReport(t *testing.T) {
 func TestParseReportParsesReportTo(t *testing.T) {
 	var tests []reportTest
 
-	files, err := os.ReadDir("./reports-examples")
+	files, err := os.ReadDir("./examples")
 	if err != nil {
 		t.Error(err)
 	}
 
 	for _, file := range files {
-		json, err := os.ReadFile(filepath.Join(".", "reports-examples", file.Name()))
+		json, err := os.ReadFile(filepath.Join(".", "examples", file.Name()))
 		if err != nil {
 			t.Error(err)
 		}

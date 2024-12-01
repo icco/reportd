@@ -1,4 +1,4 @@
-package lib
+package analytics
 
 import (
 	"os"
@@ -21,13 +21,13 @@ type analyticsTest struct {
 func TestParseAnalyticsParsesWebVitals(t *testing.T) {
 	var tests []analyticsTest
 
-	files, err := os.ReadDir("./analytics-examples")
+	files, err := os.ReadDir("./examples")
 	if err != nil {
 		t.Error(err)
 	}
 
 	for _, file := range files {
-		json, err := os.ReadFile(filepath.Join(".", "analytics-examples", file.Name()))
+		json, err := os.ReadFile(filepath.Join(".", "examples", file.Name()))
 		if err != nil {
 			t.Error(err)
 		}
