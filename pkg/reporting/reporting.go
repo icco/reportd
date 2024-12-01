@@ -1,4 +1,11 @@
-package lib
+package reporting
+
+import "github.com/icco/gutil/logging"
+
+var (
+	service = "reportd"
+	log     = logging.Must(logging.NewLogger(service))
+)
 
 type CspReport struct {
 	// The URI of the document in which the violation occurred.

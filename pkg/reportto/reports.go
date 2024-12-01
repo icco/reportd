@@ -1,4 +1,4 @@
-package lib
+package reportto
 
 import (
 	"context"
@@ -9,7 +9,14 @@ import (
 
 	"cloud.google.com/go/bigquery"
 	"cloud.google.com/go/civil"
+	"github.com/icco/gutil/logging"
+	"github.com/icco/reportd/pkg/analytics"
 	"google.golang.org/api/iterator"
+)
+
+var (
+	service = "reportd"
+	log     = logging.Must(logging.NewLogger(service))
 )
 
 // Report is a simple interface for types exported by ParseReport.
@@ -189,7 +196,7 @@ func WriteReportToBigQuery(ctx context.Context, project, dataset, table string, 
 	return nil
 }
 
-func GetReportCounts(ctx context.Context, site, project, dataset, table string) ([]*WebVitalSummary, error) {
+func GetReportCounts(ctx context.Context, site, project, dataset, table string) ([]*analytics.WebVitalSummary, error) {
 	client, err := bigquery.NewClient(ctx, project)
 	if err != nil {
 		return nil, fmt.Errorf("connecting to bq: %w", err)
@@ -218,9 +225,9 @@ func GetReportCounts(ctx context.Context, site, project, dataset, table string) 
 		return nil, err
 	}
 
-	var ret []*WebVitalSummary
+	var ret []*analytics.WebVitalSummary
 	for {
-		var r WebVitalSummary
+		var r analytics.WebVitalSummary
 		err := it.Next(&r)
 		if err == iterator.Done {
 			break

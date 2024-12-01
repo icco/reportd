@@ -13,7 +13,6 @@ import (
 	"github.com/go-chi/chi/v5/middleware"
 	"github.com/go-chi/cors"
 	"github.com/icco/gutil/logging"
-	"github.com/icco/reportd/lib"
 	"github.com/namsral/flag"
 	"github.com/unrolled/render"
 	"go.uber.org/zap"
@@ -237,6 +236,33 @@ func main() {
 			http.Error(w, "uploading error", 500)
 			return
 		}
+	})
+
+	r.Post("/reporting/{bucket}", func(w http.ResponseWriter, r *http.Request) {
+		bucket := chi.URLParam(r, "bucket")
+		contentType := r.Header.Get("Content-Type")
+		if contentType != "application/reports+json" {
+			log.Errorw("Content-Type header is not application/reports+json", "bucket", bucket, "content-type", contentType)
+			http.Error(w, "uploading error", 400)
+			return
+		}
+
+		//data, err := io.ReadAll(r.Body)
+		//if err != nil {
+		//	log.Errorw("error on reading reporting data", zap.Error(err), "bucket", bucket)
+		//	http.Error(w, "uploading error", 500)
+		//	return
+		//}
+
+		log.Infow("reporting recieved", "content-type", contentType, "bucket", bucket, "user-agent", r.UserAgent())
+
+		//var buf lib.
+		//err = json.Unmarshal(data, &buf)
+		//if err != nil {
+		//log.Errorw("error on parsing JSON", zap.Error(err))
+		//http.Error(w, "uploading error", 500)
+		//return
+		//}
 	})
 
 	log.Fatal(http.ListenAndServe(":"+port, r))
