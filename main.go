@@ -234,7 +234,7 @@ func main() {
 
 		// Log the report.
 		log.Infow("analytics recieved", "content-type", ct, "bucket", bucket, "user-agent", r.UserAgent(), "analytics", data)
-		if err := analytics.WriteAnalyticsToBigQuery(r.Context(), *project, *dataset, *aTable, []*lib.WebVital{data}); err != nil {
+		if err := analytics.WriteAnalyticsToBigQuery(r.Context(), *project, *dataset, *aTable, []*analytics.WebVital{data}); err != nil {
 			log.Errorw("error during analytics upload", "dataset", *dataset, "project", *project, "table", *aTable, "bodyJson", bodyStr, zap.Error(err))
 			http.Error(w, "uploading error", 500)
 			return
