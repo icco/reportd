@@ -117,7 +117,7 @@
             const chart = document.querySelector(`#${key}`);
             if (!chart) return;
 
-            while (out[key].length < 30) out[key].push(1);
+            while (out[key].length < 30) out[key].push(0);
 
             chart.dataset.points = out[key].join(',');
             chart.dispatchEvent(new Event('update'));
