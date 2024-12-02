@@ -102,22 +102,22 @@ func main() {
 		}
 	})
 
-	r.Get("/view/{bucket}", func(w http.ResponseWriter, r *http.Request) {
-		bucket := chi.URLParam(r, "bucket")
+	r.Get("/view/{service}", func(w http.ResponseWriter, r *http.Request) {
+		service := chi.URLParam(r, "service")
 		re := render.New()
 
-		if err := lib.ValidateService(bucket); err != nil {
-			log.Errorw("error validating service", zap.Error(err), "service", bucket)
+		if err := lib.ValidateService(service); err != nil {
+			log.Errorw("error validating service", zap.Error(err), "service", service)
 			http.Error(w, "could not validate service", 400)
 			return
 		}
 
 		if err := re.HTML(w, http.StatusOK, "view", struct {
-			Bucket string
+			Service string
 		}{
-			Bucket: bucket,
+			Service: service,
 		}); err != nil {
-			log.Errorw("error rendering view", zap.Error(err), "service", bucket)
+			log.Errorw("error rendering view", zap.Error(err), "service", service)
 			http.Error(w, "could not render view", 500)
 			return
 		}
@@ -129,48 +129,48 @@ func main() {
 
 	// Needed because some browsers fire off an OPTIONS request before sending a
 	// POST to validate CORS.
-	r.Options("/report/{bucket}", func(w http.ResponseWriter, r *http.Request) {
-		bucket := chi.URLParam(r, "bucket")
+	r.Options("/report/{service}", func(w http.ResponseWriter, r *http.Request) {
+		service := chi.URLParam(r, "service")
 
-		if err := lib.ValidateService(bucket); err != nil {
-			log.Errorw("error validating service", zap.Error(err), "service", bucket)
+		if err := lib.ValidateService(service); err != nil {
+			log.Errorw("error validating service", zap.Error(err), "service", service)
 			http.Error(w, "could not validate service", 400)
 			return
 		}
 		w.Write([]byte(""))
 	})
 
-	r.Options("/analytics/{bucket}", func(w http.ResponseWriter, r *http.Request) {
-		bucket := chi.URLParam(r, "bucket")
+	r.Options("/analytics/{service}", func(w http.ResponseWriter, r *http.Request) {
+		service := chi.URLParam(r, "service")
 
-		if err := lib.ValidateService(bucket); err != nil {
-			log.Errorw("error validating service", zap.Error(err), "service", bucket)
+		if err := lib.ValidateService(service); err != nil {
+			log.Errorw("error validating service", zap.Error(err), "service", service)
 			http.Error(w, "could not validate service", 400)
 			return
 		}
 		w.Write([]byte(""))
 	})
 
-	r.Get("/reports/{bucket}", func(w http.ResponseWriter, r *http.Request) {
+	r.Get("/reports/{service}", func(w http.ResponseWriter, r *http.Request) {
 		ctx := r.Context()
-		bucket := chi.URLParam(r, "bucket")
+		service := chi.URLParam(r, "service")
 
-		if err := lib.ValidateService(bucket); err != nil {
-			log.Errorw("error validating service", zap.Error(err), "service", bucket)
+		if err := lib.ValidateService(service); err != nil {
+			log.Errorw("error validating service", zap.Error(err), "service", service)
 			http.Error(w, "could not validate service", 400)
 			return
 		}
 
-		data, err := reportto.GetReportCounts(ctx, bucket, *project, *dataset, *rTable)
+		data, err := reportto.GetReportCounts(ctx, service, *project, *dataset, *rTable)
 		if err != nil {
-			log.Errorw("error seen during reports get", zap.Error(err), "bucket", bucket)
+			log.Errorw("error seen during reports get", zap.Error(err), "service", service)
 			http.Error(w, "processing error", 500)
 			return
 		}
 
 		resp, err := json.Marshal(data)
 		if err != nil {
-			log.Errorw("error seen during reports marshal", zap.Error(err), "bucket", bucket)
+			log.Errorw("error seen during reports marshal", zap.Error(err), "service", service)
 			http.Error(w, "processing error", 500)
 			return
 		}
@@ -179,12 +179,12 @@ func main() {
 		w.Write(resp)
 	})
 
-	r.Post("/report/{bucket}", func(w http.ResponseWriter, r *http.Request) {
+	r.Post("/report/{service}", func(w http.ResponseWriter, r *http.Request) {
 		ctx := r.Context()
-		bucket := chi.URLParam(r, "bucket")
+		service := chi.URLParam(r, "service")
 
-		if err := lib.ValidateService(bucket); err != nil {
-			log.Errorw("error validating service", zap.Error(err), "service", bucket)
+		if err := lib.ValidateService(service); err != nil {
+			log.Errorw("error validating service", zap.Error(err), "service", service)
 			http.Error(w, "could not validate service", 400)
 			return
 		}
@@ -194,18 +194,18 @@ func main() {
 		bodyStr := buf.String()
 		ct := r.Header.Get("content-type")
 
-		data, err := reportto.ParseReport(ct, bodyStr, bucket)
+		data, err := reportto.ParseReport(ct, bodyStr, service)
 		if err != nil {
-			log.Errorw("error seen during report parse", "content-type", ct, "user-agent", r.UserAgent(), "bodyJson", bodyStr, zap.Error(err), "service", bucket)
+			log.Errorw("error seen during report parse", "content-type", ct, "user-agent", r.UserAgent(), "bodyJson", bodyStr, zap.Error(err), "service", service)
 			http.Error(w, "processing error", 500)
 			return
 		}
 
 		// Log the report.
-		log.Infow("report recieved", "content-type", ct, "bucket", bucket, "user-agent", r.UserAgent(), "report", data)
+		log.Infow("report recieved", "content-type", ct, "service", service, "user-agent", r.UserAgent(), "report", data)
 
 		if err := reportto.WriteReportToBigQuery(ctx, *project, *dataset, *rTable, []*reportto.Report{data}); err != nil {
-			log.Errorw("error during report upload", "dataset", *dataset, "project", *project, "table", *rTable, "bodyJson", bodyStr, zap.Error(err), "service", bucket)
+			log.Errorw("error during report upload", "dataset", *dataset, "project", *project, "table", *rTable, "bodyJson", bodyStr, zap.Error(err), "service", service)
 			http.Error(w, "uploading error", 500)
 			return
 		}
@@ -232,26 +232,26 @@ func main() {
 		w.Write(resp)
 	})
 
-	r.Get("/analytics/{bucket}", func(w http.ResponseWriter, r *http.Request) {
+	r.Get("/analytics/{service}", func(w http.ResponseWriter, r *http.Request) {
 		ctx := r.Context()
-		bucket := chi.URLParam(r, "bucket")
+		service := chi.URLParam(r, "service")
 
-		if err := lib.ValidateService(bucket); err != nil {
-			log.Errorw("error validating service", zap.Error(err), "service", bucket)
+		if err := lib.ValidateService(service); err != nil {
+			log.Errorw("error validating service", zap.Error(err), "service", service)
 			http.Error(w, "could not validate service", 400)
 			return
 		}
 
-		data, err := analytics.GetAnalytics(ctx, bucket, *project, *dataset, *aTable)
+		data, err := analytics.GetAnalytics(ctx, service, *project, *dataset, *aTable)
 		if err != nil {
-			log.Errorw("error seen during analytics get", zap.Error(err), "service", bucket)
+			log.Errorw("error seen during analytics get", zap.Error(err), "service", service)
 			http.Error(w, "processing error", 500)
 			return
 		}
 
 		resp, err := json.Marshal(data)
 		if err != nil {
-			log.Errorw("error seen during analytics marshal", zap.Error(err), "service", bucket)
+			log.Errorw("error seen during analytics marshal", zap.Error(err), "service", service)
 			http.Error(w, "processing error", 500)
 			return
 		}
@@ -260,13 +260,13 @@ func main() {
 		w.Write(resp)
 	})
 
-	r.Post("/analytics/{bucket}", func(w http.ResponseWriter, r *http.Request) {
+	r.Post("/analytics/{service}", func(w http.ResponseWriter, r *http.Request) {
 		ctx := r.Context()
-		bucket := chi.URLParam(r, "bucket")
+		service := chi.URLParam(r, "service")
 		ct := r.Header.Get("content-type")
 
-		if err := lib.ValidateService(bucket); err != nil {
-			log.Errorw("error validating service", zap.Error(err), "service", bucket)
+		if err := lib.ValidateService(service); err != nil {
+			log.Errorw("error validating service", zap.Error(err), "service", service)
 			http.Error(w, "could not validate service", 400)
 			return
 		}
@@ -274,34 +274,34 @@ func main() {
 		buf := new(bytes.Buffer)
 		buf.ReadFrom(r.Body)
 		bodyStr := buf.String()
-		data, err := analytics.ParseAnalytics(bodyStr, bucket)
+		data, err := analytics.ParseAnalytics(bodyStr, service)
 		if err != nil {
-			log.Errorw("error seen during analytics parse", zap.Error(err), "content-type", ct, "user-agent", r.UserAgent(), "bodyJson", bodyStr, "service", bucket)
+			log.Errorw("error seen during analytics parse", zap.Error(err), "content-type", ct, "user-agent", r.UserAgent(), "bodyJson", bodyStr, "service", service)
 			http.Error(w, "processing error", 500)
 			return
 		}
 
 		// Log the report.
-		log.Infow("analytics recieved", "content-type", ct, "bucket", bucket, "user-agent", r.UserAgent(), "analytics", data, "service", bucket)
+		log.Infow("analytics recieved", "content-type", ct, "service", service, "user-agent", r.UserAgent(), "analytics", data)
 		if err := analytics.WriteAnalyticsToBigQuery(ctx, *project, *dataset, *aTable, []*analytics.WebVital{data}); err != nil {
-			log.Errorw("error during analytics upload", "dataset", *dataset, "project", *project, "table", *aTable, "bodyJson", bodyStr, zap.Error(err), "service", bucket)
+			log.Errorw("error during analytics upload", "dataset", *dataset, "project", *project, "table", *aTable, "bodyJson", bodyStr, zap.Error(err), "service", service)
 			http.Error(w, "uploading error", 500)
 			return
 		}
 	})
 
-	r.Post("/reporting/{bucket}", func(w http.ResponseWriter, r *http.Request) {
+	r.Post("/reporting/{service}", func(w http.ResponseWriter, r *http.Request) {
 		ctx := r.Context()
-		bucket := chi.URLParam(r, "bucket")
+		service := chi.URLParam(r, "service")
 		contentType := r.Header.Get("Content-Type")
 		if contentType != "application/reports+json" {
-			log.Errorw("Content-Type header is not application/reports+json", "bucket", bucket, "content-type", contentType, "service", bucket)
+			log.Errorw("Content-Type header is not application/reports+json", "service", service, "content-type", contentType)
 			http.Error(w, "uploading error", 400)
 			return
 		}
 
-		if err := lib.ValidateService(bucket); err != nil {
-			log.Errorw("error validating service", zap.Error(err), "service", bucket)
+		if err := lib.ValidateService(service); err != nil {
+			log.Errorw("error validating service", zap.Error(err), "service", service)
 			http.Error(w, "could not validate service", 400)
 			return
 		}
@@ -310,15 +310,15 @@ func main() {
 		buf.ReadFrom(r.Body)
 		bodyStr := buf.String()
 
-		log.Infow("reporting recieved", "content-type", contentType, "bucket", bucket, "user-agent", r.UserAgent())
+		log.Infow("reporting recieved", "content-type", contentType, "service", service, "user-agent", r.UserAgent())
 		reports, err := reporting.ParseReport(bodyStr)
 		if err != nil {
-			log.Errorw("error on parsing reporting data", zap.Error(err), "bucket", bucket, "content-type", contentType, "body", bodyStr)
+			log.Errorw("error on parsing reporting data", zap.Error(err), "service", service, "content-type", contentType, "body", bodyStr)
 			http.Error(w, "uploading error", 500)
 			return
 		}
 
-		log.Infow("reporting parsed", "reports", reports, "bucket", bucket, "content-type", contentType, "user-agent", r.UserAgent())
+		log.Infow("reporting parsed", "reports", reports, "service", service, "content-type", contentType, "user-agent", r.UserAgent())
 		if err := reporting.WriteReportsToBigQuery(ctx, *project, *dataset, *rv2Table, reports); err != nil {
 			log.Errorw("error during reporting upload", "dataset", *dataset, "project", *project, "table", *rTable, zap.Error(err))
 			http.Error(w, "uploading error", 500)

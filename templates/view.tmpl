@@ -5,7 +5,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta http-equiv="X-UA-Compatible" content="ie=edge">
-    <title>ReportD - {{ .Bucket }}</title>
+    <title>ReportD - {{ .Service }}</title>
     <script src="https://cdn.tailwindcss.com?plugins=forms,typography,aspect-ratio,container-queries"></script>
 
     <style>
@@ -18,8 +18,8 @@
   <body class="mx-auto p-6 md:p-24 bg-black text-white">
 
     <header class="mb-10">
-      <h1 class="text-3xl font-bold"><a href="/">ReportD</a> - {{ .Bucket }}</h1>
-      <div class="hidden" id="name">{{ .Bucket }}</div>
+      <h1 class="text-3xl font-bold"><a href="/">ReportD</a> - {{ .Service }}</h1>
+      <div class="hidden" id="name">{{ .Service }}</div>
     </header>
 
     <div class="border-b border-gray-700 pb-2 mb-10">
