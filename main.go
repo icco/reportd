@@ -332,7 +332,7 @@ func main() {
 		bodyStr := buf.String()
 
 		log.Infow("reporting recieved", "content-type", contentType, "service", service, "user-agent", r.UserAgent())
-		reports, err := reporting.ParseReport(bodyStr)
+		reports, err := reporting.ParseReport(bodyStr, service)
 		if err != nil {
 			log.Errorw("error on parsing reporting data", zap.Error(err), "service", service, "content-type", contentType, "body", bodyStr)
 			http.Error(w, "uploading error", 500)
