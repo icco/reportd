@@ -77,15 +77,22 @@
 
     <div class="border-b border-gray-700 pb-2 mb-10">
       <h2 class="text-xl font-medium">Reports</h2>
-      <p class="text-gray-500">Data sent from Report-To API.</p>
+      <p class="text-gray-500">Data sent to Web Reporting API.</p>
     </div>
     <section id="reports" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-12 mb-16">
-      <!--
       <div>
-        <h3 class="text-lg font-medium">Total Count</h3>
-        <div id="count" data-sparkline="true" data-points="1,2,3,4,5,6,7" data-width="300" data-height="50"></div>
+        <h3 class="text-lg font-medium">Report-To Count</h3>
+        <div id="ReportToReportCount" data-sparkline="true" data-points="1,2,3,4,5,6,7" data-width="300"
+          data-height="50"></div>
       </div>
-      -->
+    </section>
+
+    <section id="reports" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-12 mb-16">
+      <div>
+        <h3 class="text-lg font-medium">Endpoint Security Count</h3>
+        <div id="EndpointSecurityReportCount" data-sparkline="true" data-points="1,2,3,4,5,6,7" data-width="300"
+          data-height="50"></div>
+      </div>
     </section>
 
     <!-- sparklines.js from https://github.com/mitjafelicijan/sparklines -->
