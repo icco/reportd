@@ -161,7 +161,7 @@ func GetReportCounts(ctx context.Context, site, project, dataset, table string) 
 			return nil, fmt.Errorf("couldn't get WebVitalSummary: %w", err)
 		}
 
-		r.Name = "Endpoint Security Report Count"
+		r.Name = "EndpointSecurityReportCount"
 
 		ret = append(ret, &r)
 	}
