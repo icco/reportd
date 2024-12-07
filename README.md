@@ -30,3 +30,22 @@ Also need to add support for Reporting API v1. see migration policy https://deve
 This service will log the reports recieved for web-vitals. We have only tested with next.js. See https://nextjs.org/docs/advanced-features/measuring-performance and https://web.dev/vitals/ for more information.
 
 To start sending analytics, target https://reportd.natwelch.com/analytics/$yourservicename
+
+```html
+    <script type="module">
+      import { onCLS, onINP, onLCP, onFCP, onFID, onTTFB } from 'https://unpkg.com/web-vitals@4?module';
+
+      function sendToAnalytics(metric) {
+        const body = JSON.stringify(metric);
+        (navigator.sendBeacon && navigator.sendBeacon('https://reportd.natwelch.com/analytics/$yourservicename', body)) ||
+          fetch('https://reportd.natwelch.com/analytics/$yourservicename', { body, method: 'POST', keepalive: true });
+      }
+
+      onCLS(sendToAnalytics);
+      onFCP(sendToAnalytics);
+      onFID(sendToAnalytics);
+      onINP(sendToAnalytics);
+      onLCP(sendToAnalytics);
+      onTTFB(sendToAnalytics);
+    </script>
+```
