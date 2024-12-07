@@ -38,13 +38,19 @@ func TestParseReportParsesReportTo(t *testing.T) {
 		tc := tc
 		t.Run(tc.Name, func(t *testing.T) {
 			t.Parallel()
-			data, err := ParseReport(tc.JSON)
+			data, err := ParseReport(tc.JSON, "test")
 			if err != nil {
 				t.Error(err)
 			}
 
 			if data == nil {
 				t.Error("data should not be nil")
+				t.FailNow()
+			}
+
+			if data.Service.String() != "test" {
+				t.Errorf("expected service to be test, got %s", data.Service.StringVal)
+				t.FailNow()
 			}
 		})
 	}
