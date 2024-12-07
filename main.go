@@ -189,7 +189,16 @@ func main() {
 			return
 		}
 
-		resp, err := json.Marshal(data)
+		data2, err := reporting.GetReportCounts(ctx, service, *project, *dataset, *rv2Table)
+		if err != nil {
+			log.Errorw("error seen during reports get", zap.Error(err), "service", service)
+			http.Error(w, "processing error", 500)
+			return
+		}
+
+		out := append(data, data2...)
+
+		resp, err := json.Marshal(out)
 		if err != nil {
 			log.Errorw("error seen during reports marshal", zap.Error(err), "service", service)
 			http.Error(w, "processing error", 500)
@@ -332,7 +341,7 @@ func main() {
 		bodyStr := buf.String()
 
 		log.Infow("reporting recieved", "content-type", contentType, "service", service, "user-agent", r.UserAgent())
-		reports, err := reporting.ParseReport(bodyStr)
+		reports, err := reporting.ParseReport(bodyStr, service)
 		if err != nil {
 			log.Errorw("error on parsing reporting data", zap.Error(err), "service", service, "content-type", contentType, "body", bodyStr)
 			http.Error(w, "uploading error", 500)

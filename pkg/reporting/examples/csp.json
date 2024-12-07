@@ -1,0 +1,17 @@
+{
+  "type": "csp-violation",
+  "url": "http://127.0.0.1:9999/",
+  "body": {
+    "sourceFile": null,
+    "lineNumber": null,
+    "columnNumber": null,
+    "documentURL": "http://127.0.0.1:9999/",
+    "referrer": "",
+    "blockedURL": "https://apis.google.com/js/platform.js",
+    "effectiveDirective": "script-src-elem",
+    "originalPolicy": "default-src 'self';",
+    "sample": "",
+    "disposition": "enforce",
+    "statusCode": 200
+  }
+}
