@@ -13,6 +13,23 @@
         max-width: 1200px;
       }
     </style>
+
+    <script type="module">
+      import { onCLS, onINP, onLCP, onFCP, onFID, onTTFB } from 'https://unpkg.com/web-vitals@4?module';
+
+      function sendToAnalytics(metric) {
+        const body = JSON.stringify(metric);
+        (navigator.sendBeacon && navigator.sendBeacon('https://reportd.natwelch.com/analytics/resume', body)) ||
+          fetch('https://reportd.natwelch.com/analytics/resume', { body, method: 'POST', keepalive: true });
+      }
+
+      onCLS(sendToAnalytics);
+      onFCP(sendToAnalytics);
+      onFID(sendToAnalytics);
+      onINP(sendToAnalytics);
+      onLCP(sendToAnalytics);
+      onTTFB(sendToAnalytics);
+    </script>
   </head>
 
   <body class="mx-auto p-6 md:p-24 bg-black text-white">
