@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"regexp"
+	"sort"
 
 	"cloud.google.com/go/bigquery"
 	"github.com/icco/gutil/logging"
@@ -80,6 +81,8 @@ func GetServices(ctx context.Context, project, dataset, atable, rtable string) (
 			}
 		}
 	}
+
+	sort.Strings(ret)
 
 	return ret, nil
 }
