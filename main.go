@@ -19,6 +19,7 @@ import (
 	"github.com/icco/reportd/pkg/reportto"
 	"github.com/namsral/flag"
 	"github.com/unrolled/render"
+	"github.com/unrolled/secure"
 	"go.uber.org/zap"
 )
 
@@ -82,6 +83,26 @@ func main() {
 	}).Handler)
 
 	r.Use(middleware.Timeout(30 * time.Second))
+
+	r.Use(func(h http.Handler) http.Handler {
+		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			w.Header().Set("report-to", `{"group":"default","max_age":10886400,"endpoints":[{"url":"https://reportd.natwelch.com/report/reportd"}]}`)
+			w.Header().Set("reporting-endpoints", `default="https://reportd.natwelch.com/reporting/reportd"`)
+
+			h.ServeHTTP(w, r)
+		})
+	})
+
+	secureMiddleware := secure.New(secure.Options{
+		SSLRedirect:        false,
+		SSLProxyHeaders:    map[string]string{"X-Forwarded-Proto": "https"},
+		FrameDeny:          true,
+		ContentTypeNosniff: true,
+		BrowserXssFilter:   true,
+		ReferrerPolicy:     "no-referrer",
+		FeaturePolicy:      "geolocation 'none'; midi 'none'; sync-xhr 'none'; microphone 'none'; camera 'none'; magnetometer 'none'; gyroscope 'none'; fullscreen 'none'; payment 'none'; usb 'none'",
+	})
+	r.Use(secureMiddleware.Handler)
 
 	r.Get("/", func(w http.ResponseWriter, r *http.Request) {
 		re := render.New()
