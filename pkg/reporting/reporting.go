@@ -168,3 +168,32 @@ func GetReportCounts(ctx context.Context, site, project, dataset, table string) 
 
 	return ret, nil
 }
+
+// UpdateReportsBQSchema updates the bigquery schema if fields are added.
+func UpdateReportsBQSchema(ctx context.Context, project, dataset, table string) error {
+	client, err := bigquery.NewClient(ctx, project)
+	if err != nil {
+		return fmt.Errorf("connecting to bq: %w", err)
+	}
+
+	t := client.Dataset(dataset).Table(table)
+	md, err := t.Metadata(ctx)
+	if err != nil {
+		return fmt.Errorf("getting table meta: %w", err)
+	}
+
+	s, err := getReportSchema()
+	if err != nil {
+		return fmt.Errorf("infer schema: %w", err)
+	}
+
+	if _, err := t.Update(ctx, bigquery.TableMetadataToUpdate{Schema: s}, md.ETag); err != nil {
+		return fmt.Errorf("updating table: %w", err)
+	}
+
+	return nil
+}
+
+func getReportSchema() (bigquery.Schema, error) {
+	return bigquery.InferSchema(SecurityReport{})
+}

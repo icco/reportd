@@ -68,6 +68,10 @@ func main() {
 		log.Errorw("analytics table update", zap.Error(err))
 	}
 
+	if err := reporting.UpdateReportsBQSchema(ctx, *project, *dataset, *rv2Table); err != nil {
+		log.Errorw("reporting table update", zap.Error(err))
+	}
+
 	r := chi.NewRouter()
 	r.Use(middleware.RealIP)
 	r.Use(logging.Middleware(log.Desugar(), *project))
