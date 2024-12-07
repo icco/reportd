@@ -189,7 +189,16 @@ func main() {
 			return
 		}
 
-		resp, err := json.Marshal(data)
+		data2, err := reporting.GetReportCounts(ctx, service, *project, *dataset, *rv2Table)
+		if err != nil {
+			log.Errorw("error seen during reports get", zap.Error(err), "service", service)
+			http.Error(w, "processing error", 500)
+			return
+		}
+
+		out := append(data, data2...)
+
+		resp, err := json.Marshal(out)
 		if err != nil {
 			log.Errorw("error seen during reports marshal", zap.Error(err), "service", service)
 			http.Error(w, "processing error", 500)

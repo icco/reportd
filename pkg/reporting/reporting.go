@@ -8,6 +8,8 @@ import (
 
 	"cloud.google.com/go/bigquery"
 	"cloud.google.com/go/civil"
+	"github.com/icco/reportd/pkg/analytics"
+	"google.golang.org/api/iterator"
 )
 
 type CSPReport struct {
@@ -117,4 +119,52 @@ func WriteReportsToBigQuery(ctx context.Context, project, dataset, table string,
 		return fmt.Errorf("uploading to bq: %w", err)
 	}
 	return nil
+}
+
+func GetReportCounts(ctx context.Context, site, project, dataset, table string) ([]*analytics.WebVitalSummary, error) {
+	client, err := bigquery.NewClient(ctx, project)
+	if err != nil {
+		return nil, fmt.Errorf("connecting to bq: %w", err)
+	}
+
+	t := client.Dataset(dataset).Table(table)
+	tableID, err := t.Identifier(bigquery.StandardSQLID)
+	if err != nil {
+		return nil, fmt.Errorf("getting table id: %w", err)
+	}
+	query := fmt.Sprintf(
+		"SELECT DATE(Time) AS Day, Service, CAST(COUNT(*) as FLOAT64) AS Value "+
+			"FROM `%s` "+
+			"WHERE Service = @site AND Time >= DATE_SUB(CURRENT_DATE(), INTERVAL 3 MONTH) "+
+			"GROUP BY 1, 2 "+
+			"ORDER BY Day DESC;",
+		tableID,
+	)
+
+	q := client.Query(query)
+	q.Parameters = []bigquery.QueryParameter{
+		{Name: "site", Value: site},
+	}
+	it, err := q.Read(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	var ret []*analytics.WebVitalSummary
+	for {
+		var r analytics.WebVitalSummary
+		err := it.Next(&r)
+		if err == iterator.Done {
+			break
+		}
+		if err != nil {
+			return nil, fmt.Errorf("couldn't get WebVitalSummary: %w", err)
+		}
+
+		r.Name = "Endpoint Security Report Count"
+
+		ret = append(ret, &r)
+	}
+
+	return ret, nil
 }
