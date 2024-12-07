@@ -220,7 +220,11 @@ func main() {
 		}
 
 		buf := new(bytes.Buffer)
-		buf.ReadFrom(r.Body)
+		if _, err := buf.ReadFrom(r.Body); err != nil {
+			log.Errorw("error reading body", zap.Error(err), "service", service)
+			http.Error(w, "uploading error", 500)
+			return
+		}
 		bodyStr := buf.String()
 		ct := r.Header.Get("content-type")
 
@@ -302,7 +306,11 @@ func main() {
 		}
 
 		buf := new(bytes.Buffer)
-		buf.ReadFrom(r.Body)
+		if _, err := buf.ReadFrom(r.Body); err != nil {
+			log.Errorw("error reading body", zap.Error(err), "service", service)
+			http.Error(w, "uploading error", 500)
+			return
+		}
 		bodyStr := buf.String()
 		data, err := analytics.ParseAnalytics(bodyStr, service)
 		if err != nil {
@@ -337,7 +345,11 @@ func main() {
 		}
 
 		buf := new(bytes.Buffer)
-		buf.ReadFrom(r.Body)
+		if _, err := buf.ReadFrom(r.Body); err != nil {
+			log.Errorw("error reading body", zap.Error(err), "service", service, "content-type", contentType)
+			http.Error(w, "uploading error", 500)
+			return
+		}
 		bodyStr := buf.String()
 
 		log.Infow("reporting recieved", "content-type", contentType, "service", service, "user-agent", r.UserAgent())
