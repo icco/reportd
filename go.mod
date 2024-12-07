@@ -12,6 +12,7 @@ require (
 	github.com/icco/gutil v0.0.0-20231226055340-e0dfddaad70c
 	github.com/namsral/flag v1.7.4-pre
 	github.com/unrolled/render v1.7.0
+	github.com/unrolled/secure v1.17.0
 	go.uber.org/zap v1.27.0
 	google.golang.org/api v0.210.0
 )
