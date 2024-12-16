@@ -3,6 +3,7 @@ package analytics
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"time"
 
@@ -170,7 +171,7 @@ func GetAnalytics(ctx context.Context, site, project, dataset, table string) ([]
 	for {
 		var wv WebVitalSummary
 		err := it.Next(&wv)
-		if err == iterator.Done {
+		if errors.Is(err, iterator.Done) {
 			break
 		}
 		if err != nil {

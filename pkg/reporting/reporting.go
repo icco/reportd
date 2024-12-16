@@ -3,6 +3,7 @@ package reporting
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"time"
 
@@ -154,7 +155,7 @@ func GetReportCounts(ctx context.Context, site, project, dataset, table string) 
 	for {
 		var r analytics.WebVitalSummary
 		err := it.Next(&r)
-		if err == iterator.Done {
+		if errors.Is(err, iterator.Done) {
 			break
 		}
 		if err != nil {

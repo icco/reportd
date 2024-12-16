@@ -2,6 +2,7 @@ package lib
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"regexp"
 	"sort"
@@ -67,7 +68,7 @@ func GetServices(ctx context.Context, project, dataset, atable, rtable string) (
 		for {
 			var row []bigquery.Value
 			err := it.Next(&row)
-			if err == iterator.Done {
+			if errors.Is(err, iterator.Done) {
 				break
 			}
 			if err != nil {
