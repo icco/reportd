@@ -151,7 +151,9 @@ func main() {
 	})
 
 	r.Get("/healthz", func(w http.ResponseWriter, r *http.Request) {
-		w.Write([]byte("ok."))
+		if _, err := w.Write([]byte("ok.")); err != nil {
+			log.Errorw("error writing healthz", zap.Error(err))
+		}
 	})
 
 	// Needed because some browsers fire off an OPTIONS request before sending a
@@ -164,7 +166,9 @@ func main() {
 			http.Error(w, "could not validate service", 400)
 			return
 		}
-		w.Write([]byte(""))
+		if _, err := w.Write([]byte("")); err != nil {
+			log.Errorw("error writing options", zap.Error(err))
+		}
 	})
 
 	r.Options("/analytics/{service}", func(w http.ResponseWriter, r *http.Request) {
@@ -175,7 +179,9 @@ func main() {
 			http.Error(w, "could not validate service", 400)
 			return
 		}
-		w.Write([]byte(""))
+		if _, err := w.Write([]byte("")); err != nil {
+			log.Errorw("error writing options", zap.Error(err))
+		}
 	})
 
 	r.Get("/reports/{service}", func(w http.ResponseWriter, r *http.Request) {
