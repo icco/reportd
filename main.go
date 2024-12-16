@@ -35,7 +35,9 @@ func main() {
 	aTable := fs.String("analytics_table", "", "The bigquery table to upload analytics to.")
 	rTable := fs.String("reports_table", "", "The bigquery table to upload reports to.")
 	rv2Table := fs.String("reports_v2_table", "", "The bigquery table to upload reports to.")
-	fs.Parse(os.Args[1:])
+	if err := fs.Parse(os.Args[1:]); err != nil {
+		log.Fatalw("error parsing flags", zap.Error(err))
+	}
 
 	port := "8080"
 	if fromEnv := os.Getenv("PORT"); fromEnv != "" {
@@ -149,7 +151,9 @@ func main() {
 	})
 
 	r.Get("/healthz", func(w http.ResponseWriter, r *http.Request) {
-		w.Write([]byte("ok."))
+		if _, err := w.Write([]byte("ok.")); err != nil {
+			log.Errorw("error writing healthz", zap.Error(err))
+		}
 	})
 
 	// Needed because some browsers fire off an OPTIONS request before sending a
@@ -162,7 +166,9 @@ func main() {
 			http.Error(w, "could not validate service", 400)
 			return
 		}
-		w.Write([]byte(""))
+		if _, err := w.Write([]byte("")); err != nil {
+			log.Errorw("error writing options", zap.Error(err))
+		}
 	})
 
 	r.Options("/analytics/{service}", func(w http.ResponseWriter, r *http.Request) {
@@ -173,7 +179,9 @@ func main() {
 			http.Error(w, "could not validate service", 400)
 			return
 		}
-		w.Write([]byte(""))
+		if _, err := w.Write([]byte("")); err != nil {
+			log.Errorw("error writing options", zap.Error(err))
+		}
 	})
 
 	r.Get("/reports/{service}", func(w http.ResponseWriter, r *http.Request) {
@@ -210,7 +218,9 @@ func main() {
 		}
 
 		w.Header().Set("Content-Type", "application/json")
-		w.Write(resp)
+		if _, err := w.Write(resp); err != nil {
+			log.Errorw("error writing reports", zap.Error(err), "service", service)
+		}
 	})
 
 	r.Post("/report/{service}", func(w http.ResponseWriter, r *http.Request) {
@@ -267,7 +277,9 @@ func main() {
 		}
 
 		w.Header().Set("Content-Type", "application/json")
-		w.Write(resp)
+		if _, err := w.Write(resp); err != nil {
+			log.Errorw("error writing services", zap.Error(err))
+		}
 	})
 
 	r.Get("/analytics/{service}", func(w http.ResponseWriter, r *http.Request) {
@@ -295,7 +307,9 @@ func main() {
 		}
 
 		w.Header().Set("Content-Type", "application/json")
-		w.Write(resp)
+		if _, err := w.Write(resp); err != nil {
+			log.Errorw("error writing analytics", zap.Error(err), "service", service)
+		}
 	})
 
 	r.Post("/analytics/{service}", func(w http.ResponseWriter, r *http.Request) {

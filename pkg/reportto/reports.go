@@ -3,20 +3,15 @@ package reportto
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"mime"
 	"time"
 
 	"cloud.google.com/go/bigquery"
 	"cloud.google.com/go/civil"
-	"github.com/icco/gutil/logging"
 	"github.com/icco/reportd/pkg/analytics"
 	"google.golang.org/api/iterator"
-)
-
-var (
-	service = "reportd"
-	log     = logging.Must(logging.NewLogger(service))
 )
 
 // Report is a simple interface for types exported by ParseReport.
@@ -229,7 +224,7 @@ func GetReportCounts(ctx context.Context, site, project, dataset, table string) 
 	for {
 		var r analytics.WebVitalSummary
 		err := it.Next(&r)
-		if err == iterator.Done {
+		if errors.Is(err, iterator.Done) {
 			break
 		}
 		if err != nil {
