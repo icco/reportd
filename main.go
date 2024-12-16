@@ -240,7 +240,7 @@ func main() {
 		}
 
 		// Log the report.
-		log.Infow("report recieved", "content-type", ct, "service", service, "user-agent", r.UserAgent(), "report", data)
+		log.Infow("report received", "content-type", ct, "service", service, "user-agent", r.UserAgent(), "report", data)
 
 		if err := reportto.WriteReportToBigQuery(ctx, *project, *dataset, *rTable, []*reportto.Report{data}); err != nil {
 			log.Errorw("error during report upload", "dataset", *dataset, "project", *project, "table", *rTable, "bodyJson", bodyStr, zap.Error(err), "service", service)
@@ -324,7 +324,7 @@ func main() {
 		}
 
 		// Log the report.
-		log.Infow("analytics recieved", "content-type", ct, "service", service, "user-agent", r.UserAgent(), "analytics", data)
+		log.Infow("analytics received", "content-type", ct, "service", service, "user-agent", r.UserAgent(), "analytics", data)
 		if err := analytics.WriteAnalyticsToBigQuery(ctx, *project, *dataset, *aTable, []*analytics.WebVital{data}); err != nil {
 			log.Errorw("error during analytics upload", "dataset", *dataset, "project", *project, "table", *aTable, "bodyJson", bodyStr, zap.Error(err), "service", service)
 			http.Error(w, "uploading error", 500)
@@ -356,7 +356,7 @@ func main() {
 		}
 		bodyStr := buf.String()
 
-		log.Infow("reporting recieved", "content-type", contentType, "service", service, "user-agent", r.UserAgent())
+		log.Infow("reporting received", "content-type", contentType, "service", service, "user-agent", r.UserAgent())
 		reports, err := reporting.ParseReport(bodyStr, service)
 		if err != nil {
 			log.Errorw("error on parsing reporting data", zap.Error(err), "service", service, "content-type", contentType, "body", bodyStr)
