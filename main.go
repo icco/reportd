@@ -35,7 +35,9 @@ func main() {
 	aTable := fs.String("analytics_table", "", "The bigquery table to upload analytics to.")
 	rTable := fs.String("reports_table", "", "The bigquery table to upload reports to.")
 	rv2Table := fs.String("reports_v2_table", "", "The bigquery table to upload reports to.")
-	fs.Parse(os.Args[1:])
+	if err := fs.Parse(os.Args[1:]); err != nil {
+		log.Fatalw("error parsing flags", zap.Error(err))
+	}
 
 	port := "8080"
 	if fromEnv := os.Getenv("PORT"); fromEnv != "" {
