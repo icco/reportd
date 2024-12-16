@@ -218,7 +218,9 @@ func main() {
 		}
 
 		w.Header().Set("Content-Type", "application/json")
-		w.Write(resp)
+		if _, err := w.Write(resp); err != nil {
+			log.Errorw("error writing reports", zap.Error(err), "service", service)
+		}
 	})
 
 	r.Post("/report/{service}", func(w http.ResponseWriter, r *http.Request) {
@@ -275,7 +277,9 @@ func main() {
 		}
 
 		w.Header().Set("Content-Type", "application/json")
-		w.Write(resp)
+		if _, err := w.Write(resp); err != nil {
+			log.Errorw("error writing services", zap.Error(err))
+		}
 	})
 
 	r.Get("/analytics/{service}", func(w http.ResponseWriter, r *http.Request) {
@@ -303,7 +307,9 @@ func main() {
 		}
 
 		w.Header().Set("Content-Type", "application/json")
-		w.Write(resp)
+		if _, err := w.Write(resp); err != nil {
+			log.Errorw("error writing analytics", zap.Error(err), "service", service)
+		}
 	})
 
 	r.Post("/analytics/{service}", func(w http.ResponseWriter, r *http.Request) {
