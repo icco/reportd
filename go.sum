@@ -102,6 +102,8 @@ github.com/googleapis/gax-go/v2 v2.14.0 h1:f+jMrjBPl+DL9nI4IQzLUxMq7XrAqFYB7hBPq
 github.com/googleapis/gax-go/v2 v2.14.0/go.mod h1:lhBCnjdLrWRaPvLWhmc8IS24m9mr07qSYnHncrgo+zk=
 github.com/icco/gutil v0.0.0-20231226055340-e0dfddaad70c h1:ikTvnERNW0SovckIcyZjsqdpqC8ZHXbZdTnXyy5oBFg=
 github.com/icco/gutil v0.0.0-20231226055340-e0dfddaad70c/go.mod h1:67ZPs0JW1qmJ4x0YtxdrRng/SBPuJkFGtTGZlCKZ+XY=
+github.com/icco/gutil v0.0.0-20241216022053-944972fc0ecf h1:fXWnSARrY8oAVoVQuRo/4CwllVnoJBQ8HDKD7BowSMw=
+github.com/icco/gutil v0.0.0-20241216022053-944972fc0ecf/go.mod h1:Bm//tZXc7XoDCr93xuXnfawyLv7atXgrq1BdsIFCcn0=
 github.com/icco/zapdriver v1.4.0 h1:ACpofOtnSJT9eywNOoTuEhzo7YtFUGCc4xBXYFWYMkI=
 github.com/icco/zapdriver v1.4.0/go.mod h1:M9vTLsSlL3ciV1RK6uK9O/0zAdqNNIZ3n74qdCHvAl8=
 github.com/kisielk/gotool v1.0.0/go.mod h1:XhKaO+MFFWcvkIS/tQcRk01m1F5IRFswLeQ+oQHNcck=

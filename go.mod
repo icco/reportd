@@ -1,15 +1,15 @@
 module github.com/icco/reportd
 
-go 1.22.7
+go 1.23
 
-toolchain go1.23.3
+toolchain go1.23.4
 
 require (
 	cloud.google.com/go v0.116.0
 	cloud.google.com/go/bigquery v1.65.0
 	github.com/go-chi/chi/v5 v5.2.0
 	github.com/go-chi/cors v1.2.1
-	github.com/icco/gutil v0.0.0-20231226055340-e0dfddaad70c
+	github.com/icco/gutil v0.0.0-20241216022053-944972fc0ecf
 	github.com/namsral/flag v1.7.4-pre
 	github.com/unrolled/render v1.7.0
 	github.com/unrolled/secure v1.17.0
