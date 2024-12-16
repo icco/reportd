@@ -10,14 +10,8 @@ import (
 
 	"cloud.google.com/go/bigquery"
 	"cloud.google.com/go/civil"
-	"github.com/icco/gutil/logging"
 	"github.com/icco/reportd/pkg/analytics"
 	"google.golang.org/api/iterator"
-)
-
-var (
-	service = "reportd"
-	log     = logging.Must(logging.NewLogger(service))
 )
 
 // Report is a simple interface for types exported by ParseReport.
