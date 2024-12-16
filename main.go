@@ -372,5 +372,14 @@ func main() {
 		}
 	})
 
-	log.Fatal(http.ListenAndServe(":"+port, r))
+	srv := http.Server{
+		Addr:         ":" + port,
+		WriteTimeout: 1 * time.Second,
+		ReadTimeout:  1 * time.Second,
+		Handler:      r,
+	}
+
+	if err := srv.ListenAndServe(); err != nil {
+		log.Fatalw("Server failed", zap.Error(err))
+	}
 }
