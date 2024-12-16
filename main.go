@@ -388,8 +388,8 @@ func main() {
 
 	srv := http.Server{
 		Addr:         ":" + port,
-		WriteTimeout: 1 * time.Second,
-		ReadTimeout:  1 * time.Second,
+		WriteTimeout: 30 * time.Second,
+		ReadTimeout:  30 * time.Second,
 		Handler:      r,
 	}
 
