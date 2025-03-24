@@ -5,7 +5,7 @@ go 1.23.0
 toolchain go1.24.1
 
 require (
-	cloud.google.com/go v0.119.0
+	cloud.google.com/go v0.120.0
 	cloud.google.com/go/bigquery v1.66.2
 	github.com/go-chi/chi/v5 v5.2.1
 	github.com/go-chi/cors v1.2.1
