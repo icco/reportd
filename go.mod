@@ -7,7 +7,7 @@ toolchain go1.24.1
 require (
 	cloud.google.com/go v0.121.2
 	cloud.google.com/go/bigquery v1.69.0
-	github.com/go-chi/chi/v5 v5.2.1
+	github.com/go-chi/chi/v5 v5.2.2
 	github.com/go-chi/cors v1.2.1
 	github.com/icco/gutil v0.0.0-20250215014032-7b1b73930901
 	github.com/namsral/flag v1.7.4-pre
