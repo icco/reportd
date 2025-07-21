@@ -14,7 +14,7 @@ require (
 	github.com/unrolled/render v1.7.0
 	github.com/unrolled/secure v1.17.0
 	go.uber.org/zap v1.27.0
-	google.golang.org/api v0.237.0
+	google.golang.org/api v0.242.0
 )
 
 require (
