@@ -13,7 +13,7 @@ require (
 	github.com/namsral/flag v1.7.4-pre
 	github.com/unrolled/render v1.7.0
 	github.com/unrolled/secure v1.17.0
-	go.uber.org/zap v1.27.0
+	go.uber.org/zap v1.27.1
 	google.golang.org/api v0.257.0
 )
 
