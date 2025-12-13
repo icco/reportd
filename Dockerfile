@@ -1,17 +1,31 @@
-FROM golang:1.25-alpine
+# Build stage
+FROM golang:1.25-alpine AS builder
 
 ENV GOPROXY="https://proxy.golang.org"
-ENV GO111MODULE="on"
+ENV CGO_ENABLED=0
+
+WORKDIR /src
+
+# Cache dependencies
+COPY go.mod go.sum ./
+RUN go mod download
+
+# Build binary
+COPY . .
+RUN go build -ldflags="-s -w" -o /server .
+
+# Final stage
+FROM alpine:3.21
+
+RUN apk add --no-cache ca-certificates tzdata
+
+WORKDIR /app
+
+COPY --from=builder /server .
+COPY templates/ templates/
+COPY public/ public/
+
 ENV NAT_ENV="production"
-
-
 EXPOSE 8080
 
-WORKDIR /go/src/github.com/icco/reportd
-
-RUN apk add --no-cache git
-COPY . .
-
-RUN go build -v -o /go/bin/server .
-
-CMD ["/go/bin/server"]
+ENTRYPOINT ["/app/server"]
