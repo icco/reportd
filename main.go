@@ -4,9 +4,12 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net/http"
 	"os"
+	"os/signal"
+	"syscall"
 	"time"
 
 	chi "github.com/go-chi/chi/v5"
@@ -97,8 +100,11 @@ func main() {
 	}
 
 	r := chi.NewRouter()
+	r.Use(middleware.RequestID)
 	r.Use(middleware.RealIP)
 	r.Use(logging.Middleware(log.Desugar(), *project))
+	r.Use(middleware.Recoverer)
+	r.Use(middleware.Compress(5))
 
 	r.Use(cors.New(cors.Options{
 		AllowCredentials:   true,
@@ -122,15 +128,23 @@ func main() {
 	})
 
 	secureMiddleware := secure.New(secure.Options{
-		SSLRedirect:        false,
-		SSLProxyHeaders:    map[string]string{"X-Forwarded-Proto": "https"},
-		FrameDeny:          true,
-		ContentTypeNosniff: true,
-		BrowserXssFilter:   true,
-		ReferrerPolicy:     "no-referrer",
-		FeaturePolicy:      "geolocation 'none'; midi 'none'; sync-xhr 'none'; microphone 'none'; camera 'none'; magnetometer 'none'; gyroscope 'none'; fullscreen 'none'; payment 'none'; usb 'none'",
+		SSLRedirect:          false,
+		SSLProxyHeaders:      map[string]string{"X-Forwarded-Proto": "https"},
+		STSSeconds:           63072000,
+		STSIncludeSubdomains: true,
+		STSPreload:           true,
+		FrameDeny:            true,
+		ContentTypeNosniff:   true,
+		BrowserXssFilter:     true,
+		ReferrerPolicy:       "no-referrer",
+		PermissionsPolicy:    "geolocation=(), midi=(), sync-xhr=(), microphone=(), camera=(), magnetometer=(), gyroscope=(), fullscreen=(), payment=(), usb=()",
 	})
 	r.Use(secureMiddleware.Handler)
+
+	r.Get("/robots.txt", robotsTxtHandler())
+	r.Get("/favicon.ico", func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusNoContent)
+	})
 
 	r.Get("/", indexHandler(pgDB))
 	r.Get("/view/{service}", viewHandler())
@@ -152,15 +166,35 @@ func main() {
 	r.Get("/api/reports/{service}", apiReportsHandler(pgDB))
 
 	srv := http.Server{
-		Addr:         ":" + port,
-		WriteTimeout: 30 * time.Second,
-		ReadTimeout:  30 * time.Second,
-		Handler:      r,
+		Addr:              ":" + port,
+		WriteTimeout:      30 * time.Second,
+		ReadTimeout:       30 * time.Second,
+		ReadHeaderTimeout: 5 * time.Second,
+		IdleTimeout:       120 * time.Second,
+		Handler:           r,
 	}
 
-	if err := srv.ListenAndServe(); err != nil {
-		log.Fatalw("Server failed", zap.Error(err))
+	done := make(chan os.Signal, 1)
+	signal.Notify(done, os.Interrupt, syscall.SIGTERM)
+
+	go func() {
+		if err := srv.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
+			log.Fatalw("Server failed", zap.Error(err))
+		}
+	}()
+
+	log.Infow("Server ready", "addr", srv.Addr)
+	<-done
+	log.Infow("Shutting down")
+
+	shutdownCtx, cancel := context.WithTimeout(ctx, 15*time.Second)
+	defer cancel()
+
+	if err := srv.Shutdown(shutdownCtx); err != nil {
+		log.Fatalw("Shutdown failed", zap.Error(err))
 	}
+
+	log.Infow("Server stopped")
 }
 
 func indexHandler(pgDB *gorm.DB) http.HandlerFunc {
@@ -224,6 +258,17 @@ func healthzHandler() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		if _, err := w.Write([]byte("ok.")); err != nil {
 			log.Errorw("error writing healthz", zap.Error(err))
+		}
+	}
+}
+
+func robotsTxtHandler() http.HandlerFunc {
+	body := []byte("User-agent: *\nDisallow: /\n")
+	return func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "text/plain; charset=utf-8")
+		w.Header().Set("Cache-Control", "public, max-age=86400")
+		if _, err := w.Write(body); err != nil {
+			log.Errorw("error writing robots.txt", zap.Error(err))
 		}
 	}
 }
