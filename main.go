@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io/fs"
 	"net/http"
 	"os"
 	"os/signal"
@@ -21,6 +22,7 @@ import (
 	"github.com/icco/reportd/pkg/lib"
 	"github.com/icco/reportd/pkg/reporting"
 	"github.com/icco/reportd/pkg/reportto"
+	"github.com/icco/reportd/templates"
 	"github.com/namsral/flag"
 	"github.com/unrolled/render"
 	"github.com/unrolled/secure"
@@ -141,13 +143,19 @@ func main() {
 	})
 	r.Use(secureMiddleware.Handler)
 
+	re := render.New(render.Options{
+		Directory:  ".",
+		FileSystem: &render.EmbedFileSystem{FS: templates.FS},
+		Extensions: []string{".tmpl"},
+	})
+
 	r.Get("/robots.txt", robotsTxtHandler())
 	r.Get("/favicon.ico", func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusNoContent)
 	})
 
-	r.Get("/", indexHandler(pgDB))
-	r.Get("/view/{service}", viewHandler())
+	r.Get("/", indexHandler(re, pgDB))
+	r.Get("/view/{service}", viewHandler(re))
 	r.Get("/healthz", healthzHandler())
 
 	r.Options("/report/{service}", corsPreflightHandler())
@@ -197,10 +205,9 @@ func main() {
 	log.Infow("Server stopped")
 }
 
-func indexHandler(pgDB *gorm.DB) http.HandlerFunc {
+func indexHandler(re *render.Render, pgDB *gorm.DB) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		ctx := r.Context()
-		re := render.New()
 
 		services, err := db.GetServices(ctx, pgDB)
 		if err != nil {
@@ -231,10 +238,9 @@ func indexHandler(pgDB *gorm.DB) http.HandlerFunc {
 	}
 }
 
-func viewHandler() http.HandlerFunc {
+func viewHandler(re *render.Render) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		service := chi.URLParam(r, "service")
-		re := render.New()
 
 		if err := lib.ValidateService(service); err != nil {
 			log.Errorw("error validating service", zap.Error(err), "service", service)
@@ -263,8 +269,16 @@ func healthzHandler() http.HandlerFunc {
 }
 
 func robotsTxtHandler() http.HandlerFunc {
+	body, err := fs.ReadFile(templates.FS, "robots.txt")
+	if err != nil {
+		log.Fatalw("could not read embedded robots.txt", zap.Error(err))
+	}
 	return func(w http.ResponseWriter, r *http.Request) {
-		http.ServeFile(w, r, "templates/robots.txt")
+		w.Header().Set("Content-Type", "text/plain; charset=utf-8")
+		w.Header().Set("Cache-Control", "public, max-age=86400")
+		if _, err := w.Write(body); err != nil {
+			log.Errorw("error writing robots.txt", zap.Error(err))
+		}
 	}
 }
 

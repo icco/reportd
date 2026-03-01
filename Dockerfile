@@ -22,8 +22,6 @@ RUN apk add --no-cache ca-certificates tzdata
 WORKDIR /app
 
 COPY --from=builder /server .
-COPY templates/ templates/
-COPY public/ public/
 
 ENV NAT_ENV="production"
 EXPOSE 8080
