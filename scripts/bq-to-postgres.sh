@@ -84,30 +84,16 @@ echo "    Found $REPORTS_COUNT rows"
 
 if [[ "$REPORTS_COUNT" -gt 0 ]]; then
   echo "==> Inserting report_to_entries into Postgres..."
-  # Process each row with jq, extracting CSP fields where available
   jq -c '.[]' "$TMPDIR/reports.json" | while IFS= read -r row; do
     srv=$(echo "$row" | jq -r '.Service // ""')
     ts=$(echo "$row" | jq -r '.Time // ""')
     pg_ts="${ts:-$(date -u +%Y-%m-%dT%H:%M:%S)}"
-    raw=$(echo "$row" | jq -c '.' | sed "s/'/''/g")
 
-    # Determine report type and extract CSP fields
     has_csp=$(echo "$row" | jq '.CSP != null and .CSP != {}')
     has_expectct=$(echo "$row" | jq '.ExpectCT != null and .ExpectCT != {}')
 
-    report_type=""
-    doc_uri=""
-    blocked_uri=""
-    violated_dir=""
-    effective_dir=""
-    original_policy=""
-    source_file=""
-    line_number=0
-    column_number=0
-    status_code=0
-
     if [[ "$has_csp" == "true" ]]; then
-      report_type="csp"
+      raw=$(echo "$row" | jq -c '.' | sed "s/'/''/g")
       doc_uri=$(echo "$row" | jq -r '.CSP.CSPReport.DocumentURI // .CSP.CSPReport."document-uri" // ""' | sed "s/'/''/g")
       blocked_uri=$(echo "$row" | jq -r '.CSP.CSPReport.BlockedURI // .CSP.CSPReport."blocked-uri" // ""' | sed "s/'/''/g")
       violated_dir=$(echo "$row" | jq -r '.CSP.CSPReport.ViolatedDirective // .CSP.CSPReport."violated-directive" // ""' | sed "s/'/''/g")
@@ -117,21 +103,54 @@ if [[ "$REPORTS_COUNT" -gt 0 ]]; then
       line_number=$(echo "$row" | jq -r '.CSP.CSPReport.LineNumber // .CSP.CSPReport."line-number" // 0')
       column_number=$(echo "$row" | jq -r '.CSP.CSPReport.ColumnNumber // .CSP.CSPReport."column-number" // 0')
       status_code=$(echo "$row" | jq -r '.CSP.CSPReport.StatusCode // .CSP.CSPReport."status-code" // 0')
+      psql "$PGCONN" -q -c "
+        INSERT INTO report_to_entries (created_at, service, report_type, document_uri, blocked_uri,
+          violated_directive, effective_directive, original_policy, source_file,
+          line_number, column_number, status_code, raw_json)
+        VALUES ('${pg_ts}', '${srv}', 'csp', '${doc_uri}', '${blocked_uri}',
+          '${violated_dir}', '${effective_dir}', '${original_policy}', '${source_file}',
+          ${line_number}, ${column_number}, ${status_code}, '${raw}')
+        ON CONFLICT DO NOTHING;
+      "
     elif [[ "$has_expectct" == "true" ]]; then
-      report_type="expect-ct"
+      raw=$(echo "$row" | jq -c '.' | sed "s/'/''/g")
+      psql "$PGCONN" -q -c "
+        INSERT INTO report_to_entries (created_at, service, report_type, document_uri, blocked_uri,
+          violated_directive, effective_directive, original_policy, source_file,
+          line_number, column_number, status_code, raw_json)
+        VALUES ('${pg_ts}', '${srv}', 'expect-ct', '', '', '', '', '', '', 0, 0, 0, '${raw}')
+        ON CONFLICT DO NOTHING;
+      "
     else
-      report_type="report-to"
+      # ReportTo is a repeated field — one Postgres row per item
+      echo "$row" | jq -c '.ReportTo // [] | .[]' | while IFS= read -r rt; do
+        raw=$(echo "$rt" | jq -c '.' | sed "s/'/''/g")
+        rt_type=$(echo "$rt" | jq -r '.Type // ""')
+        rt_url=$(echo "$rt" | jq -r '.URL // ""' | sed "s/'/''/g")
+        doc_uri=$(echo "$rt" | jq -r '.Body.DocumentURL // .Body.documentURL // ""' | sed "s/'/''/g")
+        blocked_uri=$(echo "$rt" | jq -r '.Body.BlockedURL // .Body.blockedURL // ""' | sed "s/'/''/g")
+        effective_dir=$(echo "$rt" | jq -r '.Body.EffectiveDirective // .Body.effectiveDirective // ""' | sed "s/'/''/g")
+        violated_dir=$(echo "$rt" | jq -r '.Body.Directive // .Body.directive // ""' | sed "s/'/''/g")
+        original_policy=$(echo "$rt" | jq -r '.Body.OriginalPolicy // .Body.originalPolicy // ""' | sed "s/'/''/g")
+        source_file=$(echo "$rt" | jq -r '.Body.SourceFile // .Body.sourceFile // ""' | sed "s/'/''/g")
+        line_number=$(echo "$rt" | jq -r '.Body.LineNumber // .Body.lineNumber // 0')
+        column_number=$(echo "$rt" | jq -r '.Body.ColumnNumber // .Body.columnNumber // 0')
+        status_code=$(echo "$rt" | jq -r '.Body.StatusCode // .Body.status_code // 0')
+        # Use URL as document_uri fallback (matches Go logic)
+        if [[ -z "$doc_uri" && -n "$rt_url" ]]; then
+          doc_uri="$rt_url"
+        fi
+        psql "$PGCONN" -q -c "
+          INSERT INTO report_to_entries (created_at, service, report_type, document_uri, blocked_uri,
+            violated_directive, effective_directive, original_policy, source_file,
+            line_number, column_number, status_code, raw_json)
+          VALUES ('${pg_ts}', '${srv}', '${rt_type}', '${doc_uri}', '${blocked_uri}',
+            '${violated_dir}', '${effective_dir}', '${original_policy}', '${source_file}',
+            ${line_number}, ${column_number}, ${status_code}, '${raw}')
+          ON CONFLICT DO NOTHING;
+        "
+      done
     fi
-
-    psql "$PGCONN" -q -c "
-      INSERT INTO report_to_entries (created_at, service, report_type, document_uri, blocked_uri,
-        violated_directive, effective_directive, original_policy, source_file,
-        line_number, column_number, status_code, raw_json)
-      VALUES ('${pg_ts}', '${srv}', '${report_type}', '${doc_uri}', '${blocked_uri}',
-        '${violated_dir}', '${effective_dir}', '${original_policy}', '${source_file}',
-        ${line_number}, ${column_number}, ${status_code}, '${raw}')
-      ON CONFLICT DO NOTHING;
-    "
   done
   echo "    Done."
 fi
