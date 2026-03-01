@@ -263,13 +263,8 @@ func healthzHandler() http.HandlerFunc {
 }
 
 func robotsTxtHandler() http.HandlerFunc {
-	body := []byte("User-agent: *\nDisallow: /\n")
 	return func(w http.ResponseWriter, r *http.Request) {
-		w.Header().Set("Content-Type", "text/plain; charset=utf-8")
-		w.Header().Set("Cache-Control", "public, max-age=86400")
-		if _, err := w.Write(body); err != nil {
-			log.Errorw("error writing robots.txt", zap.Error(err))
-		}
+		http.ServeFile(w, r, "templates/robots.txt")
 	}
 }
 
