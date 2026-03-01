@@ -13,6 +13,10 @@ func nullStr(s string) bigquery.NullString {
 	return bigquery.NullString{StringVal: s, Valid: true}
 }
 
+func strPtr(s string) *string { return &s }
+
+const testBlockedURI = "https://evil.com/script.js"
+
 func TestWebVitalFromAnalytics(t *testing.T) {
 	wv := &analytics.WebVital{
 		Name:    "LCP",
@@ -65,7 +69,7 @@ func TestReportToEntryFromCSPReport(t *testing.T) {
 				ColumnNumber       int    `json:"column-number"`
 			}{
 				DocumentURI:        "https://example.com/",
-				BlockedURI:         "https://evil.com/script.js",
+				BlockedURI:         testBlockedURI,
 				EffectiveDirective: "script-src",
 				ViolatedDirective:  "script-src",
 				SourceFile:         "https://example.com/app.js",
@@ -91,7 +95,7 @@ func TestReportToEntryFromCSPReport(t *testing.T) {
 	if entry.DocumentURI != "https://example.com/" {
 		t.Errorf("expected document_uri, got %q", entry.DocumentURI)
 	}
-	if entry.BlockedURI != "https://evil.com/script.js" {
+	if entry.BlockedURI != testBlockedURI {
 		t.Errorf("expected blocked_uri, got %q", entry.BlockedURI)
 	}
 	if entry.LineNumber != 10 {
@@ -154,7 +158,7 @@ func TestReportToEntryFromReportTo(t *testing.T) {
 					Type               string  `json:"type,omitempty"`
 				}{
 					DocumentURL:        "https://example.com/page",
-					BlockedURL:         "https://evil.com/script.js",
+					BlockedURL:         testBlockedURI,
 					EffectiveDirective: "script-src",
 					OriginalPolicy:     "default-src 'self'",
 					SourceFile:         "https://example.com/app.js",
@@ -177,7 +181,7 @@ func TestReportToEntryFromReportTo(t *testing.T) {
 	if entry.DocumentURI != "https://example.com/page" {
 		t.Errorf("expected document_uri, got %q", entry.DocumentURI)
 	}
-	if entry.BlockedURI != "https://evil.com/script.js" {
+	if entry.BlockedURI != testBlockedURI {
 		t.Errorf("expected blocked_uri, got %q", entry.BlockedURI)
 	}
 	if entry.EffectiveDirective != "script-src" {
@@ -200,7 +204,7 @@ func TestSecurityReportEntryFromCSP(t *testing.T) {
 			URL: "https://example.com/",
 			Body: reporting.CSPReportBody{
 				DocumentUri:        "https://example.com/page",
-				BlockedUri:         "https://evil.com/script.js",
+				BlockedUri:         testBlockedURI,
 				EffectiveDirective: "script-src-elem",
 				SourceFile:         "app.js",
 				LineNumber:         42,
@@ -217,7 +221,7 @@ func TestSecurityReportEntryFromCSP(t *testing.T) {
 	if entry.URL != "https://example.com/" {
 		t.Errorf("expected URL, got %q", entry.URL)
 	}
-	if entry.BlockedURI != "https://evil.com/script.js" {
+	if entry.BlockedURI != testBlockedURI {
 		t.Errorf("expected blocked_uri, got %q", entry.BlockedURI)
 	}
 	if entry.EffectiveDirective != "script-src-elem" {
@@ -236,7 +240,7 @@ func TestSecurityReportEntryFromDeprecation(t *testing.T) {
 		Deprecation: &reporting.DeprecationReport{
 			URL: "https://example.com/",
 			Body: reporting.DeprecationReportBody{
-				Message:    "WebSQL is deprecated",
+				Message:    strPtr("WebSQL is deprecated"),
 				SourceFile: "db.js",
 				LineNumber: 10,
 			},

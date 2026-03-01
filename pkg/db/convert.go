@@ -102,7 +102,9 @@ func SecurityReportEntryFromReport(sr *reporting.SecurityReport) *SecurityReport
 		entry.ColumnNumber = int(sr.CSP.Body.ColumnNumber)
 	case sr.Deprecation != nil:
 		entry.URL = sr.Deprecation.URL
-		entry.Message = sr.Deprecation.Body.Message
+		if sr.Deprecation.Body.Message != nil {
+			entry.Message = *sr.Deprecation.Body.Message
+		}
 		entry.SourceFile = sr.Deprecation.Body.SourceFile
 		entry.LineNumber = int(sr.Deprecation.Body.LineNumber)
 		entry.ColumnNumber = int(sr.Deprecation.Body.ColumnNumber)

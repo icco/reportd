@@ -39,21 +39,21 @@ type DeprecationReport struct {
 }
 
 type DeprecationReportBody struct {
-	Id                 string `json:"id,omitempty"`
-	AnticipatedRemoval string `json:"anticipated_removal,omitempty"`
-	Message            string `json:"message,omitempty"`
-	SourceFile         string `json:"source_file,omitempty"`
+	// Fields that existed in BQ from when Body was CSPReportBody (REQUIRED).
 	DocumentUri        string `json:"document_uri,omitempty"`
 	Referrer           string `json:"referrer,omitempty"`
-	LineNumber         int32  `json:"line_number,omitempty"`
-	ColumnNumber       int32  `json:"column_number,omitempty"`
-	// Fields below existed in BQ when DeprecationReport.Body was typed as
-	// CSPReportBody. BQ schemas are append-only so they must remain.
 	BlockedUri         string `json:"blocked_uri,omitempty"`
 	ViolatedDirective  string `json:"violated_directive,omitempty"`
 	EffectiveDirective string `json:"effective_directive,omitempty"`
 	OriginalPolicy     string `json:"original_policy,omitempty"`
+	SourceFile         string `json:"source_file,omitempty"`
+	LineNumber         int32  `json:"line_number,omitempty"`
+	ColumnNumber       int32  `json:"column_number,omitempty"`
 	ScriptSample       string `json:"script_sample,omitempty"`
+	// Fields new to DeprecationReportBody — must be nullable for BQ compat.
+	Id                 *string `json:"id,omitempty"`
+	AnticipatedRemoval *string `json:"anticipated_removal,omitempty"`
+	Message            *string `json:"message,omitempty"`
 }
 
 type PermissionsPolicyReport struct {

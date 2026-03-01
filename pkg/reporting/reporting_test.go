@@ -109,11 +109,11 @@ func TestParseDeprecation(t *testing.T) {
 	if data.Deprecation == nil {
 		t.Fatal("Deprecation should not be nil")
 	}
-	if data.Deprecation.Body.Id != "websql" {
-		t.Errorf("expected id 'websql', got %q", data.Deprecation.Body.Id)
+	if data.Deprecation.Body.Id == nil || *data.Deprecation.Body.Id != "websql" {
+		t.Errorf("expected id 'websql', got %v", data.Deprecation.Body.Id)
 	}
-	if data.Deprecation.Body.Message != "WebSQL is deprecated" {
-		t.Errorf("expected message 'WebSQL is deprecated', got %q", data.Deprecation.Body.Message)
+	if data.Deprecation.Body.Message == nil || *data.Deprecation.Body.Message != "WebSQL is deprecated" {
+		t.Errorf("expected message 'WebSQL is deprecated', got %v", data.Deprecation.Body.Message)
 	}
 }
 
