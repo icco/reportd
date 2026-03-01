@@ -25,6 +25,34 @@ type ReportDailyCount struct {
 	Count      int64  `json:"count"`
 }
 
+type ServiceHealth struct {
+	Service string  `json:"service"`
+	Metric  string  `json:"metric"`
+	P75     float64 `json:"p75"`
+}
+
+func GetAllServicesHealth(d *gorm.DB) (map[string][]ServiceHealth, error) {
+	cutoff := time.Now().AddDate(0, 0, -28)
+	var results []ServiceHealth
+	err := d.Raw(`
+		SELECT service, name AS metric,
+			PERCENTILE_CONT(0.75) WITHIN GROUP (ORDER BY value) AS p75
+		FROM web_vitals
+		WHERE created_at >= ? AND deleted_at IS NULL
+		GROUP BY service, name
+		ORDER BY service, name
+	`, cutoff).Scan(&results).Error
+	if err != nil {
+		return nil, fmt.Errorf("querying all services health: %w", err)
+	}
+
+	out := make(map[string][]ServiceHealth)
+	for _, r := range results {
+		out[r.Service] = append(out[r.Service], r)
+	}
+	return out, nil
+}
+
 func GetServices(d *gorm.DB) ([]string, error) {
 	var services []string
 	err := d.Raw(`

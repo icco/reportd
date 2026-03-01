@@ -167,10 +167,22 @@ func indexHandler(pgDB *gorm.DB) http.HandlerFunc {
 			http.Error(w, "could not get services", 500)
 			return
 		}
+
+		health, err := db.GetAllServicesHealth(pgDB)
+		if err != nil {
+			log.Errorw("error getting services health", zap.Error(err))
+			// Non-fatal: render without health data.
+			health = make(map[string][]db.ServiceHealth)
+		}
+
+		healthJSON, _ := json.Marshal(health)
+
 		if err := re.HTML(w, http.StatusOK, "index", struct {
-			Services []string
+			Services   []string
+			HealthJSON string
 		}{
-			Services: services,
+			Services:   services,
+			HealthJSON: string(healthJSON),
 		}); err != nil {
 			log.Errorw("error rendering index", zap.Error(err))
 			http.Error(w, "could not render index", 500)
