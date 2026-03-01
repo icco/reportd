@@ -30,6 +30,11 @@ var (
 	log     = logging.Must(logging.NewLogger(service))
 )
 
+func writeJSON(w http.ResponseWriter, data any) error {
+	w.Header().Set("Content-Type", "application/json")
+	return json.NewEncoder(w).Encode(data)
+}
+
 func main() {
 	fs := flag.NewFlagSetWithEnvPrefix(os.Args[0], "REPORTD", 0)
 	project := fs.String("project", "", "Project ID containing the bigquery dataset to upload to.")
@@ -255,15 +260,7 @@ func getReportsHandler(pgDB *gorm.DB) http.HandlerFunc {
 			return
 		}
 
-		resp, err := json.Marshal(data)
-		if err != nil {
-			log.Errorw("error seen during reports marshal", zap.Error(err), "service", service)
-			http.Error(w, "processing error", 500)
-			return
-		}
-
-		w.Header().Set("Content-Type", "application/json")
-		if _, err := w.Write(resp); err != nil {
+		if err := writeJSON(w, data); err != nil {
 			log.Errorw("error writing reports", zap.Error(err), "service", service)
 		}
 	}
@@ -323,15 +320,7 @@ func getServicesHandler(pgDB *gorm.DB) http.HandlerFunc {
 			return
 		}
 
-		resp, err := json.Marshal(data)
-		if err != nil {
-			log.Errorw("error seen during services marshal", zap.Error(err))
-			http.Error(w, "processing error", 500)
-			return
-		}
-
-		w.Header().Set("Content-Type", "application/json")
-		if _, err := w.Write(resp); err != nil {
+		if err := writeJSON(w, data); err != nil {
 			log.Errorw("error writing services", zap.Error(err))
 		}
 	}
@@ -355,15 +344,7 @@ func getAnalyticsHandler(pgDB *gorm.DB) http.HandlerFunc {
 			return
 		}
 
-		resp, err := json.Marshal(data)
-		if err != nil {
-			log.Errorw("error seen during analytics marshal", zap.Error(err), "service", service)
-			http.Error(w, "processing error", 500)
-			return
-		}
-
-		w.Header().Set("Content-Type", "application/json")
-		if _, err := w.Write(resp); err != nil {
+		if err := writeJSON(w, data); err != nil {
 			log.Errorw("error writing analytics", zap.Error(err), "service", service)
 		}
 	}
@@ -493,15 +474,7 @@ func apiVitalsHandler(pgDB *gorm.DB) http.HandlerFunc {
 			Summaries: summaries,
 		}
 
-		resp, err := json.Marshal(out)
-		if err != nil {
-			log.Errorw("error marshaling vitals", zap.Error(err), "service", service)
-			http.Error(w, "processing error", 500)
-			return
-		}
-
-		w.Header().Set("Content-Type", "application/json")
-		if _, err := w.Write(resp); err != nil {
+		if err := writeJSON(w, out); err != nil {
 			log.Errorw("error writing vitals", zap.Error(err), "service", service)
 		}
 	}
@@ -558,15 +531,7 @@ func apiReportsHandler(pgDB *gorm.DB) http.HandlerFunc {
 			TopDirectives:  topDirectives,
 		}
 
-		resp, err := json.Marshal(out)
-		if err != nil {
-			log.Errorw("error marshaling reports", zap.Error(err), "service", service)
-			http.Error(w, "processing error", 500)
-			return
-		}
-
-		w.Header().Set("Content-Type", "application/json")
-		if _, err := w.Write(resp); err != nil {
+		if err := writeJSON(w, out); err != nil {
 			log.Errorw("error writing reports", zap.Error(err), "service", service)
 		}
 	}
