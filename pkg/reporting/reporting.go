@@ -43,6 +43,7 @@ type DeprecationReportBody struct {
 	AnticipatedRemoval string `json:"anticipated_removal,omitempty"`
 	Message            string `json:"message,omitempty"`
 	SourceFile         string `json:"source_file,omitempty"`
+	DocumentUri        string `json:"document_uri,omitempty"`
 	LineNumber         int32  `json:"line_number,omitempty"`
 	ColumnNumber       int32  `json:"column_number,omitempty"`
 }

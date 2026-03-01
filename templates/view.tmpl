@@ -298,7 +298,7 @@
         const colors = ['#3b82f6', '#f59e0b', '#ef4444', '#10b981', '#8b5cf6', '#ec4899'];
         const datasets = Object.entries(byType).map(([type, data], i) => ({
           label: type,
-          data: data.sort((a, b) => a.x - b.x),
+          data: fillMissingDays(data.sort((a, b) => a.x - b.x), 0),
           backgroundColor: colors[i % colors.length] + '88',
           borderColor: colors[i % colors.length],
           borderWidth: 1,
@@ -406,6 +406,22 @@
         `).join('');
       }
 
+      // Fill missing dates with zero values so charts show continuous lines
+      function fillMissingDays(points, defaultY = 0) {
+        if (points.length < 2) return points;
+        const sorted = [...points].sort((a, b) => a.x - b.x);
+        const filled = [];
+        const existing = new Set(sorted.map(p => p.x.toISOString().slice(0, 10)));
+        const start = sorted[0].x;
+        const end = sorted[sorted.length - 1].x;
+        for (let d = new Date(start); d <= end; d.setDate(d.getDate() + 1)) {
+          const key = d.toISOString().slice(0, 10);
+          const found = sorted.find(p => p.x.toISOString().slice(0, 10) === key);
+          filled.push({ x: new Date(d), y: found ? found.y : defaultY });
+        }
+        return filled;
+      }
+
       // Fetch and render vitals
       fetch(`/api/vitals/${SERVICE}`)
         .then(r => r.json())
@@ -420,7 +436,7 @@
               byMetric[s.name].push({ x: new Date(s.day), y: s.value });
             });
             Object.entries(byMetric).forEach(([metric, points]) => {
-              createVitalChart('chart-' + metric, metric, points);
+              createVitalChart('chart-' + metric, metric, fillMissingDays(points));
             });
           }
         })

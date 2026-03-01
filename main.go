@@ -435,7 +435,11 @@ func postAnalyticsHandler(pgDB *gorm.DB, project, dataset, aTable string) http.H
 		entry := db.WebVitalFromAnalytics(data)
 		if err := pgDB.WithContext(ctx).Create(entry).Error; err != nil {
 			log.Errorw("error writing analytics to postgres", zap.Error(err), "service", service)
+			http.Error(w, "storage error", 500)
+			return
 		}
+
+		w.WriteHeader(http.StatusNoContent)
 
 		go func() {
 			bgCtx := context.Background()
@@ -484,7 +488,11 @@ func postReportingHandler(pgDB *gorm.DB, project, dataset, rv2Table string) http
 		entry := db.SecurityReportEntryFromReport(reports)
 		if err := pgDB.WithContext(ctx).Create(entry).Error; err != nil {
 			log.Errorw("error writing reporting to postgres", zap.Error(err), "service", service)
+			http.Error(w, "storage error", 500)
+			return
 		}
+
+		w.WriteHeader(http.StatusNoContent)
 
 		go func() {
 			bgCtx := context.Background()
