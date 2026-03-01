@@ -143,6 +143,9 @@ func main() {
 
 	r.Post("/reporting/{service}", postReportingHandler(pgDB, *project, *dataset, *rv2Table))
 
+	r.Get("/api/vitals/{service}", apiVitalsHandler(pgDB))
+	r.Get("/api/reports/{service}", apiReportsHandler(pgDB))
+
 	srv := http.Server{
 		Addr:         ":" + port,
 		WriteTimeout: 30 * time.Second,
@@ -440,5 +443,118 @@ func postReportingHandler(pgDB *gorm.DB, project, dataset, rv2Table string) http
 				log.Errorw("error during reporting upload to bigquery", "dataset", dataset, "project", project, "table", rv2Table, zap.Error(err))
 			}
 		}()
+	}
+}
+
+func apiVitalsHandler(pgDB *gorm.DB) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		service := chi.URLParam(r, "service")
+
+		if err := lib.ValidateService(service); err != nil {
+			log.Errorw("error validating service", zap.Error(err), "service", service)
+			http.Error(w, "could not validate service", 400)
+			return
+		}
+
+		p75s, err := db.GetWebVitalP75s(pgDB, service)
+		if err != nil {
+			log.Errorw("error getting p75s", zap.Error(err), "service", service)
+			http.Error(w, "processing error", 500)
+			return
+		}
+
+		summaries, err := db.GetWebVitalSummaries(pgDB, service)
+		if err != nil {
+			log.Errorw("error getting summaries", zap.Error(err), "service", service)
+			http.Error(w, "processing error", 500)
+			return
+		}
+
+		out := struct {
+			P75s      []db.WebVitalP75        `json:"p75s"`
+			Summaries []db.WebVitalDailySummary `json:"summaries"`
+		}{
+			P75s:      p75s,
+			Summaries: summaries,
+		}
+
+		resp, err := json.Marshal(out)
+		if err != nil {
+			log.Errorw("error marshaling vitals", zap.Error(err), "service", service)
+			http.Error(w, "processing error", 500)
+			return
+		}
+
+		w.Header().Set("Content-Type", "application/json")
+		if _, err := w.Write(resp); err != nil {
+			log.Errorw("error writing vitals", zap.Error(err), "service", service)
+		}
+	}
+}
+
+func apiReportsHandler(pgDB *gorm.DB) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		service := chi.URLParam(r, "service")
+
+		if err := lib.ValidateService(service); err != nil {
+			log.Errorw("error validating service", zap.Error(err), "service", service)
+			http.Error(w, "could not validate service", 400)
+			return
+		}
+
+		counts, err := db.GetReportCounts(pgDB, service)
+		if err != nil {
+			log.Errorw("error getting report counts", zap.Error(err), "service", service)
+			http.Error(w, "processing error", 500)
+			return
+		}
+
+		recent, err := db.GetRecentReports(pgDB, service, 50)
+		if err != nil {
+			log.Errorw("error getting recent reports", zap.Error(err), "service", service)
+			http.Error(w, "processing error", 500)
+			return
+		}
+
+		recentRT, err := db.GetRecentReportToEntries(pgDB, service, 50)
+		if err != nil {
+			log.Errorw("error getting recent report-to entries", zap.Error(err), "service", service)
+			http.Error(w, "processing error", 500)
+			return
+		}
+
+		topDirectives, err := db.GetTopViolatedDirectives(pgDB, service, 10)
+		if err != nil {
+			log.Errorw("error getting top violated directives", zap.Error(err), "service", service)
+			http.Error(w, "processing error", 500)
+			return
+		}
+
+		out := struct {
+			Counts        []db.ReportDailyCount      `json:"counts"`
+			RecentReports []db.SecurityReportEntry    `json:"recent_reports"`
+			RecentReportTo []db.ReportToEntry         `json:"recent_report_to"`
+			TopDirectives []struct {
+				Directive string `json:"directive"`
+				Count     int64  `json:"count"`
+			} `json:"top_directives"`
+		}{
+			Counts:         counts,
+			RecentReports:  recent,
+			RecentReportTo: recentRT,
+			TopDirectives:  topDirectives,
+		}
+
+		resp, err := json.Marshal(out)
+		if err != nil {
+			log.Errorw("error marshaling reports", zap.Error(err), "service", service)
+			http.Error(w, "processing error", 500)
+			return
+		}
+
+		w.Header().Set("Content-Type", "application/json")
+		if _, err := w.Write(resp); err != nil {
+			log.Errorw("error writing reports", zap.Error(err), "service", service)
+		}
 	}
 }
