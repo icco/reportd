@@ -47,6 +47,13 @@ type DeprecationReportBody struct {
 	Referrer           string `json:"referrer,omitempty"`
 	LineNumber         int32  `json:"line_number,omitempty"`
 	ColumnNumber       int32  `json:"column_number,omitempty"`
+	// Fields below existed in BQ when DeprecationReport.Body was typed as
+	// CSPReportBody. BQ schemas are append-only so they must remain.
+	BlockedUri         string `json:"blocked_uri,omitempty"`
+	ViolatedDirective  string `json:"violated_directive,omitempty"`
+	EffectiveDirective string `json:"effective_directive,omitempty"`
+	OriginalPolicy     string `json:"original_policy,omitempty"`
+	ScriptSample       string `json:"script_sample,omitempty"`
 }
 
 type PermissionsPolicyReport struct {
