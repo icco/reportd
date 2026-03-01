@@ -1,0 +1,7 @@
+{
+  "type": "crash",
+  "url": "https://example.com/page",
+  "body": {
+    "reason": "oom"
+  }
+}

@@ -1,0 +1,12 @@
+{
+  "type": "permissions-policy-violation",
+  "url": "https://example.com/page",
+  "body": {
+    "featureId": "geolocation",
+    "sourceFile": "https://example.com/js/app.js",
+    "lineNumber": 42,
+    "columnNumber": 12,
+    "disposition": "enforce",
+    "message": "Permissions policy violation: geolocation is not allowed"
+  }
+}

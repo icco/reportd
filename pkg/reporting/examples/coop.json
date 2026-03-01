@@ -1,0 +1,11 @@
+{
+  "type": "coop",
+  "url": "https://example.com/page",
+  "body": {
+    "type": "navigation-to-response",
+    "property": "opener",
+    "effectivePolicy": "same-origin",
+    "nextResponseURL": "https://other.example.com/",
+    "previousResponseURL": "https://example.com/page"
+  }
+}

@@ -1,0 +1,7 @@
+{
+  "type": "some-future-report-type",
+  "url": "https://example.com/page",
+  "body": {
+    "custom_field": "custom_value"
+  }
+}
