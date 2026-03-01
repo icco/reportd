@@ -1,6 +1,4 @@
 User-agent: *
-Allow: /
-Allow: /view/
 Disallow: /api/
 Disallow: /services
 Disallow: /reports/
