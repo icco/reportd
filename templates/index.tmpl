@@ -15,7 +15,7 @@
     </style>
 
     <script type="module">
-      import { onCLS, onINP, onLCP, onFCP, onFID, onTTFB } from 'https://unpkg.com/web-vitals@4?module';
+      import { onCLS, onINP, onLCP, onFCP, onTTFB } from 'https://unpkg.com/web-vitals@5?module';
 
       function sendToAnalytics(metric) {
         const body = JSON.stringify(metric);
@@ -25,7 +25,6 @@
 
       onCLS(sendToAnalytics);
       onFCP(sendToAnalytics);
-      onFID(sendToAnalytics);
       onINP(sendToAnalytics);
       onLCP(sendToAnalytics);
       onTTFB(sendToAnalytics);
