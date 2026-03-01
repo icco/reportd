@@ -271,9 +271,9 @@
             scales: {
               x: {
                 type: 'time',
-                time: { unit: 'week', tooltipFormat: 'MMM d, yyyy' },
+                time: { unit: 'day', tooltipFormat: 'MMM d, yyyy' },
                 grid: { color: 'rgba(255,255,255,0.05)' },
-                ticks: { color: '#6b7280', maxTicksLimit: 8 },
+                ticks: { color: '#6b7280', maxTicksLimit: 12 },
               },
               y: {
                 beginAtZero: true,
@@ -322,7 +322,7 @@
               x: {
                 type: 'time',
                 stacked: true,
-                time: { unit: 'week', tooltipFormat: 'MMM d, yyyy' },
+                time: { unit: 'day', tooltipFormat: 'MMM d, yyyy' },
                 grid: { color: 'rgba(255,255,255,0.05)' },
                 ticks: { color: '#6b7280' },
               },

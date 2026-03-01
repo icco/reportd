@@ -101,10 +101,10 @@ func GetWebVitalSummaries(ctx context.Context, d *gorm.DB, service string) ([]We
 	var results []WebVitalDailySummary
 	err := d.WithContext(ctx).
 		Model(&WebVital{}).
-		Select("DATE(created_at) AS day, service, name, AVG(value) AS value").
+		Select("TO_CHAR(DATE(created_at), 'YYYY-MM-DD') AS day, service, name, AVG(value) AS value").
 		Where("service = ? AND created_at >= ?", service, cutoff).
-		Group("day, service, name").
-		Order("day DESC").
+		Group("DATE(created_at), service, name").
+		Order("DATE(created_at) DESC").
 		Find(&results).Error
 	if err != nil {
 		return nil, fmt.Errorf("querying web vital summaries: %w", err)
@@ -134,10 +134,10 @@ func GetReportCounts(ctx context.Context, d *gorm.DB, service string) ([]ReportD
 	var rtCounts []ReportDailyCount
 	err := d.WithContext(ctx).
 		Model(&ReportToEntry{}).
-		Select("DATE(created_at) AS day, report_type, COUNT(*) AS count").
+		Select("TO_CHAR(DATE(created_at), 'YYYY-MM-DD') AS day, report_type, COUNT(*) AS count").
 		Where("service = ? AND created_at >= ?", service, cutoff).
-		Group("day, report_type").
-		Order("day DESC").
+		Group("DATE(created_at), report_type").
+		Order("DATE(created_at) DESC").
 		Find(&rtCounts).Error
 	if err != nil {
 		return nil, fmt.Errorf("querying report-to counts: %w", err)
@@ -146,10 +146,10 @@ func GetReportCounts(ctx context.Context, d *gorm.DB, service string) ([]ReportD
 	var srCounts []ReportDailyCount
 	err = d.WithContext(ctx).
 		Model(&SecurityReportEntry{}).
-		Select("DATE(created_at) AS day, report_type, COUNT(*) AS count").
+		Select("TO_CHAR(DATE(created_at), 'YYYY-MM-DD') AS day, report_type, COUNT(*) AS count").
 		Where("service = ? AND created_at >= ?", service, cutoff).
-		Group("day, report_type").
-		Order("day DESC").
+		Group("DATE(created_at), report_type").
+		Order("DATE(created_at) DESC").
 		Find(&srCounts).Error
 	if err != nil {
 		return nil, fmt.Errorf("querying security report counts: %w", err)
