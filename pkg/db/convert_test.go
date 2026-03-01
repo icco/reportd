@@ -13,7 +13,6 @@ func nullStr(s string) bigquery.NullString {
 	return bigquery.NullString{StringVal: s, Valid: true}
 }
 
-func strPtr(s string) *string { return &s }
 
 const testBlockedURI = "https://evil.com/script.js"
 
@@ -240,7 +239,7 @@ func TestSecurityReportEntryFromDeprecation(t *testing.T) {
 		Deprecation: &reporting.DeprecationReport{
 			URL: "https://example.com/",
 			Body: reporting.DeprecationReportBody{
-				Message:    strPtr("WebSQL is deprecated"),
+				Message:    bigquery.NullString{StringVal: "WebSQL is deprecated", Valid: true},
 				SourceFile: "db.js",
 				LineNumber: 10,
 			},

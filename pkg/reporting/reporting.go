@@ -51,9 +51,9 @@ type DeprecationReportBody struct {
 	ColumnNumber       int32  `json:"column_number,omitempty"`
 	ScriptSample       string `json:"script_sample,omitempty"`
 	// Fields new to DeprecationReportBody — must be nullable for BQ compat.
-	Id                 *string `json:"id,omitempty"`
-	AnticipatedRemoval *string `json:"anticipated_removal,omitempty"`
-	Message            *string `json:"message,omitempty"`
+	Id                 bigquery.NullString `json:"-"`
+	AnticipatedRemoval bigquery.NullString `json:"-"`
+	Message            bigquery.NullString `json:"-"`
 }
 
 type PermissionsPolicyReport struct {
@@ -182,6 +182,19 @@ func ParseReport(data, srv string) (*SecurityReport, error) {
 	case "deprecation":
 		if err := json.Unmarshal([]byte(data), &sr.Deprecation); err != nil {
 			return nil, err
+		}
+		// Populate NullString fields that json:"-" skips.
+		var depJSON struct {
+			Body struct {
+				Id                 string `json:"id"`
+				AnticipatedRemoval string `json:"anticipated_removal"`
+				Message            string `json:"message"`
+			} `json:"body"`
+		}
+		if err := json.Unmarshal([]byte(data), &depJSON); err == nil {
+			sr.Deprecation.Body.Id = bigquery.NullString{StringVal: depJSON.Body.Id, Valid: depJSON.Body.Id != ""}
+			sr.Deprecation.Body.AnticipatedRemoval = bigquery.NullString{StringVal: depJSON.Body.AnticipatedRemoval, Valid: depJSON.Body.AnticipatedRemoval != ""}
+			sr.Deprecation.Body.Message = bigquery.NullString{StringVal: depJSON.Body.Message, Valid: depJSON.Body.Message != ""}
 		}
 	case "permissions-policy-violation":
 		if err := json.Unmarshal([]byte(data), &sr.PermissionsPolicy); err != nil {
