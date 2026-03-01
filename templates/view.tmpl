@@ -406,18 +406,24 @@
         `).join('');
       }
 
-      // Fill missing dates with zero values so charts show continuous lines
+      // Fill the full 3-month window with zero for any missing days
       function fillMissingDays(points, defaultY = 0) {
-        if (points.length < 2) return points;
-        const sorted = [...points].sort((a, b) => a.x - b.x);
+        const now = new Date();
+        const start = new Date(now);
+        start.setMonth(start.getMonth() - 3);
+        start.setHours(0, 0, 0, 0);
+        const end = new Date(now);
+        end.setHours(0, 0, 0, 0);
+
+        const byDate = {};
+        points.forEach(p => {
+          byDate[p.x.toISOString().slice(0, 10)] = p.y;
+        });
+
         const filled = [];
-        const existing = new Set(sorted.map(p => p.x.toISOString().slice(0, 10)));
-        const start = sorted[0].x;
-        const end = sorted[sorted.length - 1].x;
         for (let d = new Date(start); d <= end; d.setDate(d.getDate() + 1)) {
           const key = d.toISOString().slice(0, 10);
-          const found = sorted.find(p => p.x.toISOString().slice(0, 10) === key);
-          filled.push({ x: new Date(d), y: found ? found.y : defaultY });
+          filled.push({ x: new Date(d), y: key in byDate ? byDate[key] : defaultY });
         }
         return filled;
       }
