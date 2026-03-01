@@ -14,6 +14,7 @@ import (
 	"github.com/go-chi/cors"
 	"github.com/icco/gutil/logging"
 	"github.com/icco/reportd/pkg/analytics"
+	"github.com/icco/reportd/pkg/db"
 	"github.com/icco/reportd/pkg/lib"
 	"github.com/icco/reportd/pkg/reporting"
 	"github.com/icco/reportd/pkg/reportto"
@@ -21,6 +22,7 @@ import (
 	"github.com/unrolled/render"
 	"github.com/unrolled/secure"
 	"go.uber.org/zap"
+	"gorm.io/gorm"
 )
 
 var (
@@ -35,6 +37,7 @@ func main() {
 	aTable := fs.String("analytics_table", "", "The bigquery table to upload analytics to.")
 	rTable := fs.String("reports_table", "", "The bigquery table to upload reports to.")
 	rv2Table := fs.String("reports_v2_table", "", "The bigquery table to upload reports to.")
+	databaseURL := fs.String("database_url", "", "Postgres connection string (e.g. postgres://user:pass@host/reportd).")
 	if err := fs.Parse(os.Args[1:]); err != nil {
 		log.Fatalw("error parsing flags", zap.Error(err))
 	}
@@ -61,6 +64,20 @@ func main() {
 		log.Fatalw("reports_table is required")
 	}
 
+	if *databaseURL == "" {
+		log.Fatalw("database_url is required")
+	}
+
+	// Connect to Postgres via GORM.
+	pgDB, err := db.Connect(*databaseURL)
+	if err != nil {
+		log.Fatalw("could not connect to postgres", zap.Error(err))
+	}
+	if err := db.AutoMigrate(pgDB); err != nil {
+		log.Fatalw("could not auto-migrate postgres", zap.Error(err))
+	}
+	log.Infow("Postgres connected and migrated")
+
 	ctx := context.Background()
 	if err := reportto.UpdateReportsBQSchema(ctx, *project, *dataset, *rTable); err != nil {
 		log.Errorw("report table update", zap.Error(err))
@@ -85,7 +102,7 @@ func main() {
 		AllowedMethods:     []string{"GET", "POST", "OPTIONS"},
 		AllowedHeaders:     []string{"Accept", "Authorization", "Content-Type", "X-CSRF-Token"},
 		ExposedHeaders:     []string{"Link"},
-		MaxAge:             300, // Maximum value not ignored by any of major browsers
+		MaxAge:             300,
 	}).Handler)
 
 	r.Use(middleware.Timeout(30 * time.Second))
@@ -110,9 +127,38 @@ func main() {
 	})
 	r.Use(secureMiddleware.Handler)
 
-	r.Get("/", func(w http.ResponseWriter, r *http.Request) {
+	r.Get("/", indexHandler(pgDB))
+	r.Get("/view/{service}", viewHandler())
+	r.Get("/healthz", healthzHandler())
+
+	r.Options("/report/{service}", corsPreflightHandler())
+	r.Options("/analytics/{service}", corsPreflightHandler())
+
+	r.Get("/reports/{service}", getReportsHandler(pgDB, *project, *dataset, *rTable, *rv2Table))
+	r.Post("/report/{service}", postReportHandler(pgDB, *project, *dataset, *rTable))
+
+	r.Get("/services", getServicesHandler(pgDB))
+	r.Get("/analytics/{service}", getAnalyticsHandler(pgDB, *project, *dataset, *aTable))
+	r.Post("/analytics/{service}", postAnalyticsHandler(pgDB, *project, *dataset, *aTable))
+
+	r.Post("/reporting/{service}", postReportingHandler(pgDB, *project, *dataset, *rv2Table))
+
+	srv := http.Server{
+		Addr:         ":" + port,
+		WriteTimeout: 30 * time.Second,
+		ReadTimeout:  30 * time.Second,
+		Handler:      r,
+	}
+
+	if err := srv.ListenAndServe(); err != nil {
+		log.Fatalw("Server failed", zap.Error(err))
+	}
+}
+
+func indexHandler(pgDB *gorm.DB) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
 		re := render.New()
-		services, err := lib.GetServices(r.Context(), *project, *dataset, *aTable, *rTable)
+		services, err := db.GetServices(pgDB)
 		if err != nil {
 			log.Errorw("error getting services", zap.Error(err))
 			http.Error(w, "could not get services", 500)
@@ -127,9 +173,11 @@ func main() {
 			http.Error(w, "could not render index", 500)
 			return
 		}
-	})
+	}
+}
 
-	r.Get("/view/{service}", func(w http.ResponseWriter, r *http.Request) {
+func viewHandler() http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
 		service := chi.URLParam(r, "service")
 		re := render.New()
 
@@ -148,19 +196,20 @@ func main() {
 			http.Error(w, "could not render view", 500)
 			return
 		}
-	})
+	}
+}
 
-	r.Get("/healthz", func(w http.ResponseWriter, r *http.Request) {
+func healthzHandler() http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
 		if _, err := w.Write([]byte("ok.")); err != nil {
 			log.Errorw("error writing healthz", zap.Error(err))
 		}
-	})
+	}
+}
 
-	// Needed because some browsers fire off an OPTIONS request before sending a
-	// POST to validate CORS.
-	r.Options("/report/{service}", func(w http.ResponseWriter, r *http.Request) {
+func corsPreflightHandler() http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
 		service := chi.URLParam(r, "service")
-
 		if err := lib.ValidateService(service); err != nil {
 			log.Errorw("error validating service", zap.Error(err), "service", service)
 			http.Error(w, "could not validate service", 400)
@@ -169,23 +218,11 @@ func main() {
 		if _, err := w.Write([]byte("")); err != nil {
 			log.Errorw("error writing options", zap.Error(err))
 		}
-	})
+	}
+}
 
-	r.Options("/analytics/{service}", func(w http.ResponseWriter, r *http.Request) {
-		service := chi.URLParam(r, "service")
-
-		if err := lib.ValidateService(service); err != nil {
-			log.Errorw("error validating service", zap.Error(err), "service", service)
-			http.Error(w, "could not validate service", 400)
-			return
-		}
-		if _, err := w.Write([]byte("")); err != nil {
-			log.Errorw("error writing options", zap.Error(err))
-		}
-	})
-
-	r.Get("/reports/{service}", func(w http.ResponseWriter, r *http.Request) {
-		ctx := r.Context()
+func getReportsHandler(pgDB *gorm.DB, project, dataset, rTable, rv2Table string) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
 		service := chi.URLParam(r, "service")
 
 		if err := lib.ValidateService(service); err != nil {
@@ -194,23 +231,14 @@ func main() {
 			return
 		}
 
-		data, err := reportto.GetReportCounts(ctx, service, *project, *dataset, *rTable)
+		data, err := db.GetReportCounts(pgDB, service)
 		if err != nil {
-			log.Errorw("error seen during reports get", zap.Error(err), "service", service)
+			log.Errorw("error getting report counts from postgres", zap.Error(err), "service", service)
 			http.Error(w, "processing error", 500)
 			return
 		}
 
-		data2, err := reporting.GetReportCounts(ctx, service, *project, *dataset, *rv2Table)
-		if err != nil {
-			log.Errorw("error seen during reports get", zap.Error(err), "service", service)
-			http.Error(w, "processing error", 500)
-			return
-		}
-
-		out := append(data, data2...)
-
-		resp, err := json.Marshal(out)
+		resp, err := json.Marshal(data)
 		if err != nil {
 			log.Errorw("error seen during reports marshal", zap.Error(err), "service", service)
 			http.Error(w, "processing error", 500)
@@ -221,9 +249,11 @@ func main() {
 		if _, err := w.Write(resp); err != nil {
 			log.Errorw("error writing reports", zap.Error(err), "service", service)
 		}
-	})
+	}
+}
 
-	r.Post("/report/{service}", func(w http.ResponseWriter, r *http.Request) {
+func postReportHandler(pgDB *gorm.DB, project, dataset, rTable string) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
 		ctx := r.Context()
 		service := chi.URLParam(r, "service")
 
@@ -249,20 +279,26 @@ func main() {
 			return
 		}
 
-		// Log the report.
 		log.Infow("report received", "content-type", ct, "service", service, "user-agent", r.UserAgent(), "report", data)
 
-		if err := reportto.WriteReportToBigQuery(ctx, *project, *dataset, *rTable, []*reportto.Report{data}); err != nil {
-			log.Errorw("error during report upload", "dataset", *dataset, "project", *project, "table", *rTable, "bodyJson", bodyStr, zap.Error(err), "service", service)
-			http.Error(w, "uploading error", 500)
-			return
+		// Write to Postgres first.
+		entry := db.ReportToEntryFromReport(data)
+		if err := pgDB.Create(entry).Error; err != nil {
+			log.Errorw("error writing report to postgres", zap.Error(err), "service", service)
 		}
-	})
 
-	r.Get("/services", func(w http.ResponseWriter, r *http.Request) {
-		ctx := r.Context()
+		// Write to BigQuery asynchronously.
+		go func() {
+			if err := reportto.WriteReportToBigQuery(ctx, project, dataset, rTable, []*reportto.Report{data}); err != nil {
+				log.Errorw("error during report upload to bigquery", "dataset", dataset, "project", project, "table", rTable, "bodyJson", bodyStr, zap.Error(err), "service", service)
+			}
+		}()
+	}
+}
 
-		data, err := lib.GetServices(ctx, *project, *dataset, *aTable, *rTable)
+func getServicesHandler(pgDB *gorm.DB) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		data, err := db.GetServices(pgDB)
 		if err != nil {
 			log.Errorw("error seen during services get", zap.Error(err))
 			http.Error(w, "processing error", 500)
@@ -280,10 +316,11 @@ func main() {
 		if _, err := w.Write(resp); err != nil {
 			log.Errorw("error writing services", zap.Error(err))
 		}
-	})
+	}
+}
 
-	r.Get("/analytics/{service}", func(w http.ResponseWriter, r *http.Request) {
-		ctx := r.Context()
+func getAnalyticsHandler(pgDB *gorm.DB, project, dataset, aTable string) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
 		service := chi.URLParam(r, "service")
 
 		if err := lib.ValidateService(service); err != nil {
@@ -292,9 +329,9 @@ func main() {
 			return
 		}
 
-		data, err := analytics.GetAnalytics(ctx, service, *project, *dataset, *aTable)
+		data, err := db.GetWebVitalSummaries(pgDB, service)
 		if err != nil {
-			log.Errorw("error seen during analytics get", zap.Error(err), "service", service)
+			log.Errorw("error getting analytics from postgres", zap.Error(err), "service", service)
 			http.Error(w, "processing error", 500)
 			return
 		}
@@ -310,9 +347,11 @@ func main() {
 		if _, err := w.Write(resp); err != nil {
 			log.Errorw("error writing analytics", zap.Error(err), "service", service)
 		}
-	})
+	}
+}
 
-	r.Post("/analytics/{service}", func(w http.ResponseWriter, r *http.Request) {
+func postAnalyticsHandler(pgDB *gorm.DB, project, dataset, aTable string) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
 		ctx := r.Context()
 		service := chi.URLParam(r, "service")
 		ct := r.Header.Get("content-type")
@@ -337,16 +376,25 @@ func main() {
 			return
 		}
 
-		// Log the report.
 		log.Infow("analytics received", "content-type", ct, "service", service, "user-agent", r.UserAgent(), "analytics", data)
-		if err := analytics.WriteAnalyticsToBigQuery(ctx, *project, *dataset, *aTable, []*analytics.WebVital{data}); err != nil {
-			log.Errorw("error during analytics upload", "dataset", *dataset, "project", *project, "table", *aTable, "bodyJson", bodyStr, zap.Error(err), "service", service)
-			http.Error(w, "uploading error", 500)
-			return
-		}
-	})
 
-	r.Post("/reporting/{service}", func(w http.ResponseWriter, r *http.Request) {
+		// Write to Postgres first.
+		entry := db.WebVitalFromAnalytics(data)
+		if err := pgDB.Create(entry).Error; err != nil {
+			log.Errorw("error writing analytics to postgres", zap.Error(err), "service", service)
+		}
+
+		// Write to BigQuery asynchronously.
+		go func() {
+			if err := analytics.WriteAnalyticsToBigQuery(ctx, project, dataset, aTable, []*analytics.WebVital{data}); err != nil {
+				log.Errorw("error during analytics upload to bigquery", "dataset", dataset, "project", project, "table", aTable, "bodyJson", bodyStr, zap.Error(err), "service", service)
+			}
+		}()
+	}
+}
+
+func postReportingHandler(pgDB *gorm.DB, project, dataset, rv2Table string) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
 		ctx := r.Context()
 		service := chi.URLParam(r, "service")
 		contentType := r.Header.Get("Content-Type")
@@ -379,21 +427,18 @@ func main() {
 		}
 
 		log.Infow("reporting parsed", "reports", reports, "service", service, "content-type", contentType, "user-agent", r.UserAgent())
-		if err := reporting.WriteReportsToBigQuery(ctx, *project, *dataset, *rv2Table, reports); err != nil {
-			log.Errorw("error during reporting upload", "dataset", *dataset, "project", *project, "table", *rTable, zap.Error(err))
-			http.Error(w, "uploading error", 500)
-			return
+
+		// Write to Postgres first.
+		entry := db.SecurityReportEntryFromReport(reports)
+		if err := pgDB.Create(entry).Error; err != nil {
+			log.Errorw("error writing reporting to postgres", zap.Error(err), "service", service)
 		}
-	})
 
-	srv := http.Server{
-		Addr:         ":" + port,
-		WriteTimeout: 30 * time.Second,
-		ReadTimeout:  30 * time.Second,
-		Handler:      r,
-	}
-
-	if err := srv.ListenAndServe(); err != nil {
-		log.Fatalw("Server failed", zap.Error(err))
+		// Write to BigQuery asynchronously.
+		go func() {
+			if err := reporting.WriteReportsToBigQuery(ctx, project, dataset, rv2Table, reports); err != nil {
+				log.Errorw("error during reporting upload to bigquery", "dataset", dataset, "project", project, "table", rv2Table, zap.Error(err))
+			}
+		}()
 	}
 }
