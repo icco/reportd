@@ -1,6 +1,7 @@
 package db
 
 import (
+	"context"
 	"fmt"
 
 	"gorm.io/driver/postgres"
@@ -8,7 +9,7 @@ import (
 	"gorm.io/gorm/logger"
 )
 
-func Connect(databaseURL string) (*gorm.DB, error) {
+func Connect(ctx context.Context, databaseURL string) (*gorm.DB, error) {
 	db, err := gorm.Open(postgres.Open(databaseURL), &gorm.Config{
 		Logger: logger.Default.LogMode(logger.Warn),
 	})
@@ -19,8 +20,8 @@ func Connect(databaseURL string) (*gorm.DB, error) {
 	return db, nil
 }
 
-func AutoMigrate(db *gorm.DB) error {
-	if err := db.AutoMigrate(
+func AutoMigrate(ctx context.Context, db *gorm.DB) error {
+	if err := db.WithContext(ctx).AutoMigrate(
 		&WebVital{},
 		&ReportToEntry{},
 		&SecurityReportEntry{},

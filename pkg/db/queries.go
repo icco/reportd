@@ -1,7 +1,9 @@
 package db
 
 import (
+	"context"
 	"fmt"
+	"sort"
 	"time"
 
 	"gorm.io/gorm"
@@ -31,10 +33,16 @@ type ServiceHealth struct {
 	P75     float64 `json:"p75"`
 }
 
-func GetAllServicesHealth(d *gorm.DB) (map[string][]ServiceHealth, error) {
+type DirectiveCount struct {
+	Directive string `json:"directive"`
+	Count     int64  `json:"count"`
+}
+
+func GetAllServicesHealth(ctx context.Context, d *gorm.DB) (map[string][]ServiceHealth, error) {
 	cutoff := time.Now().AddDate(0, 0, -28)
 	var results []ServiceHealth
-	err := d.Raw(`
+	// PERCENTILE_CONT requires raw SQL -- no GORM builder equivalent.
+	err := d.WithContext(ctx).Raw(`
 		SELECT service, name AS metric,
 			PERCENTILE_CONT(0.75) WITHIN GROUP (ORDER BY value) AS p75
 		FROM web_vitals
@@ -53,42 +61,62 @@ func GetAllServicesHealth(d *gorm.DB) (map[string][]ServiceHealth, error) {
 	return out, nil
 }
 
-func GetServices(d *gorm.DB) ([]string, error) {
-	var services []string
-	err := d.Raw(`
-		SELECT DISTINCT service FROM web_vitals
-		UNION
-		SELECT DISTINCT service FROM report_to_entries
-		UNION
-		SELECT DISTINCT service FROM security_report_entries
-		ORDER BY service
-	`).Scan(&services).Error
-	if err != nil {
-		return nil, fmt.Errorf("querying services: %w", err)
+func GetServices(ctx context.Context, d *gorm.DB) ([]string, error) {
+	seen := make(map[string]bool)
+
+	var wvServices []string
+	if err := d.WithContext(ctx).Model(&WebVital{}).Distinct("service").Pluck("service", &wvServices).Error; err != nil {
+		return nil, fmt.Errorf("querying web_vitals services: %w", err)
 	}
+	for _, s := range wvServices {
+		seen[s] = true
+	}
+
+	var rtServices []string
+	if err := d.WithContext(ctx).Model(&ReportToEntry{}).Distinct("service").Pluck("service", &rtServices).Error; err != nil {
+		return nil, fmt.Errorf("querying report_to services: %w", err)
+	}
+	for _, s := range rtServices {
+		seen[s] = true
+	}
+
+	var srServices []string
+	if err := d.WithContext(ctx).Model(&SecurityReportEntry{}).Distinct("service").Pluck("service", &srServices).Error; err != nil {
+		return nil, fmt.Errorf("querying security_report services: %w", err)
+	}
+	for _, s := range srServices {
+		seen[s] = true
+	}
+
+	services := make([]string, 0, len(seen))
+	for s := range seen {
+		services = append(services, s)
+	}
+	sort.Strings(services)
 	return services, nil
 }
 
-func GetWebVitalSummaries(d *gorm.DB, service string) ([]WebVitalDailySummary, error) {
+func GetWebVitalSummaries(ctx context.Context, d *gorm.DB, service string) ([]WebVitalDailySummary, error) {
 	cutoff := time.Now().AddDate(0, -3, 0)
 	var results []WebVitalDailySummary
-	err := d.Raw(`
-		SELECT DATE(created_at) AS day, service, name, AVG(value) AS value
-		FROM web_vitals
-		WHERE service = ? AND created_at >= ? AND deleted_at IS NULL
-		GROUP BY DATE(created_at), service, name
-		ORDER BY day DESC
-	`, service, cutoff).Scan(&results).Error
+	err := d.WithContext(ctx).
+		Model(&WebVital{}).
+		Select("DATE(created_at) AS day, service, name, AVG(value) AS value").
+		Where("service = ? AND created_at >= ?", service, cutoff).
+		Group("day, service, name").
+		Order("day DESC").
+		Find(&results).Error
 	if err != nil {
 		return nil, fmt.Errorf("querying web vital summaries: %w", err)
 	}
 	return results, nil
 }
 
-func GetWebVitalP75s(d *gorm.DB, service string) ([]WebVitalP75, error) {
+func GetWebVitalP75s(ctx context.Context, d *gorm.DB, service string) ([]WebVitalP75, error) {
 	cutoff := time.Now().AddDate(0, 0, -28)
 	var results []WebVitalP75
-	err := d.Raw(`
+	// PERCENTILE_CONT requires raw SQL.
+	err := d.WithContext(ctx).Raw(`
 		SELECT name, PERCENTILE_CONT(0.75) WITHIN GROUP (ORDER BY value) AS value
 		FROM web_vitals
 		WHERE service = ? AND created_at >= ? AND deleted_at IS NULL
@@ -100,42 +128,40 @@ func GetWebVitalP75s(d *gorm.DB, service string) ([]WebVitalP75, error) {
 	return results, nil
 }
 
-func GetReportCounts(d *gorm.DB, service string) ([]ReportDailyCount, error) {
+func GetReportCounts(ctx context.Context, d *gorm.DB, service string) ([]ReportDailyCount, error) {
 	cutoff := time.Now().AddDate(0, -3, 0)
-	var results []ReportDailyCount
 
 	var rtCounts []ReportDailyCount
-	err := d.Raw(`
-		SELECT DATE(created_at) AS day, report_type, COUNT(*) AS count
-		FROM report_to_entries
-		WHERE service = ? AND created_at >= ? AND deleted_at IS NULL
-		GROUP BY DATE(created_at), report_type
-		ORDER BY day DESC
-	`, service, cutoff).Scan(&rtCounts).Error
+	err := d.WithContext(ctx).
+		Model(&ReportToEntry{}).
+		Select("DATE(created_at) AS day, report_type, COUNT(*) AS count").
+		Where("service = ? AND created_at >= ?", service, cutoff).
+		Group("day, report_type").
+		Order("day DESC").
+		Find(&rtCounts).Error
 	if err != nil {
 		return nil, fmt.Errorf("querying report-to counts: %w", err)
 	}
-	results = append(results, rtCounts...)
 
 	var srCounts []ReportDailyCount
-	err = d.Raw(`
-		SELECT DATE(created_at) AS day, report_type, COUNT(*) AS count
-		FROM security_report_entries
-		WHERE service = ? AND created_at >= ? AND deleted_at IS NULL
-		GROUP BY DATE(created_at), report_type
-		ORDER BY day DESC
-	`, service, cutoff).Scan(&srCounts).Error
+	err = d.WithContext(ctx).
+		Model(&SecurityReportEntry{}).
+		Select("DATE(created_at) AS day, report_type, COUNT(*) AS count").
+		Where("service = ? AND created_at >= ?", service, cutoff).
+		Group("day, report_type").
+		Order("day DESC").
+		Find(&srCounts).Error
 	if err != nil {
 		return nil, fmt.Errorf("querying security report counts: %w", err)
 	}
-	results = append(results, srCounts...)
 
-	return results, nil
+	return append(rtCounts, srCounts...), nil
 }
 
-func GetRecentReports(d *gorm.DB, service string, limit int) ([]SecurityReportEntry, error) {
+func GetRecentReports(ctx context.Context, d *gorm.DB, service string, limit int) ([]SecurityReportEntry, error) {
 	var results []SecurityReportEntry
-	err := d.Where("service = ?", service).
+	err := d.WithContext(ctx).
+		Where("service = ?", service).
 		Order("created_at DESC").
 		Limit(limit).
 		Find(&results).Error
@@ -145,9 +171,10 @@ func GetRecentReports(d *gorm.DB, service string, limit int) ([]SecurityReportEn
 	return results, nil
 }
 
-func GetRecentReportToEntries(d *gorm.DB, service string, limit int) ([]ReportToEntry, error) {
+func GetRecentReportToEntries(ctx context.Context, d *gorm.DB, service string, limit int) ([]ReportToEntry, error) {
 	var results []ReportToEntry
-	err := d.Where("service = ?", service).
+	err := d.WithContext(ctx).
+		Where("service = ?", service).
 		Order("created_at DESC").
 		Limit(limit).
 		Find(&results).Error
@@ -157,25 +184,18 @@ func GetRecentReportToEntries(d *gorm.DB, service string, limit int) ([]ReportTo
 	return results, nil
 }
 
-func GetTopViolatedDirectives(d *gorm.DB, service string, limit int) ([]struct {
-	Directive string `json:"directive"`
-	Count     int64  `json:"count"`
-}, error) {
+func GetTopViolatedDirectives(ctx context.Context, d *gorm.DB, service string, limit int) ([]DirectiveCount, error) {
 	cutoff := time.Now().AddDate(0, -1, 0)
-	var results []struct {
-		Directive string `json:"directive"`
-		Count     int64  `json:"count"`
-	}
-
-	err := d.Raw(`
-		SELECT effective_directive AS directive, COUNT(*) AS count
-		FROM security_report_entries
-		WHERE service = ? AND created_at >= ? AND report_type = 'csp-violation'
-			AND effective_directive != '' AND deleted_at IS NULL
-		GROUP BY effective_directive
-		ORDER BY count DESC
-		LIMIT ?
-	`, service, cutoff, limit).Scan(&results).Error
+	var results []DirectiveCount
+	err := d.WithContext(ctx).
+		Model(&SecurityReportEntry{}).
+		Select("effective_directive AS directive, COUNT(*) AS count").
+		Where("service = ? AND created_at >= ? AND report_type = ? AND effective_directive != ''",
+			service, cutoff, "csp-violation").
+		Group("effective_directive").
+		Order("count DESC").
+		Limit(limit).
+		Find(&results).Error
 	if err != nil {
 		return nil, fmt.Errorf("querying top violated directives: %w", err)
 	}

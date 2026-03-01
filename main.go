@@ -68,17 +68,17 @@ func main() {
 		log.Fatalw("database_url is required")
 	}
 
-	// Connect to Postgres via GORM.
-	pgDB, err := db.Connect(*databaseURL)
+	ctx := context.Background()
+
+	pgDB, err := db.Connect(ctx, *databaseURL)
 	if err != nil {
 		log.Fatalw("could not connect to postgres", zap.Error(err))
 	}
-	if err := db.AutoMigrate(pgDB); err != nil {
+	if err := db.AutoMigrate(ctx, pgDB); err != nil {
 		log.Fatalw("could not auto-migrate postgres", zap.Error(err))
 	}
 	log.Infow("Postgres connected and migrated")
 
-	ctx := context.Background()
 	if err := reportto.UpdateReportsBQSchema(ctx, *project, *dataset, *rTable); err != nil {
 		log.Errorw("report table update", zap.Error(err))
 	}
@@ -134,11 +134,11 @@ func main() {
 	r.Options("/report/{service}", corsPreflightHandler())
 	r.Options("/analytics/{service}", corsPreflightHandler())
 
-	r.Get("/reports/{service}", getReportsHandler(pgDB, *project, *dataset, *rTable, *rv2Table))
+	r.Get("/reports/{service}", getReportsHandler(pgDB))
 	r.Post("/report/{service}", postReportHandler(pgDB, *project, *dataset, *rTable))
 
 	r.Get("/services", getServicesHandler(pgDB))
-	r.Get("/analytics/{service}", getAnalyticsHandler(pgDB, *project, *dataset, *aTable))
+	r.Get("/analytics/{service}", getAnalyticsHandler(pgDB))
 	r.Post("/analytics/{service}", postAnalyticsHandler(pgDB, *project, *dataset, *aTable))
 
 	r.Post("/reporting/{service}", postReportingHandler(pgDB, *project, *dataset, *rv2Table))
@@ -160,18 +160,19 @@ func main() {
 
 func indexHandler(pgDB *gorm.DB) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
+		ctx := r.Context()
 		re := render.New()
-		services, err := db.GetServices(pgDB)
+
+		services, err := db.GetServices(ctx, pgDB)
 		if err != nil {
 			log.Errorw("error getting services", zap.Error(err))
 			http.Error(w, "could not get services", 500)
 			return
 		}
 
-		health, err := db.GetAllServicesHealth(pgDB)
+		health, err := db.GetAllServicesHealth(ctx, pgDB)
 		if err != nil {
 			log.Errorw("error getting services health", zap.Error(err))
-			// Non-fatal: render without health data.
 			health = make(map[string][]db.ServiceHealth)
 		}
 
@@ -236,8 +237,9 @@ func corsPreflightHandler() http.HandlerFunc {
 	}
 }
 
-func getReportsHandler(pgDB *gorm.DB, project, dataset, rTable, rv2Table string) http.HandlerFunc {
+func getReportsHandler(pgDB *gorm.DB) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
+		ctx := r.Context()
 		service := chi.URLParam(r, "service")
 
 		if err := lib.ValidateService(service); err != nil {
@@ -246,7 +248,7 @@ func getReportsHandler(pgDB *gorm.DB, project, dataset, rTable, rv2Table string)
 			return
 		}
 
-		data, err := db.GetReportCounts(pgDB, service)
+		data, err := db.GetReportCounts(ctx, pgDB, service)
 		if err != nil {
 			log.Errorw("error getting report counts from postgres", zap.Error(err), "service", service)
 			http.Error(w, "processing error", 500)
@@ -296,15 +298,14 @@ func postReportHandler(pgDB *gorm.DB, project, dataset, rTable string) http.Hand
 
 		log.Infow("report received", "content-type", ct, "service", service, "user-agent", r.UserAgent(), "report", data)
 
-		// Write to Postgres first.
 		entry := db.ReportToEntryFromReport(data)
-		if err := pgDB.Create(entry).Error; err != nil {
+		if err := pgDB.WithContext(ctx).Create(entry).Error; err != nil {
 			log.Errorw("error writing report to postgres", zap.Error(err), "service", service)
 		}
 
-		// Write to BigQuery asynchronously.
 		go func() {
-			if err := reportto.WriteReportToBigQuery(ctx, project, dataset, rTable, []*reportto.Report{data}); err != nil {
+			bgCtx := context.Background()
+			if err := reportto.WriteReportToBigQuery(bgCtx, project, dataset, rTable, []*reportto.Report{data}); err != nil {
 				log.Errorw("error during report upload to bigquery", "dataset", dataset, "project", project, "table", rTable, "bodyJson", bodyStr, zap.Error(err), "service", service)
 			}
 		}()
@@ -313,7 +314,9 @@ func postReportHandler(pgDB *gorm.DB, project, dataset, rTable string) http.Hand
 
 func getServicesHandler(pgDB *gorm.DB) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		data, err := db.GetServices(pgDB)
+		ctx := r.Context()
+
+		data, err := db.GetServices(ctx, pgDB)
 		if err != nil {
 			log.Errorw("error seen during services get", zap.Error(err))
 			http.Error(w, "processing error", 500)
@@ -334,8 +337,9 @@ func getServicesHandler(pgDB *gorm.DB) http.HandlerFunc {
 	}
 }
 
-func getAnalyticsHandler(pgDB *gorm.DB, project, dataset, aTable string) http.HandlerFunc {
+func getAnalyticsHandler(pgDB *gorm.DB) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
+		ctx := r.Context()
 		service := chi.URLParam(r, "service")
 
 		if err := lib.ValidateService(service); err != nil {
@@ -344,7 +348,7 @@ func getAnalyticsHandler(pgDB *gorm.DB, project, dataset, aTable string) http.Ha
 			return
 		}
 
-		data, err := db.GetWebVitalSummaries(pgDB, service)
+		data, err := db.GetWebVitalSummaries(ctx, pgDB, service)
 		if err != nil {
 			log.Errorw("error getting analytics from postgres", zap.Error(err), "service", service)
 			http.Error(w, "processing error", 500)
@@ -393,15 +397,14 @@ func postAnalyticsHandler(pgDB *gorm.DB, project, dataset, aTable string) http.H
 
 		log.Infow("analytics received", "content-type", ct, "service", service, "user-agent", r.UserAgent(), "analytics", data)
 
-		// Write to Postgres first.
 		entry := db.WebVitalFromAnalytics(data)
-		if err := pgDB.Create(entry).Error; err != nil {
+		if err := pgDB.WithContext(ctx).Create(entry).Error; err != nil {
 			log.Errorw("error writing analytics to postgres", zap.Error(err), "service", service)
 		}
 
-		// Write to BigQuery asynchronously.
 		go func() {
-			if err := analytics.WriteAnalyticsToBigQuery(ctx, project, dataset, aTable, []*analytics.WebVital{data}); err != nil {
+			bgCtx := context.Background()
+			if err := analytics.WriteAnalyticsToBigQuery(bgCtx, project, dataset, aTable, []*analytics.WebVital{data}); err != nil {
 				log.Errorw("error during analytics upload to bigquery", "dataset", dataset, "project", project, "table", aTable, "bodyJson", bodyStr, zap.Error(err), "service", service)
 			}
 		}()
@@ -443,15 +446,14 @@ func postReportingHandler(pgDB *gorm.DB, project, dataset, rv2Table string) http
 
 		log.Infow("reporting parsed", "reports", reports, "service", service, "content-type", contentType, "user-agent", r.UserAgent())
 
-		// Write to Postgres first.
 		entry := db.SecurityReportEntryFromReport(reports)
-		if err := pgDB.Create(entry).Error; err != nil {
+		if err := pgDB.WithContext(ctx).Create(entry).Error; err != nil {
 			log.Errorw("error writing reporting to postgres", zap.Error(err), "service", service)
 		}
 
-		// Write to BigQuery asynchronously.
 		go func() {
-			if err := reporting.WriteReportsToBigQuery(ctx, project, dataset, rv2Table, reports); err != nil {
+			bgCtx := context.Background()
+			if err := reporting.WriteReportsToBigQuery(bgCtx, project, dataset, rv2Table, reports); err != nil {
 				log.Errorw("error during reporting upload to bigquery", "dataset", dataset, "project", project, "table", rv2Table, zap.Error(err))
 			}
 		}()
@@ -460,6 +462,7 @@ func postReportingHandler(pgDB *gorm.DB, project, dataset, rv2Table string) http
 
 func apiVitalsHandler(pgDB *gorm.DB) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
+		ctx := r.Context()
 		service := chi.URLParam(r, "service")
 
 		if err := lib.ValidateService(service); err != nil {
@@ -468,14 +471,14 @@ func apiVitalsHandler(pgDB *gorm.DB) http.HandlerFunc {
 			return
 		}
 
-		p75s, err := db.GetWebVitalP75s(pgDB, service)
+		p75s, err := db.GetWebVitalP75s(ctx, pgDB, service)
 		if err != nil {
 			log.Errorw("error getting p75s", zap.Error(err), "service", service)
 			http.Error(w, "processing error", 500)
 			return
 		}
 
-		summaries, err := db.GetWebVitalSummaries(pgDB, service)
+		summaries, err := db.GetWebVitalSummaries(ctx, pgDB, service)
 		if err != nil {
 			log.Errorw("error getting summaries", zap.Error(err), "service", service)
 			http.Error(w, "processing error", 500)
@@ -483,7 +486,7 @@ func apiVitalsHandler(pgDB *gorm.DB) http.HandlerFunc {
 		}
 
 		out := struct {
-			P75s      []db.WebVitalP75        `json:"p75s"`
+			P75s      []db.WebVitalP75         `json:"p75s"`
 			Summaries []db.WebVitalDailySummary `json:"summaries"`
 		}{
 			P75s:      p75s,
@@ -506,6 +509,7 @@ func apiVitalsHandler(pgDB *gorm.DB) http.HandlerFunc {
 
 func apiReportsHandler(pgDB *gorm.DB) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
+		ctx := r.Context()
 		service := chi.URLParam(r, "service")
 
 		if err := lib.ValidateService(service); err != nil {
@@ -514,28 +518,28 @@ func apiReportsHandler(pgDB *gorm.DB) http.HandlerFunc {
 			return
 		}
 
-		counts, err := db.GetReportCounts(pgDB, service)
+		counts, err := db.GetReportCounts(ctx, pgDB, service)
 		if err != nil {
 			log.Errorw("error getting report counts", zap.Error(err), "service", service)
 			http.Error(w, "processing error", 500)
 			return
 		}
 
-		recent, err := db.GetRecentReports(pgDB, service, 50)
+		recent, err := db.GetRecentReports(ctx, pgDB, service, 50)
 		if err != nil {
 			log.Errorw("error getting recent reports", zap.Error(err), "service", service)
 			http.Error(w, "processing error", 500)
 			return
 		}
 
-		recentRT, err := db.GetRecentReportToEntries(pgDB, service, 50)
+		recentRT, err := db.GetRecentReportToEntries(ctx, pgDB, service, 50)
 		if err != nil {
 			log.Errorw("error getting recent report-to entries", zap.Error(err), "service", service)
 			http.Error(w, "processing error", 500)
 			return
 		}
 
-		topDirectives, err := db.GetTopViolatedDirectives(pgDB, service, 10)
+		topDirectives, err := db.GetTopViolatedDirectives(ctx, pgDB, service, 10)
 		if err != nil {
 			log.Errorw("error getting top violated directives", zap.Error(err), "service", service)
 			http.Error(w, "processing error", 500)
@@ -543,13 +547,10 @@ func apiReportsHandler(pgDB *gorm.DB) http.HandlerFunc {
 		}
 
 		out := struct {
-			Counts        []db.ReportDailyCount      `json:"counts"`
-			RecentReports []db.SecurityReportEntry    `json:"recent_reports"`
+			Counts         []db.ReportDailyCount     `json:"counts"`
+			RecentReports  []db.SecurityReportEntry   `json:"recent_reports"`
 			RecentReportTo []db.ReportToEntry         `json:"recent_report_to"`
-			TopDirectives []struct {
-				Directive string `json:"directive"`
-				Count     int64  `json:"count"`
-			} `json:"top_directives"`
+			TopDirectives  []db.DirectiveCount        `json:"top_directives"`
 		}{
 			Counts:         counts,
 			RecentReports:  recent,
