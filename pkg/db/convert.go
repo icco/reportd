@@ -52,15 +52,14 @@ func ReportToEntryFromReport(r *reportto.Report) *ReportToEntry {
 
 func SecurityReportEntryFromReport(sr *reporting.SecurityReport) *SecurityReportEntry {
 	entry := &SecurityReportEntry{
-		CreatedAt: time.Now(),
-		Service:   sr.Service.StringVal,
+		CreatedAt:  time.Now(),
+		Service:    sr.Service.StringVal,
+		ReportType: sr.ReportType,
+		RawJSON:    sr.RawJSON,
 	}
 
-	raw, _ := json.Marshal(sr)
-	entry.RawJSON = string(raw)
-
-	if sr.CSP != nil {
-		entry.ReportType = "csp-violation"
+	switch {
+	case sr.CSP != nil:
 		entry.URL = sr.CSP.URL
 		entry.DocumentURI = sr.CSP.Body.DocumentUri
 		entry.BlockedURI = sr.CSP.Body.BlockedUri
@@ -69,9 +68,40 @@ func SecurityReportEntryFromReport(sr *reporting.SecurityReport) *SecurityReport
 		entry.SourceFile = sr.CSP.Body.SourceFile
 		entry.LineNumber = int(sr.CSP.Body.LineNumber)
 		entry.ColumnNumber = int(sr.CSP.Body.ColumnNumber)
-	} else if sr.Deprecation != nil {
-		entry.ReportType = "deprecation"
+	case sr.Deprecation != nil:
 		entry.URL = sr.Deprecation.URL
+		entry.Message = sr.Deprecation.Body.Message
+		entry.SourceFile = sr.Deprecation.Body.SourceFile
+		entry.LineNumber = int(sr.Deprecation.Body.LineNumber)
+		entry.ColumnNumber = int(sr.Deprecation.Body.ColumnNumber)
+	case sr.PermissionsPolicy != nil:
+		entry.URL = sr.PermissionsPolicy.URL
+		entry.Message = sr.PermissionsPolicy.Body.Message
+		entry.SourceFile = sr.PermissionsPolicy.Body.SourceFile
+		entry.LineNumber = int(sr.PermissionsPolicy.Body.LineNumber)
+		entry.ColumnNumber = int(sr.PermissionsPolicy.Body.ColumnNumber)
+	case sr.Intervention != nil:
+		entry.URL = sr.Intervention.URL
+		entry.Message = sr.Intervention.Body.Message
+		entry.SourceFile = sr.Intervention.Body.SourceFile
+		entry.LineNumber = int(sr.Intervention.Body.LineNumber)
+		entry.ColumnNumber = int(sr.Intervention.Body.ColumnNumber)
+	case sr.Crash != nil:
+		entry.URL = sr.Crash.URL
+		entry.Message = sr.Crash.Body.Reason
+	case sr.COEP != nil:
+		entry.URL = sr.COEP.URL
+		entry.BlockedURI = sr.COEP.Body.BlockedURL
+		entry.Message = sr.COEP.Body.Disposition
+	case sr.COOP != nil:
+		entry.URL = sr.COOP.URL
+		entry.Message = sr.COOP.Body.EffectivePolicy
+	case sr.DocumentPolicy != nil:
+		entry.URL = sr.DocumentPolicy.URL
+		entry.Message = sr.DocumentPolicy.Body.Message
+		entry.SourceFile = sr.DocumentPolicy.Body.SourceFile
+		entry.LineNumber = int(sr.DocumentPolicy.Body.LineNumber)
+		entry.ColumnNumber = int(sr.DocumentPolicy.Body.ColumnNumber)
 	}
 
 	return entry
