@@ -54,7 +54,7 @@ func SecurityReportEntryFromReport(sr *reporting.SecurityReport) *SecurityReport
 	entry := &SecurityReportEntry{
 		CreatedAt:  time.Now(),
 		Service:    sr.Service.StringVal,
-		ReportType: sr.ReportType,
+		ReportType: sr.ReportType.StringVal,
 		RawJSON:    sr.RawJSON,
 	}
 

@@ -139,7 +139,7 @@ type SecurityReport struct {
 	COOP              *COOPReport               `bigquery:",nullable"`
 	DocumentPolicy    *DocumentPolicyReport     `bigquery:",nullable"`
 
-	ReportType string
+	ReportType bigquery.NullString
 
 	// Raw JSON for unknown/forward-compatible types.
 	RawJSON string `bigquery:"-"`
@@ -162,7 +162,7 @@ func ParseReport(data, srv string) (*SecurityReport, error) {
 		return nil, err
 	}
 
-	sr.ReportType = tmp.Type
+	sr.ReportType = bigquery.NullString{StringVal: tmp.Type, Valid: true}
 	sr.RawJSON = data
 
 	switch tmp.Type {

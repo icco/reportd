@@ -34,7 +34,7 @@ func TestParseReportAllExamples(t *testing.T) {
 				t.Errorf("expected service 'test', got %q", data.Service.StringVal)
 			}
 
-			if data.ReportType == "" {
+			if !data.ReportType.Valid || data.ReportType.StringVal == "" {
 				t.Error("ReportType should not be empty")
 			}
 
@@ -65,8 +65,8 @@ func TestParseCSPViolation(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if data.ReportType != "csp-violation" {
-		t.Errorf("expected type 'csp-violation', got %q", data.ReportType)
+	if data.ReportType.StringVal != "csp-violation" {
+		t.Errorf("expected type 'csp-violation', got %q", data.ReportType.StringVal)
 	}
 	if data.CSP == nil {
 		t.Fatal("CSP should not be nil")
@@ -103,8 +103,8 @@ func TestParseDeprecation(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if data.ReportType != "deprecation" {
-		t.Errorf("expected type 'deprecation', got %q", data.ReportType)
+	if data.ReportType.StringVal != "deprecation" {
+		t.Errorf("expected type 'deprecation', got %q", data.ReportType.StringVal)
 	}
 	if data.Deprecation == nil {
 		t.Fatal("Deprecation should not be nil")
@@ -136,8 +136,8 @@ func TestParsePermissionsPolicy(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if data.ReportType != "permissions-policy-violation" {
-		t.Errorf("expected type 'permissions-policy-violation', got %q", data.ReportType)
+	if data.ReportType.StringVal != "permissions-policy-violation" {
+		t.Errorf("expected type 'permissions-policy-violation', got %q", data.ReportType.StringVal)
 	}
 	if data.PermissionsPolicy == nil {
 		t.Fatal("PermissionsPolicy should not be nil")
@@ -171,8 +171,8 @@ func TestParseIntervention(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if data.ReportType != "intervention" {
-		t.Errorf("expected type 'intervention', got %q", data.ReportType)
+	if data.ReportType.StringVal != "intervention" {
+		t.Errorf("expected type 'intervention', got %q", data.ReportType.StringVal)
 	}
 	if data.Intervention == nil {
 		t.Fatal("Intervention should not be nil")
@@ -199,8 +199,8 @@ func TestParseCrash(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if data.ReportType != "crash" {
-		t.Errorf("expected type 'crash', got %q", data.ReportType)
+	if data.ReportType.StringVal != "crash" {
+		t.Errorf("expected type 'crash', got %q", data.ReportType.StringVal)
 	}
 	if data.Crash == nil {
 		t.Fatal("Crash should not be nil")
@@ -227,8 +227,8 @@ func TestParseCOEP(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if data.ReportType != "coep" {
-		t.Errorf("expected type 'coep', got %q", data.ReportType)
+	if data.ReportType.StringVal != "coep" {
+		t.Errorf("expected type 'coep', got %q", data.ReportType.StringVal)
 	}
 	if data.COEP == nil {
 		t.Fatal("COEP should not be nil")
@@ -259,8 +259,8 @@ func TestParseCOOP(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if data.ReportType != "coop" {
-		t.Errorf("expected type 'coop', got %q", data.ReportType)
+	if data.ReportType.StringVal != "coop" {
+		t.Errorf("expected type 'coop', got %q", data.ReportType.StringVal)
 	}
 	if data.COOP == nil {
 		t.Fatal("COOP should not be nil")
@@ -292,8 +292,8 @@ func TestParseDocumentPolicy(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if data.ReportType != "document-policy-violation" {
-		t.Errorf("expected type 'document-policy-violation', got %q", data.ReportType)
+	if data.ReportType.StringVal != "document-policy-violation" {
+		t.Errorf("expected type 'document-policy-violation', got %q", data.ReportType.StringVal)
 	}
 	if data.DocumentPolicy == nil {
 		t.Fatal("DocumentPolicy should not be nil")
@@ -318,8 +318,8 @@ func TestParseUnknownType(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if data.ReportType != "some-future-type" {
-		t.Errorf("expected type 'some-future-type', got %q", data.ReportType)
+	if data.ReportType.StringVal != "some-future-type" {
+		t.Errorf("expected type 'some-future-type', got %q", data.ReportType.StringVal)
 	}
 	if data.RawJSON == "" {
 		t.Error("RawJSON should be preserved for unknown types")

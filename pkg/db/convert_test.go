@@ -9,6 +9,10 @@ import (
 	"github.com/icco/reportd/pkg/reportto"
 )
 
+func nullStr(s string) bigquery.NullString {
+	return bigquery.NullString{StringVal: s, Valid: true}
+}
+
 func TestWebVitalFromAnalytics(t *testing.T) {
 	wv := &analytics.WebVital{
 		Name:    "LCP",
@@ -124,9 +128,9 @@ func TestReportToEntryFromReportTo(t *testing.T) {
 
 func TestSecurityReportEntryFromCSP(t *testing.T) {
 	sr := &reporting.SecurityReport{
-		ReportType: "csp-violation",
+		ReportType: nullStr("csp-violation"),
 		RawJSON:    `{"type":"csp-violation"}`,
-		Service:    bigquery.NullString{StringVal: "mysite", Valid: true},
+		Service:    nullStr("mysite"),
 		CSP: &reporting.CSPReport{
 			URL: "https://example.com/",
 			Body: reporting.CSPReportBody{
@@ -161,9 +165,9 @@ func TestSecurityReportEntryFromCSP(t *testing.T) {
 
 func TestSecurityReportEntryFromDeprecation(t *testing.T) {
 	sr := &reporting.SecurityReport{
-		ReportType: "deprecation",
+		ReportType: nullStr("deprecation"),
 		RawJSON:    `{"type":"deprecation"}`,
-		Service:    bigquery.NullString{StringVal: "mysite", Valid: true},
+		Service:    nullStr("mysite"),
 		Deprecation: &reporting.DeprecationReport{
 			URL: "https://example.com/",
 			Body: reporting.DeprecationReportBody{
@@ -189,9 +193,9 @@ func TestSecurityReportEntryFromDeprecation(t *testing.T) {
 
 func TestSecurityReportEntryFromCrash(t *testing.T) {
 	sr := &reporting.SecurityReport{
-		ReportType: "crash",
+		ReportType: nullStr("crash"),
 		RawJSON:    `{"type":"crash"}`,
-		Service:    bigquery.NullString{StringVal: "mysite", Valid: true},
+		Service:    nullStr("mysite"),
 		Crash: &reporting.CrashReport{
 			URL:  "https://example.com/",
 			Body: reporting.CrashReportBody{Reason: "oom"},
@@ -210,9 +214,9 @@ func TestSecurityReportEntryFromCrash(t *testing.T) {
 
 func TestSecurityReportEntryFromCOEP(t *testing.T) {
 	sr := &reporting.SecurityReport{
-		ReportType: "coep",
+		ReportType: nullStr("coep"),
 		RawJSON:    `{"type":"coep"}`,
-		Service:    bigquery.NullString{StringVal: "mysite", Valid: true},
+		Service:    nullStr("mysite"),
 		COEP: &reporting.COEPReport{
 			URL: "https://example.com/",
 			Body: reporting.COEPReportBody{
@@ -234,9 +238,9 @@ func TestSecurityReportEntryFromCOEP(t *testing.T) {
 
 func TestSecurityReportEntryFromCOOP(t *testing.T) {
 	sr := &reporting.SecurityReport{
-		ReportType: "coop",
+		ReportType: nullStr("coop"),
 		RawJSON:    `{"type":"coop"}`,
-		Service:    bigquery.NullString{StringVal: "mysite", Valid: true},
+		Service:    nullStr("mysite"),
 		COOP: &reporting.COOPReport{
 			URL: "https://example.com/",
 			Body: reporting.COOPReportBody{
@@ -254,9 +258,9 @@ func TestSecurityReportEntryFromCOOP(t *testing.T) {
 
 func TestSecurityReportEntryFromDocumentPolicy(t *testing.T) {
 	sr := &reporting.SecurityReport{
-		ReportType: "document-policy-violation",
+		ReportType: nullStr("document-policy-violation"),
 		RawJSON:    `{"type":"document-policy-violation"}`,
-		Service:    bigquery.NullString{StringVal: "mysite", Valid: true},
+		Service:    nullStr("mysite"),
 		DocumentPolicy: &reporting.DocumentPolicyReport{
 			URL: "https://example.com/",
 			Body: reporting.DocumentPolicyReportBody{
@@ -283,9 +287,9 @@ func TestSecurityReportEntryFromDocumentPolicy(t *testing.T) {
 
 func TestSecurityReportEntryFromPermissionsPolicy(t *testing.T) {
 	sr := &reporting.SecurityReport{
-		ReportType: "permissions-policy-violation",
+		ReportType: nullStr("permissions-policy-violation"),
 		RawJSON:    `{"type":"permissions-policy-violation"}`,
-		Service:    bigquery.NullString{StringVal: "mysite", Valid: true},
+		Service:    nullStr("mysite"),
 		PermissionsPolicy: &reporting.PermissionsPolicyReport{
 			URL: "https://example.com/",
 			Body: reporting.PermissionsPolicyReportBody{
@@ -309,9 +313,9 @@ func TestSecurityReportEntryFromPermissionsPolicy(t *testing.T) {
 
 func TestSecurityReportEntryFromIntervention(t *testing.T) {
 	sr := &reporting.SecurityReport{
-		ReportType: "intervention",
+		ReportType: nullStr("intervention"),
 		RawJSON:    `{"type":"intervention"}`,
-		Service:    bigquery.NullString{StringVal: "mysite", Valid: true},
+		Service:    nullStr("mysite"),
 		Intervention: &reporting.InterventionReport{
 			URL: "https://example.com/",
 			Body: reporting.InterventionReportBody{
