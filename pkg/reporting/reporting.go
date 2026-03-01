@@ -44,6 +44,7 @@ type DeprecationReportBody struct {
 	Message            string `json:"message,omitempty"`
 	SourceFile         string `json:"source_file,omitempty"`
 	DocumentUri        string `json:"document_uri,omitempty"`
+	Referrer           string `json:"referrer,omitempty"`
 	LineNumber         int32  `json:"line_number,omitempty"`
 	ColumnNumber       int32  `json:"column_number,omitempty"`
 }
