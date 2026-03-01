@@ -352,7 +352,11 @@ func postReportHandler(pgDB *gorm.DB, project, dataset, rTable string) http.Hand
 		entry := db.ReportToEntryFromReport(data)
 		if err := pgDB.WithContext(ctx).Create(entry).Error; err != nil {
 			log.Errorw("error writing report to postgres", zap.Error(err), "service", service)
+			http.Error(w, "storage error", 500)
+			return
 		}
+
+		w.WriteHeader(http.StatusNoContent)
 
 		go func() {
 			bgCtx := context.Background()
