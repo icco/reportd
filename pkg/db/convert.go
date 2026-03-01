@@ -21,33 +21,65 @@ func WebVitalFromAnalytics(wv *analytics.WebVital) *WebVital {
 	}
 }
 
-func ReportToEntryFromReport(r *reportto.Report) *ReportToEntry {
-	entry := &ReportToEntry{
-		CreatedAt: time.Now(),
-		Service:   r.Service.StringVal,
-	}
-
-	raw, _ := json.Marshal(r)
-	entry.RawJSON = string(raw)
+func ReportToEntriesFromReport(r *reportto.Report) []*ReportToEntry {
+	now := time.Now()
+	srv := r.Service.StringVal
 
 	if r.CSP != nil {
-		entry.ReportType = "csp"
-		entry.DocumentURI = r.CSP.CSPReport.DocumentURI
-		entry.BlockedURI = r.CSP.CSPReport.BlockedURI
-		entry.ViolatedDirective = r.CSP.CSPReport.ViolatedDirective
-		entry.EffectiveDirective = r.CSP.CSPReport.EffectiveDirective
-		entry.OriginalPolicy = r.CSP.CSPReport.OriginalPolicy
-		entry.SourceFile = r.CSP.CSPReport.SourceFile
-		entry.LineNumber = r.CSP.CSPReport.LineNumber
-		entry.ColumnNumber = r.CSP.CSPReport.ColumnNumber
-		entry.StatusCode = r.CSP.CSPReport.StatusCode
-	} else if r.ExpectCT != nil {
-		entry.ReportType = "expect-ct"
-	} else if len(r.ReportTo) > 0 {
-		entry.ReportType = "report-to"
+		raw, _ := json.Marshal(r)
+		return []*ReportToEntry{{
+			CreatedAt:          now,
+			Service:            srv,
+			ReportType:         "csp",
+			DocumentURI:        r.CSP.CSPReport.DocumentURI,
+			BlockedURI:         r.CSP.CSPReport.BlockedURI,
+			ViolatedDirective:  r.CSP.CSPReport.ViolatedDirective,
+			EffectiveDirective: r.CSP.CSPReport.EffectiveDirective,
+			OriginalPolicy:     r.CSP.CSPReport.OriginalPolicy,
+			SourceFile:         r.CSP.CSPReport.SourceFile,
+			LineNumber:         r.CSP.CSPReport.LineNumber,
+			ColumnNumber:       r.CSP.CSPReport.ColumnNumber,
+			StatusCode:         r.CSP.CSPReport.StatusCode,
+			RawJSON:            string(raw),
+		}}
 	}
 
-	return entry
+	if r.ExpectCT != nil {
+		raw, _ := json.Marshal(r)
+		return []*ReportToEntry{{
+			CreatedAt:  now,
+			Service:    srv,
+			ReportType: "expect-ct",
+			RawJSON:    string(raw),
+		}}
+	}
+
+	var entries []*ReportToEntry
+	for _, rt := range r.ReportTo {
+		raw, _ := json.Marshal(rt)
+		entry := &ReportToEntry{
+			CreatedAt:          now,
+			Service:            srv,
+			ReportType:         rt.Type,
+			DocumentURI:        rt.Body.DocumentURL,
+			BlockedURI:         rt.Body.BlockedURL,
+			EffectiveDirective: rt.Body.EffectiveDirective,
+			OriginalPolicy:     rt.Body.OriginalPolicy,
+			SourceFile:         rt.Body.SourceFile,
+			LineNumber:         int(rt.Body.LineNumber),
+			ColumnNumber:       int(rt.Body.ColumnNumber),
+			StatusCode:         int(rt.Body.StatusCode),
+			RawJSON:            string(raw),
+		}
+		if rt.Body.Directive != "" {
+			entry.ViolatedDirective = rt.Body.Directive
+		}
+		if rt.URL != "" {
+			entry.DocumentURI = rt.URL
+		}
+		entries = append(entries, entry)
+	}
+	return entries
 }
 
 func SecurityReportEntryFromReport(sr *reporting.SecurityReport) *SecurityReportEntry {

@@ -349,8 +349,8 @@ func postReportHandler(pgDB *gorm.DB, project, dataset, rTable string) http.Hand
 
 		log.Infow("report received", "content-type", ct, "service", service, "user-agent", r.UserAgent(), "report", data)
 
-		entry := db.ReportToEntryFromReport(data)
-		if err := pgDB.WithContext(ctx).Create(entry).Error; err != nil {
+		entries := db.ReportToEntriesFromReport(data)
+		if err := pgDB.WithContext(ctx).Create(&entries).Error; err != nil {
 			log.Errorw("error writing report to postgres", zap.Error(err), "service", service)
 			http.Error(w, "storage error", 500)
 			return

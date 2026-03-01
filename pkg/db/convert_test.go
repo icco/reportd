@@ -76,7 +76,11 @@ func TestReportToEntryFromCSPReport(t *testing.T) {
 		},
 	}
 
-	entry := ReportToEntryFromReport(r)
+	entries := ReportToEntriesFromReport(r)
+	if len(entries) != 1 {
+		t.Fatalf("expected 1 entry, got %d", len(entries))
+	}
+	entry := entries[0]
 
 	if entry.ReportType != "csp" {
 		t.Errorf("expected type 'csp', got %q", entry.ReportType)
@@ -104,7 +108,11 @@ func TestReportToEntryFromExpectCT(t *testing.T) {
 		ExpectCT: &reportto.ExpectCTReport{},
 	}
 
-	entry := ReportToEntryFromReport(r)
+	entries := ReportToEntriesFromReport(r)
+	if len(entries) != 1 {
+		t.Fatalf("expected 1 entry, got %d", len(entries))
+	}
+	entry := entries[0]
 
 	if entry.ReportType != "expect-ct" {
 		t.Errorf("expected type 'expect-ct', got %q", entry.ReportType)
@@ -115,14 +123,71 @@ func TestReportToEntryFromReportTo(t *testing.T) {
 	r := &reportto.Report{
 		Service: bigquery.NullString{StringVal: "mysite", Valid: true},
 		ReportTo: []*reportto.ReportToReport{
-			{Type: "deprecation", URL: "https://example.com/"},
+			{
+				Type: "csp-violation",
+				URL:  "https://example.com/page",
+				Body: struct {
+					AnticipatedRemoval float64 `json:"anticipatedRemoval,omitempty"`
+					Blocked            string  `json:"blocked,omitempty"`
+					BlockedURL         string  `json:"blockedURL,omitempty"`
+					ColumnNumber       int64   `json:"columnNumber,omitempty"`
+					Directive          string  `json:"directive,omitempty"`
+					Disposition        string  `json:"disposition,omitempty"`
+					DocumentURL        string  `json:"documentURL,omitempty"`
+					EffectiveDirective string  `json:"effectiveDirective,omitempty"`
+					ElapsedTime        int64   `json:"elapsed_time,omitempty"`
+					ID                 string  `json:"id,omitempty"`
+					LineNumber         int64   `json:"lineNumber,omitempty"`
+					Message            string  `json:"message,omitempty"`
+					Method             string  `json:"method,omitempty"`
+					OriginalPolicy     string  `json:"originalPolicy,omitempty"`
+					Phase              string  `json:"phase,omitempty"`
+					Policy             string  `json:"policy,omitempty"`
+					Protocol           string  `json:"protocol,omitempty"`
+					Reason             string  `json:"reason,omitempty"`
+					Referrer           string  `json:"referrer,omitempty"`
+					SamplingFraction   float64 `json:"sampling_fraction,omitempty"`
+					ServerIP           string  `json:"server_ip,omitempty"`
+					SourceFile         string  `json:"sourceFile,omitempty"`
+					Status             int64   `json:"status,omitempty"`
+					StatusCode         int64   `json:"status_code,omitempty"`
+					Type               string  `json:"type,omitempty"`
+				}{
+					DocumentURL:        "https://example.com/page",
+					BlockedURL:         "https://evil.com/script.js",
+					EffectiveDirective: "script-src",
+					OriginalPolicy:     "default-src 'self'",
+					SourceFile:         "https://example.com/app.js",
+					LineNumber:         42,
+					ColumnNumber:       12,
+				},
+			},
 		},
 	}
 
-	entry := ReportToEntryFromReport(r)
+	entries := ReportToEntriesFromReport(r)
+	if len(entries) != 1 {
+		t.Fatalf("expected 1 entry, got %d", len(entries))
+	}
+	entry := entries[0]
 
-	if entry.ReportType != "report-to" {
-		t.Errorf("expected type 'report-to', got %q", entry.ReportType)
+	if entry.ReportType != "csp-violation" {
+		t.Errorf("expected type 'csp-violation', got %q", entry.ReportType)
+	}
+	if entry.DocumentURI != "https://example.com/page" {
+		t.Errorf("expected document_uri, got %q", entry.DocumentURI)
+	}
+	if entry.BlockedURI != "https://evil.com/script.js" {
+		t.Errorf("expected blocked_uri, got %q", entry.BlockedURI)
+	}
+	if entry.EffectiveDirective != "script-src" {
+		t.Errorf("expected effective_directive 'script-src', got %q", entry.EffectiveDirective)
+	}
+	if entry.LineNumber != 42 {
+		t.Errorf("expected line_number 42, got %d", entry.LineNumber)
+	}
+	if entry.RawJSON == "" {
+		t.Error("RawJSON should not be empty")
 	}
 }
 
