@@ -1,0 +1,12 @@
+{
+  "type": "document-policy-violation",
+  "url": "https://example.com/page",
+  "body": {
+    "featureId": "oversized-images",
+    "sourceFile": "https://example.com/index.html",
+    "lineNumber": 15,
+    "columnNumber": 1,
+    "disposition": "enforce",
+    "message": "Image size exceeds document policy limit"
+  }
+}

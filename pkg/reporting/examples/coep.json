@@ -1,0 +1,10 @@
+{
+  "type": "coep",
+  "url": "https://example.com/page",
+  "body": {
+    "type": "corp",
+    "blockedURL": "https://cdn.example.com/image.png",
+    "destination": "image",
+    "disposition": "enforce"
+  }
+}

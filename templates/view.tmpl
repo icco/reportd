@@ -4,18 +4,17 @@
   <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta http-equiv="X-UA-Compatible" content="ie=edge">
     <title>ReportD - {{ .Service }}</title>
     <script src="https://cdn.tailwindcss.com?plugins=forms,typography,aspect-ratio,container-queries"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns@3"></script>
 
     <style>
-      body {
-        max-width: 1200px;
-      }
+      body { max-width: 1200px; }
     </style>
 
     <script type="module">
-      import { onCLS, onINP, onLCP, onFCP, onFID, onTTFB } from 'https://unpkg.com/web-vitals@4?module';
+      import { onCLS, onINP, onLCP, onFCP, onTTFB } from 'https://unpkg.com/web-vitals@5?module';
 
       function sendToAnalytics(metric) {
         const body = JSON.stringify(metric);
@@ -25,7 +24,6 @@
 
       onCLS(sendToAnalytics);
       onFCP(sendToAnalytics);
-      onFID(sendToAnalytics);
       onINP(sendToAnalytics);
       onLCP(sendToAnalytics);
       onTTFB(sendToAnalytics);
@@ -35,120 +33,415 @@
   <body class="mx-auto p-6 md:p-24 bg-black text-white">
 
     <header class="mb-10">
-      <h1 class="text-3xl font-bold"><a href="/">ReportD</a> - {{ .Service }}</h1>
+      <h1 class="text-3xl font-bold"><a href="/" class="hover:underline">ReportD</a> <span class="text-gray-500">/</span> {{ .Service }}</h1>
       <div class="hidden" id="name">{{ .Service }}</div>
     </header>
 
-    <div class="border-b border-gray-700 pb-2 mb-10">
-      <h2 class="text-xl font-medium">Analytics</h2>
-      <p class="text-gray-500">Data sent from Web Vitals.</p>
+    <!-- Core Web Vitals -->
+    <div class="border-b border-gray-700 pb-2 mb-6">
+      <h2 class="text-xl font-medium">Core Web Vitals</h2>
+      <p class="text-gray-500 text-sm">p75 over the last 28 days. <a href="https://web.dev/vitals/" class="underline" target="_blank">Learn more</a></p>
     </div>
-    <section id="analytics" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-12 mb-16">
-      <div>
-        <h3 class="text-lg font-medium">First Input Delay (FID)</h3>
-        <div id="FID" data-sparkline="true" data-points="1,2,3,4,5,6,7" data-width="300" data-height="50"></div>
+    <section id="cwv-cards" class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-10">
+      <div id="card-LCP" class="rounded-lg border border-gray-700 p-5">
+        <div class="flex items-center justify-between mb-1">
+          <h3 class="text-sm font-medium text-gray-400">Largest Contentful Paint</h3>
+          <span id="badge-LCP" class="text-xs px-2 py-0.5 rounded-full bg-gray-700 text-gray-400">--</span>
+        </div>
+        <p id="val-LCP" class="text-3xl font-bold tabular-nums">--</p>
+        <p class="text-xs text-gray-500 mt-1">Good &le; 2500ms &middot; Poor &gt; 4000ms</p>
       </div>
-
-      <div>
-        <h3 class="text-lg font-medium">First Contentful Paint (FCP)</h3>
-        <div id="FCP" data-sparkline="true" data-points="1,2,3,4,5,6,7" data-width="300" data-height="50"></div>
+      <div id="card-CLS" class="rounded-lg border border-gray-700 p-5">
+        <div class="flex items-center justify-between mb-1">
+          <h3 class="text-sm font-medium text-gray-400">Cumulative Layout Shift</h3>
+          <span id="badge-CLS" class="text-xs px-2 py-0.5 rounded-full bg-gray-700 text-gray-400">--</span>
+        </div>
+        <p id="val-CLS" class="text-3xl font-bold tabular-nums">--</p>
+        <p class="text-xs text-gray-500 mt-1">Good &le; 0.1 &middot; Poor &gt; 0.25</p>
       </div>
-
-      <div>
-        <h3 class="text-lg font-medium">Time to First Byte (TTFB)</h3>
-        <div id="TTFB" data-sparkline="true" data-points="1,2,3,4,5,6,7" data-width="300" data-height="50"></div>
-      </div>
-
-      <div>
-        <h3 class="text-lg font-medium">Largest Contentful Paint (LCP)</h3>
-        <div id="LCP" data-sparkline="true" data-points="1,2,3,4,5,6,7" data-width="300" data-height="50"></div>
-      </div>
-
-      <div>
-        <h3 class="text-lg font-medium">Cumulative Layout Shift (CLS)</h3>
-        <div id="CLS" data-sparkline="true" data-points="1,2,3,4,5,6,7" data-width="300" data-height="50"></div>
-      </div>
-
-      <div>
-        <h3 class="text-lg font-medium">Interactive (INP)</h3>
-        <div id="INP" data-sparkline="true" data-points="1,2,3,4,5,6,7" data-width="300" data-height="50"></div>
+      <div id="card-INP" class="rounded-lg border border-gray-700 p-5">
+        <div class="flex items-center justify-between mb-1">
+          <h3 class="text-sm font-medium text-gray-400">Interaction to Next Paint</h3>
+          <span id="badge-INP" class="text-xs px-2 py-0.5 rounded-full bg-gray-700 text-gray-400">--</span>
+        </div>
+        <p id="val-INP" class="text-3xl font-bold tabular-nums">--</p>
+        <p class="text-xs text-gray-500 mt-1">Good &le; 200ms &middot; Poor &gt; 500ms</p>
       </div>
     </section>
 
-    <div class="border-b border-gray-700 pb-2 mb-10">
-      <h2 class="text-xl font-medium">Reports</h2>
-      <p class="text-gray-500">Data sent to Web Reporting API.</p>
+    <!-- Other Vitals -->
+    <section id="other-vitals" class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-10">
+      <div id="card-FCP" class="rounded-lg border border-gray-700 p-4">
+        <div class="flex items-center justify-between mb-1">
+          <h3 class="text-sm font-medium text-gray-400">First Contentful Paint</h3>
+          <span id="badge-FCP" class="text-xs px-2 py-0.5 rounded-full bg-gray-700 text-gray-400">--</span>
+        </div>
+        <p id="val-FCP" class="text-2xl font-bold tabular-nums">--</p>
+        <p class="text-xs text-gray-500 mt-1">Good &le; 1800ms &middot; Poor &gt; 3000ms</p>
+      </div>
+      <div id="card-TTFB" class="rounded-lg border border-gray-700 p-4">
+        <div class="flex items-center justify-between mb-1">
+          <h3 class="text-sm font-medium text-gray-400">Time to First Byte</h3>
+          <span id="badge-TTFB" class="text-xs px-2 py-0.5 rounded-full bg-gray-700 text-gray-400">--</span>
+        </div>
+        <p id="val-TTFB" class="text-2xl font-bold tabular-nums">--</p>
+        <p class="text-xs text-gray-500 mt-1">Good &le; 800ms &middot; Poor &gt; 1800ms</p>
+      </div>
+    </section>
+
+    <!-- Vitals Charts -->
+    <div class="border-b border-gray-700 pb-2 mb-6">
+      <h2 class="text-xl font-medium">Vitals Over Time</h2>
+      <p class="text-gray-500 text-sm">Daily averages for the last 3 months.</p>
     </div>
-    <section id="reports" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-12 mb-16">
-      <div>
-        <h3 class="text-lg font-medium">Report-To Count</h3>
-        <div id="ReportToReportCount" data-sparkline="true" data-points="1,2,3,4,5,6,7" data-width="300"
-          data-height="50"></div>
+    <section class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-10">
+      <div class="rounded-lg border border-gray-700 p-4">
+        <h3 class="text-sm font-medium text-gray-400 mb-3">LCP (ms)</h3>
+        <canvas id="chart-LCP" height="180"></canvas>
+      </div>
+      <div class="rounded-lg border border-gray-700 p-4">
+        <h3 class="text-sm font-medium text-gray-400 mb-3">CLS</h3>
+        <canvas id="chart-CLS" height="180"></canvas>
+      </div>
+      <div class="rounded-lg border border-gray-700 p-4">
+        <h3 class="text-sm font-medium text-gray-400 mb-3">INP (ms)</h3>
+        <canvas id="chart-INP" height="180"></canvas>
+      </div>
+      <div class="rounded-lg border border-gray-700 p-4">
+        <h3 class="text-sm font-medium text-gray-400 mb-3">FCP (ms)</h3>
+        <canvas id="chart-FCP" height="180"></canvas>
+      </div>
+      <div class="rounded-lg border border-gray-700 p-4">
+        <h3 class="text-sm font-medium text-gray-400 mb-3">TTFB (ms)</h3>
+        <canvas id="chart-TTFB" height="180"></canvas>
       </div>
     </section>
 
-    <section id="reports" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-12 mb-16">
-      <div>
-        <h3 class="text-lg font-medium">Endpoint Security Count</h3>
-        <div id="EndpointSecurityReportCount" data-sparkline="true" data-points="1,2,3,4,5,6,7" data-width="300"
-          data-height="50"></div>
+    <!-- Report Volume Chart -->
+    <div class="border-b border-gray-700 pb-2 mb-6">
+      <h2 class="text-xl font-medium">Report Volume</h2>
+      <p class="text-gray-500 text-sm">Daily report counts by type.</p>
+    </div>
+    <section class="mb-10">
+      <div class="rounded-lg border border-gray-700 p-4">
+        <canvas id="chart-reports" height="200"></canvas>
       </div>
     </section>
 
-    <!-- sparklines.js from https://github.com/mitjafelicijan/sparklines -->
-    <script src="https://cdn.jsdelivr.net/gh/mitjafelicijan/sparklines/sparklines.min.js" defer></script>
+    <!-- Recent CSP Violations -->
+    <div class="border-b border-gray-700 pb-2 mb-6">
+      <h2 class="text-xl font-medium">Recent CSP Violations</h2>
+      <p class="text-gray-500 text-sm">Most recent Content Security Policy violations.</p>
+    </div>
+    <section class="mb-10 overflow-x-auto">
+      <table id="csp-table" class="w-full text-sm text-left">
+        <thead class="text-xs text-gray-400 uppercase border-b border-gray-700">
+          <tr>
+            <th class="py-2 pr-4">Time</th>
+            <th class="py-2 pr-4">Violated Directive</th>
+            <th class="py-2 pr-4">Blocked URI</th>
+            <th class="py-2 pr-4">Document URI</th>
+            <th class="py-2 pr-4">Source</th>
+          </tr>
+        </thead>
+        <tbody id="csp-tbody" class="text-gray-300">
+          <tr><td colspan="5" class="py-4 text-gray-500">Loading...</td></tr>
+        </tbody>
+      </table>
+    </section>
+
+    <!-- Recent Reports (other types) -->
+    <div class="border-b border-gray-700 pb-2 mb-6">
+      <h2 class="text-xl font-medium">Recent Reports</h2>
+      <p class="text-gray-500 text-sm">Deprecation warnings, interventions, crashes, and other browser reports.</p>
+    </div>
+    <section class="mb-10 overflow-x-auto">
+      <table id="reports-table" class="w-full text-sm text-left">
+        <thead class="text-xs text-gray-400 uppercase border-b border-gray-700">
+          <tr>
+            <th class="py-2 pr-4">Time</th>
+            <th class="py-2 pr-4">Type</th>
+            <th class="py-2 pr-4">Message</th>
+            <th class="py-2 pr-4">URL</th>
+            <th class="py-2 pr-4">Source</th>
+          </tr>
+        </thead>
+        <tbody id="reports-tbody" class="text-gray-300">
+          <tr><td colspan="5" class="py-4 text-gray-500">Loading...</td></tr>
+        </tbody>
+      </table>
+    </section>
+
+    <!-- Top Violated Directives -->
+    <div class="border-b border-gray-700 pb-2 mb-6">
+      <h2 class="text-xl font-medium">Top Violated Directives</h2>
+      <p class="text-gray-500 text-sm">Most frequently violated CSP directives in the last 30 days.</p>
+    </div>
+    <section class="mb-16">
+      <div id="top-directives" class="space-y-2">
+        <p class="text-gray-500">Loading...</p>
+      </div>
+    </section>
+
     <script>
-      const name = document.querySelector('#name').textContent;
-      fetch(`/analytics/${name}`)
-        .then(response => response.json())
-        .then(data => {
-          if (!data) {
-            document.querySelector('#analytics').innerHTML = '<p>No data available.</p>';
-            return;
-          }
-          let out = {};
-          data.forEach(item => {
-            if (!out[item.name]) out[item.name] = [];
-            if (item.value > 0) {
-              out[item.name].push(item.value);
+      const SERVICE = document.querySelector('#name').textContent;
+
+      const THRESHOLDS = {
+        LCP:  { good: 2500, poor: 4000, unit: 'ms' },
+        CLS:  { good: 0.1,  poor: 0.25, unit: '' },
+        INP:  { good: 200,  poor: 500,  unit: 'ms' },
+        FCP:  { good: 1800, poor: 3000, unit: 'ms' },
+        TTFB: { good: 800,  poor: 1800, unit: 'ms' },
+      };
+
+      function ratingColor(metric, value) {
+        const t = THRESHOLDS[metric];
+        if (!t) return { bg: 'bg-gray-700', text: 'text-gray-400', label: '--', border: 'border-gray-700' };
+        if (value <= t.good) return { bg: 'bg-green-900/50', text: 'text-green-400', label: 'Good', border: 'border-green-700' };
+        if (value <= t.poor) return { bg: 'bg-amber-900/50', text: 'text-amber-400', label: 'Needs Improvement', border: 'border-amber-700' };
+        return { bg: 'bg-red-900/50', text: 'text-red-400', label: 'Poor', border: 'border-red-700' };
+      }
+
+      function formatValue(metric, value) {
+        const t = THRESHOLDS[metric];
+        if (!t) return value.toFixed(2);
+        if (t.unit === 'ms') return Math.round(value) + ' ms';
+        return value.toFixed(3);
+      }
+
+      function updateCard(metric, value) {
+        const r = ratingColor(metric, value);
+        const card = document.getElementById('card-' + metric);
+        const badge = document.getElementById('badge-' + metric);
+        const val = document.getElementById('val-' + metric);
+        if (!card || !badge || !val) return;
+
+        val.textContent = formatValue(metric, value);
+        badge.textContent = r.label;
+        badge.className = `text-xs px-2 py-0.5 rounded-full ${r.bg} ${r.text}`;
+        card.className = card.className.replace(/border-\S+/g, r.border);
+      }
+
+      function createVitalChart(canvasId, metric, dataPoints) {
+        const t = THRESHOLDS[metric];
+        const ctx = document.getElementById(canvasId);
+        if (!ctx || !dataPoints.length) return;
+
+        const sorted = [...dataPoints].sort((a, b) => a.x - b.x);
+
+        const annotations = {};
+        if (t) {
+          annotations.goodLine = {
+            type: 'line', yMin: t.good, yMax: t.good,
+            borderColor: 'rgba(34,197,94,0.4)', borderWidth: 1, borderDash: [4, 4],
+            label: { content: 'Good', display: true, position: 'start', color: 'rgba(34,197,94,0.6)', font: { size: 10 } }
+          };
+          annotations.poorLine = {
+            type: 'line', yMin: t.poor, yMax: t.poor,
+            borderColor: 'rgba(239,68,68,0.4)', borderWidth: 1, borderDash: [4, 4],
+            label: { content: 'Poor', display: true, position: 'start', color: 'rgba(239,68,68,0.6)', font: { size: 10 } }
+          };
+        }
+
+        new Chart(ctx, {
+          type: 'line',
+          data: {
+            datasets: [{
+              data: sorted,
+              borderColor: '#3b82f6',
+              backgroundColor: 'rgba(59,130,246,0.1)',
+              fill: true,
+              tension: 0.3,
+              pointRadius: 2,
+              pointHoverRadius: 5,
+            }]
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+              legend: { display: false },
+              tooltip: {
+                callbacks: {
+                  label: (c) => formatValue(metric, c.parsed.y),
+                  title: (items) => items[0] ? new Date(items[0].parsed.x).toLocaleDateString() : '',
+                }
+              },
+            },
+            scales: {
+              x: {
+                type: 'time',
+                time: { unit: 'week', tooltipFormat: 'MMM d, yyyy' },
+                grid: { color: 'rgba(255,255,255,0.05)' },
+                ticks: { color: '#6b7280', maxTicksLimit: 8 },
+              },
+              y: {
+                beginAtZero: true,
+                grid: { color: 'rgba(255,255,255,0.05)' },
+                ticks: { color: '#6b7280' },
+              }
             }
-          });
-          Object.keys(out).forEach(key => {
-            const chart = document.querySelector(`#${key}`);
-            if (!chart) return;
-
-            while (out[key].length < 30) out[key].push(0);
-
-            chart.dataset.points = out[key].join(',');
-            chart.dispatchEvent(new Event('update'));
-          });
-        });
-    </script>
-    <script>
-      fetch(`/reports/${name}`)
-        .then(response => response.json())
-        .then(data => {
-          if (!data) {
-            document.querySelector('#reports').innerHTML = '<p>No data available.</p>';
-            return;
           }
-          let out = {};
-          data.forEach(item => {
-            if (!out[item.name]) out[item.name] = [];
-            if (item.value > 0) {
-              out[item.name].push(item.value);
-            }
-          });
-          Object.keys(out).forEach(key => {
-            const chart = document.querySelector(`#${key}`);
-            if (!chart) return;
-
-            while (out[key].length < 30) out[key].push(0);
-
-            chart.dataset.points = out[key].join(',');
-            chart.dispatchEvent(new Event('update'));
-          });
         });
+      }
+
+      function createReportsChart(counts) {
+        const ctx = document.getElementById('chart-reports');
+        if (!ctx || !counts.length) return;
+
+        const byType = {};
+        counts.forEach(c => {
+          if (!byType[c.report_type]) byType[c.report_type] = [];
+          byType[c.report_type].push({ x: new Date(c.day), y: c.count });
+        });
+
+        const colors = ['#3b82f6', '#f59e0b', '#ef4444', '#10b981', '#8b5cf6', '#ec4899'];
+        const datasets = Object.entries(byType).map(([type, data], i) => ({
+          label: type,
+          data: data.sort((a, b) => a.x - b.x),
+          backgroundColor: colors[i % colors.length] + '88',
+          borderColor: colors[i % colors.length],
+          borderWidth: 1,
+        }));
+
+        new Chart(ctx, {
+          type: 'bar',
+          data: { datasets },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+              legend: { labels: { color: '#9ca3af' } },
+              tooltip: {
+                callbacks: {
+                  title: (items) => items[0] ? new Date(items[0].parsed.x).toLocaleDateString() : '',
+                }
+              },
+            },
+            scales: {
+              x: {
+                type: 'time',
+                stacked: true,
+                time: { unit: 'week', tooltipFormat: 'MMM d, yyyy' },
+                grid: { color: 'rgba(255,255,255,0.05)' },
+                ticks: { color: '#6b7280' },
+              },
+              y: {
+                stacked: true,
+                beginAtZero: true,
+                grid: { color: 'rgba(255,255,255,0.05)' },
+                ticks: { color: '#6b7280' },
+              }
+            }
+          }
+        });
+      }
+
+      function timeAgo(dateStr) {
+        const d = new Date(dateStr);
+        const now = new Date();
+        const diff = Math.floor((now - d) / 1000);
+        if (diff < 60) return diff + 's ago';
+        if (diff < 3600) return Math.floor(diff / 60) + 'm ago';
+        if (diff < 86400) return Math.floor(diff / 3600) + 'h ago';
+        return Math.floor(diff / 86400) + 'd ago';
+      }
+
+      function truncate(str, len) {
+        if (!str) return '';
+        return str.length > len ? str.substring(0, len) + '...' : str;
+      }
+
+      function populateCSPTable(reports) {
+        const tbody = document.getElementById('csp-tbody');
+        const cspReports = reports.filter(r => r.report_type === 'csp-violation' || r.report_type === 'csp');
+        if (!cspReports.length) {
+          tbody.innerHTML = '<tr><td colspan="5" class="py-4 text-gray-500">No CSP violations found.</td></tr>';
+          return;
+        }
+        tbody.innerHTML = cspReports.slice(0, 50).map(r => `
+          <tr class="border-b border-gray-800 hover:bg-gray-900/50">
+            <td class="py-2 pr-4 text-gray-500 whitespace-nowrap">${timeAgo(r.created_at)}</td>
+            <td class="py-2 pr-4"><code class="text-amber-400 text-xs">${r.violated_directive || r.effective_directive || '--'}</code></td>
+            <td class="py-2 pr-4 text-xs max-w-xs truncate" title="${r.blocked_uri || ''}">${truncate(r.blocked_uri, 60) || '--'}</td>
+            <td class="py-2 pr-4 text-xs max-w-xs truncate" title="${r.document_uri || r.url || ''}">${truncate(r.document_uri || r.url, 60) || '--'}</td>
+            <td class="py-2 pr-4 text-xs text-gray-500">${r.source_file ? truncate(r.source_file, 40) + ':' + r.line_number : '--'}</td>
+          </tr>
+        `).join('');
+      }
+
+      function populateReportsTable(reports) {
+        const tbody = document.getElementById('reports-tbody');
+        const other = reports.filter(r => r.report_type !== 'csp-violation' && r.report_type !== 'csp');
+        if (!other.length) {
+          tbody.innerHTML = '<tr><td colspan="5" class="py-4 text-gray-500">No other reports found.</td></tr>';
+          return;
+        }
+        tbody.innerHTML = other.slice(0, 50).map(r => `
+          <tr class="border-b border-gray-800 hover:bg-gray-900/50">
+            <td class="py-2 pr-4 text-gray-500 whitespace-nowrap">${timeAgo(r.created_at)}</td>
+            <td class="py-2 pr-4"><span class="text-xs px-1.5 py-0.5 rounded bg-gray-800 text-gray-300">${r.report_type}</span></td>
+            <td class="py-2 pr-4 text-xs max-w-sm truncate" title="${r.message || ''}">${truncate(r.message, 80) || '--'}</td>
+            <td class="py-2 pr-4 text-xs max-w-xs truncate" title="${r.url || ''}">${truncate(r.url, 60) || '--'}</td>
+            <td class="py-2 pr-4 text-xs text-gray-500">${r.source_file ? truncate(r.source_file, 40) + ':' + r.line_number : '--'}</td>
+          </tr>
+        `).join('');
+      }
+
+      function populateTopDirectives(directives) {
+        const container = document.getElementById('top-directives');
+        if (!directives || !directives.length) {
+          container.innerHTML = '<p class="text-gray-500">No CSP violations in the last 30 days.</p>';
+          return;
+        }
+        const maxCount = directives[0].count;
+        container.innerHTML = directives.map(d => `
+          <div class="flex items-center gap-3">
+            <code class="text-amber-400 text-sm w-48 shrink-0">${d.directive}</code>
+            <div class="flex-1 bg-gray-800 rounded-full h-4 overflow-hidden">
+              <div class="bg-amber-600 h-4 rounded-full" style="width: ${(d.count / maxCount * 100).toFixed(1)}%"></div>
+            </div>
+            <span class="text-gray-400 text-sm tabular-nums w-16 text-right">${d.count}</span>
+          </div>
+        `).join('');
+      }
+
+      // Fetch and render vitals
+      fetch(`/api/vitals/${SERVICE}`)
+        .then(r => r.json())
+        .then(data => {
+          if (data.p75s) {
+            data.p75s.forEach(p => updateCard(p.name, p.value));
+          }
+          if (data.summaries) {
+            const byMetric = {};
+            data.summaries.forEach(s => {
+              if (!byMetric[s.name]) byMetric[s.name] = [];
+              byMetric[s.name].push({ x: new Date(s.day), y: s.value });
+            });
+            Object.entries(byMetric).forEach(([metric, points]) => {
+              createVitalChart('chart-' + metric, metric, points);
+            });
+          }
+        })
+        .catch(err => console.error('Error fetching vitals:', err));
+
+      // Fetch and render reports
+      fetch(`/api/reports/${SERVICE}`)
+        .then(r => r.json())
+        .then(data => {
+          if (data.counts) createReportsChart(data.counts);
+
+          const allReports = [
+            ...(data.recent_reports || []),
+            ...(data.recent_report_to || []),
+          ].sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+
+          populateCSPTable(allReports);
+          populateReportsTable(allReports);
+          if (data.top_directives) populateTopDirectives(data.top_directives);
+        })
+        .catch(err => console.error('Error fetching reports:', err));
     </script>
   </body>
 

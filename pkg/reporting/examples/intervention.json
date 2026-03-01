@@ -1,0 +1,11 @@
+{
+  "type": "intervention",
+  "url": "https://example.com/page",
+  "body": {
+    "id": "HeavyAdIntervention",
+    "message": "Ad was removed because its CPU usage exceeded the limit.",
+    "sourceFile": "https://example.com/ads/heavy.js",
+    "lineNumber": 100,
+    "columnNumber": 5
+  }
+}

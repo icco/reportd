@@ -4,18 +4,15 @@
   <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta http-equiv="X-UA-Compatible" content="ie=edge">
     <title>ReportD</title>
     <script src="https://cdn.tailwindcss.com?plugins=forms,typography,aspect-ratio,container-queries"></script>
 
     <style>
-      body {
-        max-width: 1200px;
-      }
+      body { max-width: 1200px; }
     </style>
 
     <script type="module">
-      import { onCLS, onINP, onLCP, onFCP, onFID, onTTFB } from 'https://unpkg.com/web-vitals@4?module';
+      import { onCLS, onINP, onLCP, onFCP, onTTFB } from 'https://unpkg.com/web-vitals@5?module';
 
       function sendToAnalytics(metric) {
         const body = JSON.stringify(metric);
@@ -25,7 +22,6 @@
 
       onCLS(sendToAnalytics);
       onFCP(sendToAnalytics);
-      onFID(sendToAnalytics);
       onINP(sendToAnalytics);
       onLCP(sendToAnalytics);
       onTTFB(sendToAnalytics);
@@ -37,22 +33,176 @@
     <header class="mb-10">
       <h1 class="text-3xl font-bold">ReportD</h1>
       <p class="text-gray-500">
-        All the code for this project is available on <a class="underline"
-          href="https://github.com/icco/reportd">github.com/icco/reportd</a>.
+        Browser reporting and Web Vitals dashboard.
+        <a class="underline" href="https://github.com/icco/reportd">Source on GitHub</a>.
       </p>
     </header>
 
     <main>
-      <div id="services" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-12 mb-16">
-        {{range $element:= .Services}}
-        <section class="">
-          <div class="flex flex-col gap-6">
-            <a href="/view/{{ $element }}" class="">{{ $element }}</a>
+
+      {{if .Services}}
+      <div class="border-b border-gray-700 pb-2 mb-6">
+        <h2 class="text-xl font-medium">Services</h2>
+      </div>
+      <div id="services" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-16">
+        {{range $element := .Services}}
+        <a href="/view/{{ $element }}" class="block rounded-lg border border-gray-700 p-4 hover:border-gray-500 transition-colors" data-service="{{ $element }}">
+          <div class="flex items-center justify-between mb-2">
+            <h2 class="text-lg font-medium">{{ $element }}</h2>
+            <span class="text-gray-500 text-sm">&rarr;</span>
           </div>
-        </section>
+          <div class="flex gap-2 flex-wrap" id="health-{{ $element }}">
+          </div>
+        </a>
         {{end}}
       </div>
+      {{end}}
+
+      <div class="border-b border-gray-700 pb-2 mb-6">
+        <h2 class="text-xl font-medium">Setup</h2>
+        <p class="text-gray-500 text-sm">Add these snippets to your site to start sending data. Replace <code class="text-gray-300">YOURSITE</code> with a short name for your service.</p>
+      </div>
+
+      <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-16">
+
+        <div class="rounded-lg border border-gray-700 p-5">
+          <h3 class="text-sm font-medium text-gray-400 mb-1">Web Vitals</h3>
+          <p class="text-xs text-gray-500 mb-3">Tracks LCP, CLS, INP, FCP, and TTFB using the <a class="underline" href="https://github.com/GoogleChrome/web-vitals" target="_blank">web-vitals</a> library.</p>
+          <pre class="bg-gray-900 rounded p-3 text-xs text-gray-300 overflow-x-auto whitespace-pre"><code>&lt;script type="module"&gt;
+  import { onCLS, onINP, onLCP, onFCP, onTTFB }
+    from 'https://unpkg.com/web-vitals@5?module';
+
+  function send(metric) {
+    const body = JSON.stringify(metric);
+    navigator.sendBeacon(
+      '/analytics/<span class="text-amber-400">YOURSITE</span>', body
+    ) || fetch('/analytics/<span class="text-amber-400">YOURSITE</span>', {
+      body, method: 'POST', keepalive: true
+    });
+  }
+
+  onCLS(send);
+  onFCP(send);
+  onINP(send);
+  onLCP(send);
+  onTTFB(send);
+&lt;/script&gt;</code></pre>
+        </div>
+
+        <div class="rounded-lg border border-gray-700 p-5">
+          <h3 class="text-sm font-medium text-gray-400 mb-1">Browser Reports</h3>
+          <p class="text-xs text-gray-500 mb-3">Receives CSP violations, deprecation warnings, interventions, crashes, COOP, COEP, and permissions policy violations.</p>
+          <pre class="bg-gray-900 rounded p-3 text-xs text-gray-300 overflow-x-auto whitespace-pre"><code><span class="text-gray-500"># Reporting API v1 (modern browsers)</span>
+Reporting-Endpoints: default="/reporting/<span class="text-amber-400">YOURSITE</span>"
+
+<span class="text-gray-500"># CSP with reporting</span>
+Content-Security-Policy:
+  default-src 'self'; report-to default;
+
+<span class="text-gray-500"># COOP / COEP</span>
+Cross-Origin-Opener-Policy:
+  same-origin; report-to="default"
+Cross-Origin-Embedder-Policy:
+  require-corp; report-to="default"
+
+<span class="text-gray-500"># Legacy Report-To (older browsers)</span>
+Report-To: {"group":"default",
+  "max_age":10886400,
+  "endpoints":[{"url":"/report/<span class="text-amber-400">YOURSITE</span>"}]}</code></pre>
+        </div>
+
+      </div>
+
+      <div class="border-b border-gray-700 pb-2 mb-6">
+        <h2 class="text-xl font-medium">API Endpoints</h2>
+      </div>
+
+      <div class="mb-16 overflow-x-auto">
+        <table class="w-full text-sm text-left">
+          <thead class="text-xs text-gray-400 uppercase border-b border-gray-700">
+            <tr>
+              <th class="py-2 pr-4">Method</th>
+              <th class="py-2 pr-4">Endpoint</th>
+              <th class="py-2 pr-4">Description</th>
+            </tr>
+          </thead>
+          <tbody class="text-gray-300">
+            <tr class="border-b border-gray-800">
+              <td class="py-2 pr-4"><span class="text-xs px-1.5 py-0.5 rounded bg-green-900/50 text-green-400">POST</span></td>
+              <td class="py-2 pr-4 font-mono text-xs">/analytics/{service}</td>
+              <td class="py-2 pr-4 text-gray-500">Send Web Vitals data</td>
+            </tr>
+            <tr class="border-b border-gray-800">
+              <td class="py-2 pr-4"><span class="text-xs px-1.5 py-0.5 rounded bg-green-900/50 text-green-400">POST</span></td>
+              <td class="py-2 pr-4 font-mono text-xs">/reporting/{service}</td>
+              <td class="py-2 pr-4 text-gray-500">Reporting API v1 endpoint</td>
+            </tr>
+            <tr class="border-b border-gray-800">
+              <td class="py-2 pr-4"><span class="text-xs px-1.5 py-0.5 rounded bg-green-900/50 text-green-400">POST</span></td>
+              <td class="py-2 pr-4 font-mono text-xs">/report/{service}</td>
+              <td class="py-2 pr-4 text-gray-500">Legacy Report-To endpoint</td>
+            </tr>
+            <tr class="border-b border-gray-800">
+              <td class="py-2 pr-4"><span class="text-xs px-1.5 py-0.5 rounded bg-blue-900/50 text-blue-400">GET</span></td>
+              <td class="py-2 pr-4 font-mono text-xs">/view/{service}</td>
+              <td class="py-2 pr-4 text-gray-500">Dashboard for a service</td>
+            </tr>
+            <tr class="border-b border-gray-800">
+              <td class="py-2 pr-4"><span class="text-xs px-1.5 py-0.5 rounded bg-blue-900/50 text-blue-400">GET</span></td>
+              <td class="py-2 pr-4 font-mono text-xs">/api/vitals/{service}</td>
+              <td class="py-2 pr-4 text-gray-500">JSON: p75 summaries + daily time series</td>
+            </tr>
+            <tr class="border-b border-gray-800">
+              <td class="py-2 pr-4"><span class="text-xs px-1.5 py-0.5 rounded bg-blue-900/50 text-blue-400">GET</span></td>
+              <td class="py-2 pr-4 font-mono text-xs">/api/reports/{service}</td>
+              <td class="py-2 pr-4 text-gray-500">JSON: report counts + recent violations</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
     </main>
+
+    <script>
+      const THRESHOLDS = {
+        LCP:  { good: 2500, poor: 4000 },
+        CLS:  { good: 0.1,  poor: 0.25 },
+        INP:  { good: 200,  poor: 500 },
+        FCP:  { good: 1800, poor: 3000 },
+        TTFB: { good: 800,  poor: 1800 },
+      };
+
+      const CWV_METRICS = ['LCP', 'CLS', 'INP'];
+
+      function ratingInfo(metric, value) {
+        const t = THRESHOLDS[metric];
+        if (!t) return { cls: 'bg-gray-800 text-gray-400', label: metric };
+        if (value <= t.good) return { cls: 'bg-green-900/50 text-green-400', label: metric };
+        if (value <= t.poor) return { cls: 'bg-amber-900/50 text-amber-400', label: metric };
+        return { cls: 'bg-red-900/50 text-red-400', label: metric };
+      }
+
+      try {
+        const health = JSON.parse({{ .HealthJSON }});
+        Object.entries(health).forEach(([service, metrics]) => {
+          const container = document.getElementById('health-' + service);
+          if (!container) return;
+
+          const cwvMetrics = metrics.filter(m => CWV_METRICS.includes(m.metric));
+          if (!cwvMetrics.length) {
+            container.innerHTML = '<span class="text-xs text-gray-600">No vitals data</span>';
+            return;
+          }
+
+          container.innerHTML = cwvMetrics.map(m => {
+            const r = ratingInfo(m.metric, m.p75);
+            return `<span class="text-xs px-1.5 py-0.5 rounded ${r.cls}">${m.metric}</span>`;
+          }).join('');
+        });
+      } catch(e) {
+        console.error('Error parsing health data:', e);
+      }
+    </script>
   </body>
 
 </html>
