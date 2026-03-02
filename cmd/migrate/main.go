@@ -92,6 +92,7 @@ func migrateAnalytics(ctx context.Context, bq *bigquery.Client, pgDB *gorm.DB, p
 
 	var batch []*db.WebVital
 	total := 0
+	skipped := 0
 
 	for {
 		var row analytics.WebVital
@@ -101,6 +102,11 @@ func migrateAnalytics(ctx context.Context, bq *bigquery.Client, pgDB *gorm.DB, p
 		}
 		if err != nil {
 			log.Fatalf("reading analytics row: %v", err)
+		}
+
+		if !row.Service.Valid || row.Service.StringVal == "" {
+			skipped++
+			continue
 		}
 
 		createdAt := time.Now()
@@ -136,6 +142,9 @@ func migrateAnalytics(ctx context.Context, bq *bigquery.Client, pgDB *gorm.DB, p
 	}
 
 	log.Printf("    Done: %d web_vitals rows", total)
+	if skipped > 0 {
+		log.Printf("    WARNING: skipped %d rows with empty service", skipped)
+	}
 }
 
 func migrateReports(ctx context.Context, bq *bigquery.Client, pgDB *gorm.DB, project, dataset, table string) {
@@ -149,6 +158,7 @@ func migrateReports(ctx context.Context, bq *bigquery.Client, pgDB *gorm.DB, pro
 
 	var batch []*db.ReportToEntry
 	total := 0
+	skipped := 0
 
 	for {
 		var row reportto.Report
@@ -158,6 +168,11 @@ func migrateReports(ctx context.Context, bq *bigquery.Client, pgDB *gorm.DB, pro
 		}
 		if err != nil {
 			log.Fatalf("reading reports row: %v", err)
+		}
+
+		if !row.Service.Valid || row.Service.StringVal == "" {
+			skipped++
+			continue
 		}
 
 		createdAt := time.Now()
@@ -193,6 +208,9 @@ func migrateReports(ctx context.Context, bq *bigquery.Client, pgDB *gorm.DB, pro
 	}
 
 	log.Printf("    Done: %d report_to_entries rows", total)
+	if skipped > 0 {
+		log.Printf("    WARNING: skipped %d rows with empty service", skipped)
+	}
 }
 
 func migrateReporting(ctx context.Context, bq *bigquery.Client, pgDB *gorm.DB, project, dataset, table string) {
@@ -206,6 +224,7 @@ func migrateReporting(ctx context.Context, bq *bigquery.Client, pgDB *gorm.DB, p
 
 	var batch []*db.SecurityReportEntry
 	total := 0
+	skipped := 0
 
 	for {
 		var row reporting.SecurityReport
@@ -215,6 +234,11 @@ func migrateReporting(ctx context.Context, bq *bigquery.Client, pgDB *gorm.DB, p
 		}
 		if err != nil {
 			log.Fatalf("reading reporting row: %v", err)
+		}
+
+		if !row.Service.Valid || row.Service.StringVal == "" {
+			skipped++
+			continue
 		}
 
 		createdAt := time.Now()
@@ -253,4 +277,7 @@ func migrateReporting(ctx context.Context, bq *bigquery.Client, pgDB *gorm.DB, p
 	}
 
 	log.Printf("    Done: %d security_report_entries rows", total)
+	if skipped > 0 {
+		log.Printf("    WARNING: skipped %d rows with empty service", skipped)
+	}
 }
