@@ -21,13 +21,20 @@ ANALYTICS_TABLE="${BQ_ANALYTICS_TABLE:-analytics}"
 REPORTS_TABLE="${BQ_REPORTS_TABLE:-reports}"
 REPORTING_TABLE="${BQ_REPORTING_TABLE:-reporting}"
 
-if [[ -z "${PGCONN:-}" ]]; then
-  echo "Error: PGCONN is not set. Export a Postgres connection string." >&2
+PGCONN="${PGCONN:-${REPORTD_DATABASE_URL:-}}"
+if [[ -z "$PGCONN" ]]; then
+  echo "Error: PGCONN (or REPORTD_DATABASE_URL) is not set." >&2
   exit 1
 fi
 
 command -v bq >/dev/null 2>&1 || { echo "Error: bq CLI not found. Install the Google Cloud SDK." >&2; exit 1; }
 command -v psql >/dev/null 2>&1 || { echo "Error: psql not found." >&2; exit 1; }
+
+# Activate service account if credentials file is available
+if [[ -n "${GOOGLE_APPLICATION_CREDENTIALS:-}" && -f "$GOOGLE_APPLICATION_CREDENTIALS" ]]; then
+  echo "==> Activating service account..."
+  gcloud auth activate-service-account --key-file="$GOOGLE_APPLICATION_CREDENTIALS" --quiet
+fi
 
 TMPDIR="$(mktemp -d)"
 trap 'rm -rf "$TMPDIR"' EXIT
