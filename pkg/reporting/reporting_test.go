@@ -3,6 +3,7 @@ package reporting
 import (
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 )
 
@@ -326,5 +327,298 @@ func TestParseUnknownType(t *testing.T) {
 	}
 	if data.CSP != nil || data.Deprecation != nil || data.Crash != nil {
 		t.Error("known type fields should be nil for unknown types")
+	}
+}
+
+func TestParseReportEdgeCases(t *testing.T) {
+	tests := []struct {
+		name    string
+		body    string
+		service string
+		wantErr bool
+	}{
+		// Invalid JSON
+		{
+			name:    "empty body",
+			body:    "",
+			service: "test",
+			wantErr: true,
+		},
+		{
+			name:    "null JSON",
+			body:    "null",
+			service: "test",
+			wantErr: false, // json.Unmarshal(null, &struct{}) succeeds with zero values
+		},
+		{
+			name:    "JSON array",
+			body:    `[{"type":"csp-violation"}]`,
+			service: "test",
+			wantErr: true,
+		},
+		{
+			name:    "just a string",
+			body:    `"hello"`,
+			service: "test",
+			wantErr: true,
+		},
+		{
+			name:    "just a number",
+			body:    `42`,
+			service: "test",
+			wantErr: true,
+		},
+		{
+			name:    "truncated JSON",
+			body:    `{"type":"csp-vio`,
+			service: "test",
+			wantErr: true,
+		},
+		{
+			name:    "binary garbage",
+			body:    "\x00\x01\x02\xff\xfe",
+			service: "test",
+			wantErr: true,
+		},
+		{
+			name:    "invalid JSON with trailing comma",
+			body:    `{"type":"crash",}`,
+			service: "test",
+			wantErr: true,
+		},
+		// Missing type field
+		{
+			name:    "missing type field",
+			body:    `{"url":"https://example.com/","body":{}}`,
+			service: "test",
+			wantErr: false, // falls through to default case, stores raw JSON
+		},
+		{
+			name:    "empty type field",
+			body:    `{"type":"","url":"https://example.com/","body":{}}`,
+			service: "test",
+			wantErr: false, // unknown type, stores raw JSON
+		},
+		// Empty object
+		{
+			name:    "empty JSON object",
+			body:    `{}`,
+			service: "test",
+			wantErr: false, // type is "", falls through to default
+		},
+		// Type field as wrong JSON type
+		{
+			name:    "type field as number",
+			body:    `{"type":42,"url":"https://example.com/"}`,
+			service: "test",
+			wantErr: true, // can't unmarshal number into string
+		},
+		{
+			name:    "type field as array",
+			body:    `{"type":["csp-violation"],"url":"https://example.com/"}`,
+			service: "test",
+			wantErr: true,
+		},
+		{
+			name:    "type field as null",
+			body:    `{"type":null,"url":"https://example.com/"}`,
+			service: "test",
+			wantErr: false, // null unmarshals to zero value ""
+		},
+		// Large payloads
+		{
+			name:    "very long URL",
+			body:    `{"type":"csp-violation","url":"https://example.com/` + strings.Repeat("a", 100000) + `","body":{}}`,
+			service: "test",
+			wantErr: false,
+		},
+		{
+			name:    "very long body field",
+			body:    `{"type":"crash","url":"https://example.com/","body":{"reason":"` + strings.Repeat("x", 100000) + `"}}`,
+			service: "test",
+			wantErr: false,
+		},
+		// XSS/injection in fields
+		{
+			name:    "XSS in URL",
+			body:    `{"type":"csp-violation","url":"javascript:alert(document.cookie)","body":{"blocked_uri":"<script>alert(1)</script>"}}`,
+			service: "test",
+			wantErr: false,
+		},
+		{
+			name:    "SQL injection in body fields",
+			body:    `{"type":"csp-violation","url":"https://example.com/","body":{"document_uri":"'; DROP TABLE reports;--","blocked_uri":"1' OR '1'='1"}}`,
+			service: "test",
+			wantErr: false,
+		},
+		{
+			name:    "null bytes in strings",
+			body:    `{"type":"csp-violation","url":"https://example.com/\u0000","body":{"document_uri":"test\u0000inject"}}`,
+			service: "test",
+			wantErr: false,
+		},
+		// Extra/unknown fields (should be silently ignored)
+		{
+			name:    "extra fields in root",
+			body:    `{"type":"crash","url":"https://example.com/","body":{"reason":"oom"},"__proto__":{"admin":true},"constructor":{"prototype":{"isAdmin":true}}}`,
+			service: "test",
+			wantErr: false,
+		},
+		// Deeply nested JSON
+		{
+			name:    "deeply nested body",
+			body:    `{"type":"crash","url":"https://example.com/","body":{"reason":"oom","nested":` + strings.Repeat(`{"a":`, 100) + `1` + strings.Repeat(`}`, 100) + `}}`,
+			service: "test",
+			wantErr: false,
+		},
+		// All valid report types with minimal body
+		{
+			name:    "minimal csp-violation",
+			body:    `{"type":"csp-violation","url":"","body":{}}`,
+			service: "test",
+			wantErr: false,
+		},
+		{
+			name:    "minimal deprecation",
+			body:    `{"type":"deprecation","url":"","body":{}}`,
+			service: "test",
+			wantErr: false,
+		},
+		{
+			name:    "minimal permissions-policy-violation",
+			body:    `{"type":"permissions-policy-violation","url":"","body":{}}`,
+			service: "test",
+			wantErr: false,
+		},
+		{
+			name:    "minimal intervention",
+			body:    `{"type":"intervention","url":"","body":{}}`,
+			service: "test",
+			wantErr: false,
+		},
+		{
+			name:    "minimal crash",
+			body:    `{"type":"crash","url":"","body":{}}`,
+			service: "test",
+			wantErr: false,
+		},
+		{
+			name:    "minimal coep",
+			body:    `{"type":"coep","url":"","body":{}}`,
+			service: "test",
+			wantErr: false,
+		},
+		{
+			name:    "minimal coop",
+			body:    `{"type":"coop","url":"","body":{}}`,
+			service: "test",
+			wantErr: false,
+		},
+		{
+			name:    "minimal document-policy-violation",
+			body:    `{"type":"document-policy-violation","url":"","body":{}}`,
+			service: "test",
+			wantErr: false,
+		},
+		// Case sensitivity
+		{
+			name:    "uppercase type",
+			body:    `{"type":"CSP-VIOLATION","url":"https://example.com/","body":{}}`,
+			service: "test",
+			wantErr: false, // treated as unknown type
+		},
+		{
+			name:    "mixed case type",
+			body:    `{"type":"Crash","url":"https://example.com/","body":{}}`,
+			service: "test",
+			wantErr: false, // treated as unknown type
+		},
+	}
+
+	for _, tc := range tests {
+		tc := tc
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+			data, err := ParseReport(tc.body, tc.service)
+			if (err != nil) != tc.wantErr {
+				t.Errorf("ParseReport() error = %v, wantErr %v", err, tc.wantErr)
+				return
+			}
+			if err == nil {
+				if data == nil {
+					t.Error("expected non-nil data when no error")
+					return
+				}
+				if data.RawJSON != tc.body {
+					t.Errorf("RawJSON should preserve original body")
+				}
+				if data.Service.StringVal != tc.service {
+					t.Errorf("expected service %q, got %q", tc.service, data.Service.StringVal)
+				}
+				if !data.Time.Valid {
+					t.Error("time should always be set")
+				}
+			}
+		})
+	}
+}
+
+func TestParseReportCaseSensitiveTypes(t *testing.T) {
+	// Verify that type matching is case-sensitive (uppercase should NOT match known types)
+	body := `{"type":"CSP-VIOLATION","url":"https://example.com/","body":{"blocked_uri":"https://evil.com/"}}`
+	data, err := ParseReport(body, "test")
+	if err != nil {
+		t.Fatal(err)
+	}
+	// Should be treated as unknown — CSP field should remain nil
+	if data.CSP != nil {
+		t.Error("uppercase CSP-VIOLATION should not match csp-violation handler")
+	}
+}
+
+func TestParseReportPreservesRawJSON(t *testing.T) {
+	body := `{"type":"csp-violation","url":"https://example.com/","body":{"document_uri":"https://example.com/"}}`
+	data, err := ParseReport(body, "test")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if data.RawJSON != body {
+		t.Error("RawJSON should exactly match the input body")
+	}
+}
+
+func TestParseReportDeprecationNullStringFields(t *testing.T) {
+	// Test that deprecation NullString fields are properly populated
+	body := `{"type":"deprecation","url":"https://example.com/","body":{"id":"websql","anticipated_removal":"2025-01-01","message":"deprecated"}}`
+	data, err := ParseReport(body, "test")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !data.Deprecation.Body.Id.Valid || data.Deprecation.Body.Id.StringVal != "websql" {
+		t.Errorf("expected id 'websql', got %+v", data.Deprecation.Body.Id)
+	}
+	if !data.Deprecation.Body.AnticipatedRemoval.Valid || data.Deprecation.Body.AnticipatedRemoval.StringVal != "2025-01-01" {
+		t.Errorf("expected anticipated_removal '2025-01-01', got %+v", data.Deprecation.Body.AnticipatedRemoval)
+	}
+	if !data.Deprecation.Body.Message.Valid || data.Deprecation.Body.Message.StringVal != "deprecated" {
+		t.Errorf("expected message 'deprecated', got %+v", data.Deprecation.Body.Message)
+	}
+}
+
+func TestParseReportDeprecationEmptyNullFields(t *testing.T) {
+	// When deprecation fields are missing, NullString should be invalid
+	body := `{"type":"deprecation","url":"https://example.com/","body":{}}`
+	data, err := ParseReport(body, "test")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if data.Deprecation.Body.Id.Valid {
+		t.Error("id should not be valid when missing")
+	}
+	if data.Deprecation.Body.AnticipatedRemoval.Valid {
+		t.Error("anticipated_removal should not be valid when missing")
+	}
+	if data.Deprecation.Body.Message.Valid {
+		t.Error("message should not be valid when missing")
 	}
 }
