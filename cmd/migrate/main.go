@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"log"
 	"os"
@@ -57,7 +58,7 @@ func main() {
 	if err != nil {
 		log.Fatalf("connecting to bigquery: %v", err)
 	}
-	defer bqClient.Close()
+	defer func() { _ = bqClient.Close() }()
 
 	// Clean up bad data from previous shell-script migration.
 	log.Println("==> Cleaning up bad migration data...")
@@ -66,7 +67,7 @@ func main() {
 		if res.Error != nil {
 			log.Printf("    warning: cleaning %s: %v", table, res.Error)
 		} else {
-			log.Printf("    %s: deleted %d bad rows", table, res.RowsAffected)
+			log.Printf("    %s: deleted %d bad rows", table, res.RowsAffected) //nolint:gosec // table is from a hardcoded list, not user input
 		}
 	}
 
@@ -97,7 +98,7 @@ func migrateAnalytics(ctx context.Context, bq *bigquery.Client, pgDB *gorm.DB, p
 	for {
 		var row analytics.WebVital
 		err := it.Next(&row)
-		if err == iterator.Done {
+		if errors.Is(err, iterator.Done) {
 			break
 		}
 		if err != nil {
@@ -163,7 +164,7 @@ func migrateReports(ctx context.Context, bq *bigquery.Client, pgDB *gorm.DB, pro
 	for {
 		var row reportto.Report
 		err := it.Next(&row)
-		if err == iterator.Done {
+		if errors.Is(err, iterator.Done) {
 			break
 		}
 		if err != nil {
@@ -229,7 +230,7 @@ func migrateReporting(ctx context.Context, bq *bigquery.Client, pgDB *gorm.DB, p
 	for {
 		var row reporting.SecurityReport
 		err := it.Next(&row)
-		if err == iterator.Done {
+		if errors.Is(err, iterator.Done) {
 			break
 		}
 		if err != nil {

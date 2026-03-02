@@ -43,7 +43,6 @@ func TestParseAnalyticsParsesWebVitals(t *testing.T) {
 	}
 
 	for _, tc := range tests {
-		tc := tc
 		t.Run(tc.Name, func(t *testing.T) {
 			t.Parallel()
 			data, err := ParseAnalytics(tc.JSON, "test")
@@ -182,7 +181,6 @@ func TestParseAnalyticsEdgeCases(t *testing.T) {
 	}
 
 	for _, tc := range tests {
-		tc := tc
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 			data, err := ParseAnalytics(tc.body, tc.service)
@@ -190,16 +188,15 @@ func TestParseAnalyticsEdgeCases(t *testing.T) {
 				t.Errorf("ParseAnalytics() error = %v, wantErr %v", err, tc.wantErr)
 				return
 			}
-			if err == nil {
-				if data == nil {
-					t.Error("expected non-nil data when no error")
-				}
+			if err == nil && data != nil {
 				if !data.Service.Valid {
 					t.Error("service should always be valid when no error")
 				}
 				if !data.Time.Valid {
 					t.Error("time should always be valid when no error")
 				}
+			} else if err == nil {
+				t.Fatal("expected non-nil data when no error")
 			}
 		})
 	}
@@ -276,4 +273,3 @@ func TestWebVitalValidate(t *testing.T) {
 	}
 }
 
-// helpers removed — using bigquery.NullString inline

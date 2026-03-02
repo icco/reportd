@@ -42,7 +42,7 @@ func TestParseReport(t *testing.T) {
 	}
 
 	for _, tc := range tests {
-		tc := tc
+
 		t.Run(tc.Name, func(t *testing.T) {
 			t.Parallel()
 			data, err := ParseReport(tc.ContentType, tc.JSON, "test")
@@ -83,7 +83,7 @@ func TestParseReportParsesReportTo(t *testing.T) {
 	}
 
 	for _, tc := range tests {
-		tc := tc
+
 		t.Run(tc.Name, func(t *testing.T) {
 			t.Parallel()
 			data, err := ParseReport(tc.ContentType, tc.JSON, "test")
@@ -256,7 +256,7 @@ func TestParseReportEdgeCases(t *testing.T) {
 	}
 
 	for _, tc := range tests {
-		tc := tc
+
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 			data, err := ParseReport(tc.contentType, tc.body, tc.service)

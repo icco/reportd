@@ -14,7 +14,7 @@ func TestParseReportAllExamples(t *testing.T) {
 	}
 
 	for _, file := range files {
-		file := file
+
 		t.Run(file.Name(), func(t *testing.T) {
 			t.Parallel()
 			body, err := os.ReadFile(filepath.Join(".", "examples", file.Name()))
@@ -536,7 +536,7 @@ func TestParseReportEdgeCases(t *testing.T) {
 	}
 
 	for _, tc := range tests {
-		tc := tc
+
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 			data, err := ParseReport(tc.body, tc.service)
