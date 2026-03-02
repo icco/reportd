@@ -3,20 +3,13 @@ package analytics
 import (
 	"context"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"time"
 
 	"cloud.google.com/go/bigquery"
 	"cloud.google.com/go/civil"
-	"github.com/icco/gutil/logging"
-	"google.golang.org/api/iterator"
 )
 
-var (
-	service = "reportd"
-	log     = logging.Must(logging.NewLogger(service))
-)
 
 // WebVital is a a version of https://web.dev/vitals/.
 //
@@ -48,17 +41,6 @@ type WebVital struct {
 	Service bigquery.NullString
 }
 
-type WebVitalSummary struct {
-	// The name of the metric (in acronym form).
-	Name string `json:"name"`
-
-	// The current value of the metric.
-	Value float64 `json:"value"`
-
-	Service string `json:"service"`
-
-	Day bigquery.NullDate `json:"date"`
-}
 
 func (wv *WebVital) Validate() error {
 	if !wv.Service.Valid {
@@ -135,51 +117,4 @@ func WriteAnalyticsToBigQuery(ctx context.Context, project, dataset, table strin
 	}
 
 	return nil
-}
-
-func GetAnalytics(ctx context.Context, site, project, dataset, table string) ([]*WebVitalSummary, error) {
-	client, err := bigquery.NewClient(ctx, project)
-	if err != nil {
-		return nil, fmt.Errorf("connecting to bq: %w", err)
-	}
-
-	t := client.Dataset(dataset).Table(table)
-	tableID, err := t.Identifier(bigquery.StandardSQLID)
-	if err != nil {
-		return nil, fmt.Errorf("getting table id: %w", err)
-	}
-
-	query := fmt.Sprintf(
-		"SELECT DATE(Time) AS Day, Service, Name, AVG(Value) AS Value "+
-			"FROM `%s` "+
-			"WHERE Service = @site AND Time >= DATE_SUB(CURRENT_DATE(), INTERVAL 3 MONTH) "+
-			"GROUP BY 1, 2, 3 "+
-			"ORDER BY Day DESC;",
-		tableID,
-	)
-	q := client.Query(query)
-	q.Parameters = []bigquery.QueryParameter{
-		{Name: "site", Value: site},
-	}
-	log.Debugw("query prepped", "query", q)
-	it, err := q.Read(ctx)
-	if err != nil {
-		return nil, err
-	}
-
-	var ret []*WebVitalSummary
-	for {
-		var wv WebVitalSummary
-		err := it.Next(&wv)
-		if errors.Is(err, iterator.Done) {
-			break
-		}
-		if err != nil {
-			return nil, fmt.Errorf("couldn't get WebVitalSummary: %w", err)
-		}
-
-		ret = append(ret, &wv)
-	}
-
-	return ret, nil
 }
