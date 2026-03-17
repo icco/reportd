@@ -359,7 +359,7 @@ func postReportHandler(pgDB *gorm.DB, project, dataset, rTable string) http.Hand
 		w.WriteHeader(http.StatusNoContent)
 
 		go func() {
-			bgCtx := context.Background()
+			bgCtx := context.WithoutCancel(ctx)
 			if err := reportto.WriteReportToBigQuery(bgCtx, project, dataset, rTable, []*reportto.Report{data}); err != nil {
 				log.Errorw("error during report upload to bigquery", "dataset", dataset, "project", project, "table", rTable, "bodyJson", bodyStr, zap.Error(err), "service", service)
 			}
@@ -446,7 +446,7 @@ func postAnalyticsHandler(pgDB *gorm.DB, project, dataset, aTable string) http.H
 		w.WriteHeader(http.StatusNoContent)
 
 		go func() {
-			bgCtx := context.Background()
+			bgCtx := context.WithoutCancel(ctx)
 			if err := analytics.WriteAnalyticsToBigQuery(bgCtx, project, dataset, aTable, []*analytics.WebVital{data}); err != nil {
 				log.Errorw("error during analytics upload to bigquery", "dataset", dataset, "project", project, "table", aTable, "bodyJson", bodyStr, zap.Error(err), "service", service)
 			}
@@ -499,7 +499,7 @@ func postReportingHandler(pgDB *gorm.DB, project, dataset, rv2Table string) http
 		w.WriteHeader(http.StatusNoContent)
 
 		go func() {
-			bgCtx := context.Background()
+			bgCtx := context.WithoutCancel(ctx)
 			if err := reporting.WriteReportsToBigQuery(bgCtx, project, dataset, rv2Table, reports); err != nil {
 				log.Errorw("error during reporting upload to bigquery", "dataset", dataset, "project", project, "table", rv2Table, zap.Error(err))
 			}
