@@ -4,7 +4,7 @@ go 1.25.0
 
 require (
 	cloud.google.com/go v0.123.0
-	cloud.google.com/go/bigquery v1.74.0
+	cloud.google.com/go/bigquery v1.75.0
 	github.com/go-chi/chi/v5 v5.2.5
 	github.com/go-chi/cors v1.2.2
 	github.com/icco/gutil v0.0.0-20260209153821-fe9ae42fb376
