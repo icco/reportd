@@ -20,10 +20,15 @@ FROM alpine:3.23
 
 RUN apk add --no-cache ca-certificates tzdata
 
+# Create a non-root user.
+RUN adduser -S -u 1001 app
+
 WORKDIR /app
 
-COPY --from=builder /server .
-COPY --from=builder /migrate .
+COPY --from=builder --chown=app /server .
+COPY --from=builder --chown=app /migrate .
+
+USER app
 
 ENV NAT_ENV="production"
 EXPOSE 8080
