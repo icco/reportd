@@ -109,7 +109,13 @@ func main() {
 	r.Use(middleware.Compress(5))
 
 	r.Use(cors.New(cors.Options{
-		AllowCredentials:   true,
+		// AllowCredentials must be false when AllowedOrigins is ["*"].
+		// Combining a wildcard origin with credentials causes go-chi/cors to
+		// reflect the incoming Origin header, allowing any site to make
+		// credentialed cross-origin requests (CORS bypass). The reporting and
+		// analytics endpoints receive anonymous browser telemetry only and do
+		// not rely on cookies or session tokens.
+		AllowCredentials:   false,
 		OptionsPassthrough: true,
 		AllowedOrigins:     []string{"*"},
 		AllowedMethods:     []string{"GET", "POST", "OPTIONS"},
@@ -586,10 +592,10 @@ func apiReportsHandler(pgDB *gorm.DB) http.HandlerFunc {
 		}
 
 		out := struct {
-			Counts         []db.ReportDailyCount     `json:"counts"`
-			RecentReports  []db.SecurityReportEntry   `json:"recent_reports"`
-			RecentReportTo []db.ReportToEntry         `json:"recent_report_to"`
-			TopDirectives  []db.DirectiveCount        `json:"top_directives"`
+			Counts         []db.ReportDailyCount   `json:"counts"`
+			RecentReports  []db.SecurityReportEntry `json:"recent_reports"`
+			RecentReportTo []db.ReportToEntry       `json:"recent_report_to"`
+			TopDirectives  []db.DirectiveCount      `json:"top_directives"`
 		}{
 			Counts:         counts,
 			RecentReports:  recent,
