@@ -272,4 +272,3 @@ func TestWebVitalValidate(t *testing.T) {
 		})
 	}
 }
-

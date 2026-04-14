@@ -539,7 +539,7 @@ func apiVitalsHandler(pgDB *gorm.DB) http.HandlerFunc {
 		}
 
 		out := struct {
-			P75s      []db.WebVitalP75         `json:"p75s"`
+			P75s      []db.WebVitalP75          `json:"p75s"`
 			Summaries []db.WebVitalDailySummary `json:"summaries"`
 		}{
 			P75s:      p75s,
@@ -592,7 +592,7 @@ func apiReportsHandler(pgDB *gorm.DB) http.HandlerFunc {
 		}
 
 		out := struct {
-			Counts         []db.ReportDailyCount   `json:"counts"`
+			Counts         []db.ReportDailyCount    `json:"counts"`
 			RecentReports  []db.SecurityReportEntry `json:"recent_reports"`
 			RecentReportTo []db.ReportToEntry       `json:"recent_report_to"`
 			TopDirectives  []db.DirectiveCount      `json:"top_directives"`

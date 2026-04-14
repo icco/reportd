@@ -30,8 +30,8 @@ type CSPReportBody struct {
 }
 
 type DeprecationReport struct {
-	Type string              `json:"type"`
-	URL  string              `json:"url"`
+	Type string                `json:"type"`
+	URL  string                `json:"url"`
 	Body DeprecationReportBody `json:"body"`
 }
 
@@ -54,9 +54,9 @@ type DeprecationReportBody struct {
 }
 
 type PermissionsPolicyReport struct {
-	Type string                        `json:"type"`
-	URL  string                        `json:"url"`
-	Body PermissionsPolicyReportBody   `json:"body"`
+	Type string                      `json:"type"`
+	URL  string                      `json:"url"`
+	Body PermissionsPolicyReportBody `json:"body"`
 }
 
 type PermissionsPolicyReportBody struct {
@@ -69,9 +69,9 @@ type PermissionsPolicyReportBody struct {
 }
 
 type InterventionReport struct {
-	Type string                   `json:"type"`
-	URL  string                   `json:"url"`
-	Body InterventionReportBody   `json:"body"`
+	Type string                 `json:"type"`
+	URL  string                 `json:"url"`
+	Body InterventionReportBody `json:"body"`
 }
 
 type InterventionReportBody struct {
@@ -121,9 +121,9 @@ type COOPReportBody struct {
 }
 
 type DocumentPolicyReport struct {
-	Type string                     `json:"type"`
-	URL  string                     `json:"url"`
-	Body DocumentPolicyReportBody   `json:"body"`
+	Type string                   `json:"type"`
+	URL  string                   `json:"url"`
+	Body DocumentPolicyReportBody `json:"body"`
 }
 
 type DocumentPolicyReportBody struct {
@@ -138,12 +138,12 @@ type DocumentPolicyReportBody struct {
 type SecurityReport struct {
 	Deprecation       *DeprecationReport       `bigquery:",nullable"`
 	CSP               *CSPReport               `bigquery:",nullable"`
-	PermissionsPolicy *PermissionsPolicyReport  `bigquery:",nullable"`
-	Intervention      *InterventionReport       `bigquery:",nullable"`
-	Crash             *CrashReport              `bigquery:",nullable"`
-	COEP              *COEPReport               `bigquery:",nullable"`
-	COOP              *COOPReport               `bigquery:",nullable"`
-	DocumentPolicy    *DocumentPolicyReport     `bigquery:",nullable"`
+	PermissionsPolicy *PermissionsPolicyReport `bigquery:",nullable"`
+	Intervention      *InterventionReport      `bigquery:",nullable"`
+	Crash             *CrashReport             `bigquery:",nullable"`
+	COEP              *COEPReport              `bigquery:",nullable"`
+	COOP              *COOPReport              `bigquery:",nullable"`
+	DocumentPolicy    *DocumentPolicyReport    `bigquery:",nullable"`
 
 	ReportType bigquery.NullString
 

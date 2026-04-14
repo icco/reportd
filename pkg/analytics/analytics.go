@@ -10,7 +10,6 @@ import (
 	"cloud.google.com/go/civil"
 )
 
-
 // WebVital is a a version of https://web.dev/vitals/.
 //
 // See also https://nextjs.org/docs/advanced-features/measuring-performance#build-your-own.
@@ -40,7 +39,6 @@ type WebVital struct {
 	// What service this is for.
 	Service bigquery.NullString
 }
-
 
 func (wv *WebVital) Validate() error {
 	if !wv.Service.Valid {

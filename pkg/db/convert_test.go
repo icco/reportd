@@ -13,7 +13,6 @@ func nullStr(s string) bigquery.NullString {
 	return bigquery.NullString{StringVal: s, Valid: true}
 }
 
-
 const testBlockedURI = "https://evil.com/script.js"
 
 func TestWebVitalFromAnalytics(t *testing.T) {
