@@ -102,10 +102,7 @@ func main() {
 	}
 
 	r := chi.NewRouter()
-	r.Use(middleware.RequestID)
-	r.Use(middleware.RealIP)
-	r.Use(logging.Middleware(log.Desugar(), *project))
-	r.Use(middleware.Recoverer)
+	r.Use(logging.Middleware(log.Desugar()))
 	r.Use(middleware.Compress(5))
 
 	r.Use(cors.New(cors.Options{
@@ -214,17 +211,18 @@ func main() {
 func indexHandler(re *render.Render, pgDB *gorm.DB) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		ctx := r.Context()
+		l := logging.FromContext(ctx)
 
 		services, err := db.GetServices(ctx, pgDB)
 		if err != nil {
-			log.Errorw("error getting services", zap.Error(err))
+			l.Errorw("error getting services", zap.Error(err))
 			http.Error(w, "could not get services", 500)
 			return
 		}
 
 		health, err := db.GetAllServicesHealth(ctx, pgDB)
 		if err != nil {
-			log.Errorw("error getting services health", zap.Error(err))
+			l.Errorw("error getting services health", zap.Error(err))
 			health = make(map[string][]db.ServiceHealth)
 		}
 
@@ -237,7 +235,7 @@ func indexHandler(re *render.Render, pgDB *gorm.DB) http.HandlerFunc {
 			Services:   services,
 			HealthJSON: string(healthJSON),
 		}); err != nil {
-			log.Errorw("error rendering index", zap.Error(err))
+			l.Errorw("error rendering index", zap.Error(err))
 			http.Error(w, "could not render index", 500)
 			return
 		}
@@ -246,10 +244,11 @@ func indexHandler(re *render.Render, pgDB *gorm.DB) http.HandlerFunc {
 
 func viewHandler(re *render.Render) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
+		l := logging.FromContext(r.Context())
 		service := chi.URLParam(r, "service")
 
 		if err := lib.ValidateService(service); err != nil {
-			log.Errorw("error validating service", zap.Error(err), "service", service)
+			l.Errorw("error validating service", zap.Error(err), "service", service)
 			http.Error(w, "could not validate service", 400)
 			return
 		}
@@ -259,7 +258,7 @@ func viewHandler(re *render.Render) http.HandlerFunc {
 		}{
 			Service: service,
 		}); err != nil {
-			log.Errorw("error rendering view", zap.Error(err), "service", service)
+			l.Errorw("error rendering view", zap.Error(err), "service", service)
 			http.Error(w, "could not render view", 500)
 			return
 		}
@@ -269,7 +268,7 @@ func viewHandler(re *render.Render) http.HandlerFunc {
 func healthzHandler() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		if _, err := w.Write([]byte("ok.")); err != nil {
-			log.Errorw("error writing healthz", zap.Error(err))
+			logging.FromContext(r.Context()).Errorw("error writing healthz", zap.Error(err))
 		}
 	}
 }
@@ -283,21 +282,22 @@ func robotsTxtHandler() http.HandlerFunc {
 		w.Header().Set("Content-Type", "text/plain; charset=utf-8")
 		w.Header().Set("Cache-Control", "public, max-age=86400")
 		if _, err := w.Write(body); err != nil {
-			log.Errorw("error writing robots.txt", zap.Error(err))
+			logging.FromContext(r.Context()).Errorw("error writing robots.txt", zap.Error(err))
 		}
 	}
 }
 
 func corsPreflightHandler() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
+		l := logging.FromContext(r.Context())
 		service := chi.URLParam(r, "service")
 		if err := lib.ValidateService(service); err != nil {
-			log.Errorw("error validating service", zap.Error(err), "service", service)
+			l.Errorw("error validating service", zap.Error(err), "service", service)
 			http.Error(w, "could not validate service", 400)
 			return
 		}
 		if _, err := w.Write([]byte("")); err != nil {
-			log.Errorw("error writing options", zap.Error(err))
+			l.Errorw("error writing options", zap.Error(err))
 		}
 	}
 }
@@ -305,23 +305,24 @@ func corsPreflightHandler() http.HandlerFunc {
 func getReportsHandler(pgDB *gorm.DB) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		ctx := r.Context()
+		l := logging.FromContext(ctx)
 		service := chi.URLParam(r, "service")
 
 		if err := lib.ValidateService(service); err != nil {
-			log.Errorw("error validating service", zap.Error(err), "service", service)
+			l.Errorw("error validating service", zap.Error(err), "service", service)
 			http.Error(w, "could not validate service", 400)
 			return
 		}
 
 		data, err := db.GetReportCounts(ctx, pgDB, service)
 		if err != nil {
-			log.Errorw("error getting report counts from postgres", zap.Error(err), "service", service)
+			l.Errorw("error getting report counts from postgres", zap.Error(err), "service", service)
 			http.Error(w, "processing error", 500)
 			return
 		}
 
 		if err := writeJSON(w, data); err != nil {
-			log.Errorw("error writing reports", zap.Error(err), "service", service)
+			l.Errorw("error writing reports", zap.Error(err), "service", service)
 		}
 	}
 }
@@ -329,17 +330,18 @@ func getReportsHandler(pgDB *gorm.DB) http.HandlerFunc {
 func postReportHandler(pgDB *gorm.DB, project, dataset, rTable string) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		ctx := r.Context()
+		l := logging.FromContext(ctx)
 		service := chi.URLParam(r, "service")
 
 		if err := lib.ValidateService(service); err != nil {
-			log.Errorw("error validating service", zap.Error(err), "service", service)
+			l.Errorw("error validating service", zap.Error(err), "service", service)
 			http.Error(w, "could not validate service", 400)
 			return
 		}
 
 		buf := new(bytes.Buffer)
 		if _, err := buf.ReadFrom(r.Body); err != nil {
-			log.Errorw("error reading body", zap.Error(err), "service", service)
+			l.Errorw("error reading body", zap.Error(err), "service", service)
 			http.Error(w, "uploading error", 500)
 			return
 		}
@@ -348,22 +350,25 @@ func postReportHandler(pgDB *gorm.DB, project, dataset, rTable string) http.Hand
 
 		data, err := reportto.ParseReport(ct, bodyStr, service)
 		if err != nil {
-			log.Errorw("error seen during report parse", "content-type", ct, "user-agent", r.UserAgent(), "bodyJson", bodyStr, zap.Error(err), "service", service)
+			l.Errorw("error seen during report parse", "content-type", ct, "user-agent", r.UserAgent(), "bodyJson", bodyStr, zap.Error(err), "service", service)
 			http.Error(w, "processing error", 500)
 			return
 		}
 
-		log.Infow("report received", "content-type", ct, "service", service, "user-agent", r.UserAgent(), "report", data)
+		l.Infow("report received", "content-type", ct, "service", service, "user-agent", r.UserAgent(), "report", data)
 
 		entries := db.ReportToEntriesFromReport(data)
 		if err := pgDB.WithContext(ctx).Create(&entries).Error; err != nil {
-			log.Errorw("error writing report to postgres", zap.Error(err), "service", service)
+			l.Errorw("error writing report to postgres", zap.Error(err), "service", service)
 			http.Error(w, "storage error", 500)
 			return
 		}
 
 		w.WriteHeader(http.StatusNoContent)
 
+		// The background goroutine outlives the request, so we use the
+		// package-level logger rather than the request-scoped one (which
+		// is correlated with the now-finished request).
 		go func() {
 			bgCtx := context.WithoutCancel(ctx)
 			if err := reportto.WriteReportToBigQuery(bgCtx, project, dataset, rTable, []*reportto.Report{data}); err != nil {
@@ -376,16 +381,17 @@ func postReportHandler(pgDB *gorm.DB, project, dataset, rTable string) http.Hand
 func getServicesHandler(pgDB *gorm.DB) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		ctx := r.Context()
+		l := logging.FromContext(ctx)
 
 		data, err := db.GetServices(ctx, pgDB)
 		if err != nil {
-			log.Errorw("error seen during services get", zap.Error(err))
+			l.Errorw("error seen during services get", zap.Error(err))
 			http.Error(w, "processing error", 500)
 			return
 		}
 
 		if err := writeJSON(w, data); err != nil {
-			log.Errorw("error writing services", zap.Error(err))
+			l.Errorw("error writing services", zap.Error(err))
 		}
 	}
 }
@@ -393,23 +399,24 @@ func getServicesHandler(pgDB *gorm.DB) http.HandlerFunc {
 func getAnalyticsHandler(pgDB *gorm.DB) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		ctx := r.Context()
+		l := logging.FromContext(ctx)
 		service := chi.URLParam(r, "service")
 
 		if err := lib.ValidateService(service); err != nil {
-			log.Errorw("error validating service", zap.Error(err), "service", service)
+			l.Errorw("error validating service", zap.Error(err), "service", service)
 			http.Error(w, "could not validate service", 400)
 			return
 		}
 
 		data, err := db.GetWebVitalSummaries(ctx, pgDB, service)
 		if err != nil {
-			log.Errorw("error getting analytics from postgres", zap.Error(err), "service", service)
+			l.Errorw("error getting analytics from postgres", zap.Error(err), "service", service)
 			http.Error(w, "processing error", 500)
 			return
 		}
 
 		if err := writeJSON(w, data); err != nil {
-			log.Errorw("error writing analytics", zap.Error(err), "service", service)
+			l.Errorw("error writing analytics", zap.Error(err), "service", service)
 		}
 	}
 }
@@ -417,40 +424,42 @@ func getAnalyticsHandler(pgDB *gorm.DB) http.HandlerFunc {
 func postAnalyticsHandler(pgDB *gorm.DB, project, dataset, aTable string) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		ctx := r.Context()
+		l := logging.FromContext(ctx)
 		service := chi.URLParam(r, "service")
 		ct := r.Header.Get("content-type")
 
 		if err := lib.ValidateService(service); err != nil {
-			log.Errorw("error validating service", zap.Error(err), "service", service)
+			l.Errorw("error validating service", zap.Error(err), "service", service)
 			http.Error(w, "could not validate service", 400)
 			return
 		}
 
 		buf := new(bytes.Buffer)
 		if _, err := buf.ReadFrom(r.Body); err != nil {
-			log.Errorw("error reading body", zap.Error(err), "service", service)
+			l.Errorw("error reading body", zap.Error(err), "service", service)
 			http.Error(w, "uploading error", 500)
 			return
 		}
 		bodyStr := buf.String()
 		data, err := analytics.ParseAnalytics(bodyStr, service)
 		if err != nil {
-			log.Errorw("error seen during analytics parse", zap.Error(err), "content-type", ct, "user-agent", r.UserAgent(), "bodyJson", bodyStr, "service", service)
+			l.Errorw("error seen during analytics parse", zap.Error(err), "content-type", ct, "user-agent", r.UserAgent(), "bodyJson", bodyStr, "service", service)
 			http.Error(w, "processing error", 500)
 			return
 		}
 
-		log.Infow("analytics received", "content-type", ct, "service", service, "user-agent", r.UserAgent(), "analytics", data)
+		l.Infow("analytics received", "content-type", ct, "service", service, "user-agent", r.UserAgent(), "analytics", data)
 
 		entry := db.WebVitalFromAnalytics(data)
 		if err := pgDB.WithContext(ctx).Create(entry).Error; err != nil {
-			log.Errorw("error writing analytics to postgres", zap.Error(err), "service", service)
+			l.Errorw("error writing analytics to postgres", zap.Error(err), "service", service)
 			http.Error(w, "storage error", 500)
 			return
 		}
 
 		w.WriteHeader(http.StatusNoContent)
 
+		// Background goroutine outlives the request — see postReportHandler.
 		go func() {
 			bgCtx := context.WithoutCancel(ctx)
 			if err := analytics.WriteAnalyticsToBigQuery(bgCtx, project, dataset, aTable, []*analytics.WebVital{data}); err != nil {
@@ -463,47 +472,49 @@ func postAnalyticsHandler(pgDB *gorm.DB, project, dataset, aTable string) http.H
 func postReportingHandler(pgDB *gorm.DB, project, dataset, rv2Table string) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		ctx := r.Context()
+		l := logging.FromContext(ctx)
 		service := chi.URLParam(r, "service")
 		contentType := r.Header.Get("Content-Type")
 		if contentType != "application/reports+json" {
-			log.Errorw("Content-Type header is not application/reports+json", "service", service, "content-type", contentType)
+			l.Errorw("Content-Type header is not application/reports+json", "service", service, "content-type", contentType)
 			http.Error(w, "uploading error", 400)
 			return
 		}
 
 		if err := lib.ValidateService(service); err != nil {
-			log.Errorw("error validating service", zap.Error(err), "service", service)
+			l.Errorw("error validating service", zap.Error(err), "service", service)
 			http.Error(w, "could not validate service", 400)
 			return
 		}
 
 		buf := new(bytes.Buffer)
 		if _, err := buf.ReadFrom(r.Body); err != nil {
-			log.Errorw("error reading body", zap.Error(err), "service", service, "content-type", contentType)
+			l.Errorw("error reading body", zap.Error(err), "service", service, "content-type", contentType)
 			http.Error(w, "uploading error", 500)
 			return
 		}
 		bodyStr := buf.String()
 
-		log.Infow("reporting received", "content-type", contentType, "service", service, "user-agent", r.UserAgent())
+		l.Infow("reporting received", "content-type", contentType, "service", service, "user-agent", r.UserAgent())
 		reports, err := reporting.ParseReport(bodyStr, service)
 		if err != nil {
-			log.Errorw("error on parsing reporting data", zap.Error(err), "service", service, "content-type", contentType, "body", bodyStr)
+			l.Errorw("error on parsing reporting data", zap.Error(err), "service", service, "content-type", contentType, "body", bodyStr)
 			http.Error(w, "uploading error", 500)
 			return
 		}
 
-		log.Infow("reporting parsed", "reports", reports, "service", service, "content-type", contentType, "user-agent", r.UserAgent())
+		l.Infow("reporting parsed", "reports", reports, "service", service, "content-type", contentType, "user-agent", r.UserAgent())
 
 		entry := db.SecurityReportEntryFromReport(reports)
 		if err := pgDB.WithContext(ctx).Create(entry).Error; err != nil {
-			log.Errorw("error writing reporting to postgres", zap.Error(err), "service", service)
+			l.Errorw("error writing reporting to postgres", zap.Error(err), "service", service)
 			http.Error(w, "storage error", 500)
 			return
 		}
 
 		w.WriteHeader(http.StatusNoContent)
 
+		// Background goroutine outlives the request — see postReportHandler.
 		go func() {
 			bgCtx := context.WithoutCancel(ctx)
 			if err := reporting.WriteReportsToBigQuery(bgCtx, project, dataset, rv2Table, reports); err != nil {
@@ -516,24 +527,25 @@ func postReportingHandler(pgDB *gorm.DB, project, dataset, rv2Table string) http
 func apiVitalsHandler(pgDB *gorm.DB) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		ctx := r.Context()
+		l := logging.FromContext(ctx)
 		service := chi.URLParam(r, "service")
 
 		if err := lib.ValidateService(service); err != nil {
-			log.Errorw("error validating service", zap.Error(err), "service", service)
+			l.Errorw("error validating service", zap.Error(err), "service", service)
 			http.Error(w, "could not validate service", 400)
 			return
 		}
 
 		p75s, err := db.GetWebVitalP75s(ctx, pgDB, service)
 		if err != nil {
-			log.Errorw("error getting p75s", zap.Error(err), "service", service)
+			l.Errorw("error getting p75s", zap.Error(err), "service", service)
 			http.Error(w, "processing error", 500)
 			return
 		}
 
 		summaries, err := db.GetWebVitalSummaries(ctx, pgDB, service)
 		if err != nil {
-			log.Errorw("error getting summaries", zap.Error(err), "service", service)
+			l.Errorw("error getting summaries", zap.Error(err), "service", service)
 			http.Error(w, "processing error", 500)
 			return
 		}
@@ -547,7 +559,7 @@ func apiVitalsHandler(pgDB *gorm.DB) http.HandlerFunc {
 		}
 
 		if err := writeJSON(w, out); err != nil {
-			log.Errorw("error writing vitals", zap.Error(err), "service", service)
+			l.Errorw("error writing vitals", zap.Error(err), "service", service)
 		}
 	}
 }
@@ -555,38 +567,39 @@ func apiVitalsHandler(pgDB *gorm.DB) http.HandlerFunc {
 func apiReportsHandler(pgDB *gorm.DB) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		ctx := r.Context()
+		l := logging.FromContext(ctx)
 		service := chi.URLParam(r, "service")
 
 		if err := lib.ValidateService(service); err != nil {
-			log.Errorw("error validating service", zap.Error(err), "service", service)
+			l.Errorw("error validating service", zap.Error(err), "service", service)
 			http.Error(w, "could not validate service", 400)
 			return
 		}
 
 		counts, err := db.GetReportCounts(ctx, pgDB, service)
 		if err != nil {
-			log.Errorw("error getting report counts", zap.Error(err), "service", service)
+			l.Errorw("error getting report counts", zap.Error(err), "service", service)
 			http.Error(w, "processing error", 500)
 			return
 		}
 
 		recent, err := db.GetRecentReports(ctx, pgDB, service, 50)
 		if err != nil {
-			log.Errorw("error getting recent reports", zap.Error(err), "service", service)
+			l.Errorw("error getting recent reports", zap.Error(err), "service", service)
 			http.Error(w, "processing error", 500)
 			return
 		}
 
 		recentRT, err := db.GetRecentReportToEntries(ctx, pgDB, service, 50)
 		if err != nil {
-			log.Errorw("error getting recent report-to entries", zap.Error(err), "service", service)
+			l.Errorw("error getting recent report-to entries", zap.Error(err), "service", service)
 			http.Error(w, "processing error", 500)
 			return
 		}
 
 		topDirectives, err := db.GetTopViolatedDirectives(ctx, pgDB, service, 10)
 		if err != nil {
-			log.Errorw("error getting top violated directives", zap.Error(err), "service", service)
+			l.Errorw("error getting top violated directives", zap.Error(err), "service", service)
 			http.Error(w, "processing error", 500)
 			return
 		}
@@ -604,7 +617,7 @@ func apiReportsHandler(pgDB *gorm.DB) http.HandlerFunc {
 		}
 
 		if err := writeJSON(w, out); err != nil {
-			log.Errorw("error writing reports", zap.Error(err), "service", service)
+			l.Errorw("error writing reports", zap.Error(err), "service", service)
 		}
 	}
 }
