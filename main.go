@@ -24,11 +24,20 @@ import (
 	"github.com/icco/reportd/pkg/reportto"
 	"github.com/icco/reportd/templates"
 	"github.com/namsral/flag"
+	"github.com/prometheus/client_golang/prometheus"
+	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"github.com/unrolled/render"
 	"github.com/unrolled/secure"
+	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
+	"go.opentelemetry.io/otel"
+	otelprom "go.opentelemetry.io/otel/exporters/prometheus"
+	sdkmetric "go.opentelemetry.io/otel/sdk/metric"
+	semconv "go.opentelemetry.io/otel/semconv/v1.40.0"
 	"go.uber.org/zap"
 	"gorm.io/gorm"
 )
+
+const serverName = "reportd"
 
 var (
 	service = "reportd"
@@ -38,6 +47,20 @@ var (
 func writeJSON(w http.ResponseWriter, data any) error {
 	w.Header().Set("Content-Type", "application/json")
 	return json.NewEncoder(w).Encode(data)
+}
+
+// routeTag stamps the chi route pattern onto otelhttp metric labels.
+func routeTag(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		next.ServeHTTP(w, r)
+		labeler, ok := otelhttp.LabelerFromContext(r.Context())
+		if !ok {
+			return
+		}
+		if pattern := chi.RouteContext(r.Context()).RoutePattern(); pattern != "" {
+			labeler.Add(semconv.HTTPRoute(pattern))
+		}
+	})
 }
 
 func main() {
@@ -80,6 +103,21 @@ func main() {
 
 	ctx := context.Background()
 
+	registry := prometheus.NewRegistry()
+	exporter, err := otelprom.New(otelprom.WithRegisterer(registry))
+	if err != nil {
+		log.Fatalw("otel prometheus exporter", zap.Error(err))
+	}
+	mp := sdkmetric.NewMeterProvider(sdkmetric.WithReader(exporter))
+	otel.SetMeterProvider(mp)
+	defer func() {
+		shutdownCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+		defer cancel()
+		if err := mp.Shutdown(shutdownCtx); err != nil {
+			log.Warnw("meter provider shutdown", zap.Error(err))
+		}
+	}()
+
 	pgDB, err := db.Connect(ctx, *databaseURL)
 	if err != nil {
 		log.Fatalw("could not connect to postgres", zap.Error(err))
@@ -103,15 +141,11 @@ func main() {
 
 	r := chi.NewRouter()
 	r.Use(logging.Middleware(log.Desugar()))
+	r.Use(routeTag)
 	r.Use(middleware.Compress(5))
 
 	r.Use(cors.New(cors.Options{
-		// AllowCredentials must be false when AllowedOrigins is ["*"].
-		// Combining a wildcard origin with credentials causes go-chi/cors to
-		// reflect the incoming Origin header, allowing any site to make
-		// credentialed cross-origin requests (CORS bypass). The reporting and
-		// analytics endpoints receive anonymous browser telemetry only and do
-		// not rely on cookies or session tokens.
+		// AllowCredentials must stay false to keep the wildcard origin safe (CORS bypass).
 		AllowCredentials:   false,
 		OptionsPassthrough: true,
 		AllowedOrigins:     []string{"*"},
@@ -176,13 +210,21 @@ func main() {
 	r.Get("/api/vitals/{service}", apiVitalsHandler(pgDB))
 	r.Get("/api/reports/{service}", apiReportsHandler(pgDB))
 
+	r.Method(http.MethodGet, "/metrics", promhttp.HandlerFor(registry, promhttp.HandlerOpts{}))
+
+	handler := otelhttp.NewHandler(r, serverName,
+		otelhttp.WithFilter(func(req *http.Request) bool {
+			return req.URL.Path != "/metrics"
+		}),
+	)
+
 	srv := http.Server{
 		Addr:              ":" + port,
 		WriteTimeout:      30 * time.Second,
 		ReadTimeout:       30 * time.Second,
 		ReadHeaderTimeout: 5 * time.Second,
 		IdleTimeout:       120 * time.Second,
-		Handler:           r,
+		Handler:           handler,
 	}
 
 	done := make(chan os.Signal, 1)
@@ -366,9 +408,7 @@ func postReportHandler(pgDB *gorm.DB, project, dataset, rTable string) http.Hand
 
 		w.WriteHeader(http.StatusNoContent)
 
-		// The background goroutine outlives the request, so we use the
-		// package-level logger rather than the request-scoped one (which
-		// is correlated with the now-finished request).
+		// Background goroutine outlives the request; use the package logger.
 		go func() {
 			bgCtx := context.WithoutCancel(ctx)
 			if err := reportto.WriteReportToBigQuery(bgCtx, project, dataset, rTable, []*reportto.Report{data}); err != nil {
@@ -459,7 +499,6 @@ func postAnalyticsHandler(pgDB *gorm.DB, project, dataset, aTable string) http.H
 
 		w.WriteHeader(http.StatusNoContent)
 
-		// Background goroutine outlives the request — see postReportHandler.
 		go func() {
 			bgCtx := context.WithoutCancel(ctx)
 			if err := analytics.WriteAnalyticsToBigQuery(bgCtx, project, dataset, aTable, []*analytics.WebVital{data}); err != nil {
@@ -514,7 +553,6 @@ func postReportingHandler(pgDB *gorm.DB, project, dataset, rv2Table string) http
 
 		w.WriteHeader(http.StatusNoContent)
 
-		// Background goroutine outlives the request — see postReportHandler.
 		go func() {
 			bgCtx := context.WithoutCancel(ctx)
 			if err := reporting.WriteReportsToBigQuery(bgCtx, project, dataset, rv2Table, reports); err != nil {
