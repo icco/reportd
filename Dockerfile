@@ -6,11 +6,9 @@ ENV CGO_ENABLED=0
 
 WORKDIR /src
 
-# Cache dependencies
 COPY go.mod go.sum ./
 RUN go mod download
 
-# Build binary
 COPY . .
 RUN go build -ldflags="-s -w" -o /server .
 RUN go build -ldflags="-s -w" -o /migrate ./cmd/migrate
@@ -19,12 +17,9 @@ RUN go build -ldflags="-s -w" -o /migrate ./cmd/migrate
 FROM alpine:3.23
 
 RUN apk add --no-cache ca-certificates tzdata
-
-# Create a non-root user.
 RUN adduser -S -u 1001 app
 
 WORKDIR /app
-
 COPY --from=builder --chown=app /server .
 COPY --from=builder --chown=app /migrate .
 
