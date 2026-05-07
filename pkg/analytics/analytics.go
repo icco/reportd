@@ -11,19 +11,36 @@ import (
 	"cloud.google.com/go/civil"
 )
 
-// WebVital is one Web Vitals measurement; see https://web.dev/vitals/ and
-// https://nextjs.org/docs/app/guides/analytics#build-your-own.
+// WebVital is a a version of https://web.dev/vitals/.
+//
+// See also https://nextjs.org/docs/advanced-features/measuring-performance#build-your-own.
 type WebVital struct {
-	Name    string              `json:"name"`
-	Value   float64             `json:"value"`
-	Delta   float64             `json:"delta"`
-	ID      string              `json:"id"`
-	Label   bigquery.NullString `json:"label"`
-	Time    bigquery.NullDateTime
+	// The name of the metric (in acronym form).
+	Name string `json:"name"`
+
+	// The current value of the metric.
+	Value float64 `json:"value"`
+
+	// The delta between the current value and the last-reported value.
+	// On the first report, `delta` and `value` will always be the same.
+	Delta float64 `json:"delta"`
+
+	// A unique ID representing this particular metric that's specific to the
+	// current page. This ID can be used by an analytics tool to dedupe
+	// multiple values sent for the same metric, or to group multiple deltas
+	// together and calculate a total.
+	ID string `json:"id"`
+
+	// Type of metric (web-vital or custom).
+	Label bigquery.NullString `json:"label"`
+
+	// When we recorded this metric.
+	Time bigquery.NullDateTime
+
+	// What service this is for.
 	Service bigquery.NullString
 }
 
-// Validate returns an error if Service is unset or empty.
 func (wv *WebVital) Validate() error {
 	if !wv.Service.Valid {
 		return fmt.Errorf("service is null")
@@ -36,8 +53,7 @@ func (wv *WebVital) Validate() error {
 	return nil
 }
 
-// ParseAnalytics decodes a Web Vitals JSON payload, stamping it with the
-// current time and service.
+// ParseAnalytics parses a webvitals request body.
 func ParseAnalytics(body, service string) (*WebVital, error) {
 	now := civil.DateTimeOf(time.Now())
 	var data WebVital
@@ -51,8 +67,7 @@ func ParseAnalytics(body, service string) (*WebVital, error) {
 	return &data, nil
 }
 
-// UpdateAnalyticsBQSchema reconciles project.dataset.table's schema with
-// the inferred shape of WebVital.
+// UpdateAnalyticsBQSchema updates the bigquery schema if fields are added.
 func UpdateAnalyticsBQSchema(ctx context.Context, project, dataset, table string) error {
 	client, err := bigquery.NewClient(ctx, project)
 	if err != nil {
@@ -81,8 +96,7 @@ func getAnalyticsSchema() (bigquery.Schema, error) {
 	return bigquery.InferSchema(WebVital{})
 }
 
-// WriteAnalyticsToBigQuery validates data and streams it into
-// project.dataset.table.
+// WriteAnalyticsToBigQuery saves a webvital to bq.
 func WriteAnalyticsToBigQuery(ctx context.Context, project, dataset, table string, data []*WebVital) error {
 	for _, d := range data {
 		if err := d.Validate(); err != nil {
