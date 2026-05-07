@@ -11,25 +11,15 @@ import (
 	"cloud.google.com/go/civil"
 )
 
-// WebVital is one Web Vitals measurement; see https://web.dev/vitals/.
+// WebVital is one Web Vitals measurement; see https://web.dev/vitals/ and
+// https://nextjs.org/docs/app/guides/analytics#build-your-own.
 type WebVital struct {
-	Name string `json:"name"`
-
-	Value float64 `json:"value"`
-
-	// Delta between Value and the last reported value; equal to Value on
-	// the first report.
-	Delta float64 `json:"delta"`
-
-	// ID uniquely identifies a metric for the current page; analytics
-	// tools can use it to dedupe or sum repeated deltas.
-	ID string `json:"id"`
-
-	// Label classifies the metric (e.g. "web-vital", "custom").
-	Label bigquery.NullString `json:"label"`
-
-	Time bigquery.NullDateTime
-
+	Name    string              `json:"name"`
+	Value   float64             `json:"value"`
+	Delta   float64             `json:"delta"`
+	ID      string              `json:"id"`
+	Label   bigquery.NullString `json:"label"`
+	Time    bigquery.NullDateTime
 	Service bigquery.NullString
 }
 
