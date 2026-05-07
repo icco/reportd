@@ -3,7 +3,6 @@ package db
 import (
 	"context"
 	"fmt"
-	"math"
 	"sort"
 	"time"
 
@@ -52,65 +51,68 @@ func dayExpr(d *gorm.DB) string {
 	return "TO_CHAR(DATE(created_at), 'YYYY-MM-DD')"
 }
 
-func GetAllServicesHealth(ctx context.Context, d *gorm.DB) (map[string][]ServiceHealth, error) {
-	cutoff := time.Now().AddDate(0, 0, -28)
-
+// p75ByGroupSQL returns a query computing the linear-interpolation 75th
+// percentile of `value` from web_vitals over the given grouping columns
+// (e.g. "name" or "service, name"). Both dialects emit the same column shape.
+//
+// Postgres uses native PERCENTILE_CONT; SQLite emulates it via window
+// functions to keep the Go path identical.
+func p75ByGroupSQL(d *gorm.DB, groupCols, valueAlias, where string) string {
 	if isSQLite(d) {
-		return getAllServicesHealthSQLite(ctx, d, cutoff)
+		// Linear interpolation: rank = 0.75*(n-1); contribution from
+		// floor(rank) is value*(1-frac), from floor(rank)+1 is value*frac.
+		return `
+			WITH ranked AS (
+				SELECT ` + groupCols + `, value,
+					ROW_NUMBER() OVER (PARTITION BY ` + groupCols + ` ORDER BY value) - 1 AS rn,
+					COUNT(*) OVER (PARTITION BY ` + groupCols + `) AS cnt
+				FROM web_vitals
+				WHERE ` + where + `
+			)
+			SELECT ` + groupCols + `,
+				SUM(
+					CASE
+						WHEN rn = CAST(0.75 * (cnt - 1) AS INTEGER)
+							THEN value * (1 - (0.75 * (cnt - 1) - CAST(0.75 * (cnt - 1) AS INTEGER)))
+						WHEN rn = CAST(0.75 * (cnt - 1) AS INTEGER) + 1
+							THEN value * (0.75 * (cnt - 1) - CAST(0.75 * (cnt - 1) AS INTEGER))
+						ELSE 0
+					END
+				) AS ` + valueAlias + `
+			FROM ranked
+			GROUP BY ` + groupCols + `
+			ORDER BY ` + groupCols
 	}
-
-	var results []ServiceHealth
-	err := d.WithContext(ctx).Raw(`
-		SELECT service, name AS metric,
-			PERCENTILE_CONT(0.75) WITHIN GROUP (ORDER BY value) AS p75
+	return `
+		SELECT ` + groupCols + `,
+			PERCENTILE_CONT(0.75) WITHIN GROUP (ORDER BY value) AS ` + valueAlias + `
 		FROM web_vitals
-		WHERE created_at >= ? AND deleted_at IS NULL
-		GROUP BY service, name
-		ORDER BY service, name
-	`, cutoff).Scan(&results).Error
-	if err != nil {
-		return nil, fmt.Errorf("querying all services health: %w", err)
-	}
-
-	out := make(map[string][]ServiceHealth)
-	for _, r := range results {
-		out[r.Service] = append(out[r.Service], r)
-	}
-	return out, nil
+		WHERE ` + where + ` AND deleted_at IS NULL
+		GROUP BY ` + groupCols + `
+		ORDER BY ` + groupCols
 }
 
-// getAllServicesHealthSQLite is a Go-side fallback because SQLite lacks
-// PERCENTILE_CONT. Acceptable for local/dev use where row counts are small.
-func getAllServicesHealthSQLite(ctx context.Context, d *gorm.DB, cutoff time.Time) (map[string][]ServiceHealth, error) {
-	var rows []WebVital
+func GetAllServicesHealth(ctx context.Context, d *gorm.DB) (map[string][]ServiceHealth, error) {
+	cutoff := time.Now().AddDate(0, 0, -28)
+	type row struct {
+		Service string
+		Name    string
+		P75     float64
+	}
+	var rows []row
 	err := d.WithContext(ctx).
-		Model(&WebVital{}).
-		Select("service, name, value").
-		Where("created_at >= ?", cutoff).
-		Find(&rows).Error
+		Raw(p75ByGroupSQL(d, "service, name", "p75", "created_at >= ?"), cutoff).
+		Scan(&rows).Error
 	if err != nil {
 		return nil, fmt.Errorf("querying all services health: %w", err)
 	}
 
-	grouped := make(map[string]map[string][]float64)
-	for _, row := range rows {
-		if _, ok := grouped[row.Service]; !ok {
-			grouped[row.Service] = make(map[string][]float64)
-		}
-		grouped[row.Service][row.Name] = append(grouped[row.Service][row.Name], row.Value)
-	}
-
 	out := make(map[string][]ServiceHealth)
-	for service, metrics := range grouped {
-		for name, values := range metrics {
-			out[service] = append(out[service], ServiceHealth{
-				Service: service,
-				Metric:  name,
-				P75:     percentileCont(values, 0.75),
-			})
-		}
-		sort.Slice(out[service], func(i, j int) bool {
-			return out[service][i].Metric < out[service][j].Metric
+	for _, r := range rows {
+		out[r.Service] = append(out[r.Service], ServiceHealth{
+			Service: r.Service,
+			Metric:  r.Name,
+			P75:     r.P75,
 		})
 	}
 	return out, nil
@@ -169,52 +171,12 @@ func GetWebVitalSummaries(ctx context.Context, d *gorm.DB, service string) ([]We
 
 func GetWebVitalP75s(ctx context.Context, d *gorm.DB, service string) ([]WebVitalP75, error) {
 	cutoff := time.Now().AddDate(0, 0, -28)
-
-	if isSQLite(d) {
-		return getWebVitalP75sSQLite(ctx, d, service, cutoff)
-	}
-
 	var results []WebVitalP75
-	err := d.WithContext(ctx).Raw(`
-		SELECT name, PERCENTILE_CONT(0.75) WITHIN GROUP (ORDER BY value) AS value
-		FROM web_vitals
-		WHERE service = ? AND created_at >= ? AND deleted_at IS NULL
-		GROUP BY name
-	`, service, cutoff).Scan(&results).Error
-	if err != nil {
-		return nil, fmt.Errorf("querying web vital p75s: %w", err)
-	}
-	return results, nil
-}
-
-func getWebVitalP75sSQLite(ctx context.Context, d *gorm.DB, service string, cutoff time.Time) ([]WebVitalP75, error) {
-	var rows []WebVital
 	err := d.WithContext(ctx).
-		Model(&WebVital{}).
-		Select("name, value").
-		Where("service = ? AND created_at >= ?", service, cutoff).
-		Find(&rows).Error
+		Raw(p75ByGroupSQL(d, "name", "value", "service = ? AND created_at >= ?"), service, cutoff).
+		Scan(&results).Error
 	if err != nil {
 		return nil, fmt.Errorf("querying web vital p75s: %w", err)
-	}
-
-	grouped := make(map[string][]float64)
-	for _, row := range rows {
-		grouped[row.Name] = append(grouped[row.Name], row.Value)
-	}
-
-	names := make([]string, 0, len(grouped))
-	for name := range grouped {
-		names = append(names, name)
-	}
-	sort.Strings(names)
-
-	results := make([]WebVitalP75, 0, len(names))
-	for _, name := range names {
-		results = append(results, WebVitalP75{
-			Name:  name,
-			Value: percentileCont(grouped[name], 0.75),
-		})
 	}
 	return results, nil
 }
@@ -248,28 +210,6 @@ func GetReportCounts(ctx context.Context, d *gorm.DB, service string) ([]ReportD
 	}
 
 	return append(rtCounts, srCounts...), nil
-}
-
-func percentileCont(values []float64, p float64) float64 {
-	if len(values) == 0 {
-		return 0
-	}
-
-	cpy := append([]float64(nil), values...)
-	sort.Float64s(cpy)
-	if len(cpy) == 1 {
-		return cpy[0]
-	}
-
-	rank := p * float64(len(cpy)-1)
-	lower := int(math.Floor(rank))
-	upper := int(math.Ceil(rank))
-	if lower == upper {
-		return cpy[lower]
-	}
-
-	weight := rank - float64(lower)
-	return cpy[lower] + weight*(cpy[upper]-cpy[lower])
 }
 
 func GetRecentReports(ctx context.Context, d *gorm.DB, service string, limit int) ([]SecurityReportEntry, error) {
