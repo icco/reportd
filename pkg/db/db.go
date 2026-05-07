@@ -2,6 +2,7 @@ package db
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"strings"
 
@@ -32,7 +33,7 @@ func Connect(ctx context.Context, databaseURL string) (*gorm.DB, error) {
 func dialector(databaseURL string) (gorm.Dialector, string, error) {
 	if dsn, ok := strings.CutPrefix(databaseURL, "sqlite://"); ok {
 		if dsn == "" {
-			return nil, "", fmt.Errorf("connecting to sqlite: missing sqlite dsn")
+			return nil, "", errors.New("missing sqlite dsn")
 		}
 		return sqlite.Open(dsn), dialectSQLite, nil
 	}

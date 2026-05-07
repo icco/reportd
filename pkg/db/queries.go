@@ -2,6 +2,7 @@ package db
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"sort"
 	"time"
@@ -14,38 +15,34 @@ import (
 // "YYYY-MM-DD".
 type Day time.Time
 
-const dayLayout = "2006-01-02"
-
 func (d Day) MarshalJSON() ([]byte, error) {
-	return fmt.Appendf(nil, `"%s"`, time.Time(d).Format(dayLayout)), nil
+	return json.Marshal(time.Time(d).Format(time.DateOnly))
 }
 
 func (d *Day) Scan(v any) error {
 	switch x := v.(type) {
 	case nil:
 		*d = Day{}
+		return nil
 	case time.Time:
 		*d = Day(x)
-	case string:
-		return d.parse(x)
+		return nil
 	case []byte:
-		return d.parse(string(x))
+		return d.Scan(string(x))
+	case string:
+		// Some drivers return a longer ISO timestamp; we only want the date.
+		if len(x) > len(time.DateOnly) {
+			x = x[:len(time.DateOnly)]
+		}
+		t, err := time.Parse(time.DateOnly, x)
+		if err != nil {
+			return fmt.Errorf("parsing day %q: %w", x, err)
+		}
+		*d = Day(t)
+		return nil
 	default:
 		return fmt.Errorf("unsupported type for Day: %T", v)
 	}
-	return nil
-}
-
-func (d *Day) parse(s string) error {
-	if len(s) >= len(dayLayout) {
-		s = s[:len(dayLayout)]
-	}
-	t, err := time.Parse(dayLayout, s)
-	if err != nil {
-		return fmt.Errorf("parsing day %q: %w", s, err)
-	}
-	*d = Day(t)
-	return nil
 }
 
 type WebVitalDailySummary struct {
