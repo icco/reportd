@@ -221,18 +221,52 @@ func GetRecentReportToEntries(ctx context.Context, d *gorm.DB, service string, l
 
 func GetTopViolatedDirectives(ctx context.Context, d *gorm.DB, service string, limit int) ([]DirectiveCount, error) {
 	cutoff := time.Now().AddDate(0, -1, 0)
-	var results []DirectiveCount
+	cspTypes := []string{"csp-violation", reportTypeCSP}
+	const directiveExpr = "COALESCE(NULLIF(violated_directive, ''), effective_directive)"
+	const whereClause = "service = ? AND created_at >= ? AND report_type IN ? AND " + directiveExpr + " != ''"
+
+	var srResults []DirectiveCount
 	err := d.WithContext(ctx).
 		Model(&SecurityReportEntry{}).
-		Select("effective_directive AS directive, COUNT(*) AS count").
-		Where("service = ? AND created_at >= ? AND report_type = ? AND effective_directive != ''",
-			service, cutoff, "csp-violation").
-		Group("effective_directive").
-		Order("count DESC").
-		Limit(limit).
-		Find(&results).Error
+		Select(directiveExpr+" AS directive, COUNT(*) AS count").
+		Where(whereClause, service, cutoff, cspTypes).
+		Group(directiveExpr).
+		Find(&srResults).Error
 	if err != nil {
-		return nil, fmt.Errorf("querying top violated directives: %w", err)
+		return nil, fmt.Errorf("querying top violated directives (security_report): %w", err)
+	}
+
+	var rtResults []DirectiveCount
+	err = d.WithContext(ctx).
+		Model(&ReportToEntry{}).
+		Select(directiveExpr+" AS directive, COUNT(*) AS count").
+		Where(whereClause, service, cutoff, cspTypes).
+		Group(directiveExpr).
+		Find(&rtResults).Error
+	if err != nil {
+		return nil, fmt.Errorf("querying top violated directives (report_to): %w", err)
+	}
+
+	merged := make(map[string]int64, len(srResults)+len(rtResults))
+	for _, r := range srResults {
+		merged[r.Directive] += r.Count
+	}
+	for _, r := range rtResults {
+		merged[r.Directive] += r.Count
+	}
+
+	results := make([]DirectiveCount, 0, len(merged))
+	for directive, count := range merged {
+		results = append(results, DirectiveCount{Directive: directive, Count: count})
+	}
+	sort.Slice(results, func(i, j int) bool {
+		if results[i].Count != results[j].Count {
+			return results[i].Count > results[j].Count
+		}
+		return results[i].Directive < results[j].Directive
+	})
+	if len(results) > limit {
+		results = results[:limit]
 	}
 	return results, nil
 }

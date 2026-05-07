@@ -30,16 +30,34 @@ func TestConnectSQLiteAndQueryHelpers(t *testing.T) {
 		}
 	}
 	if err := d.Create(&ReportToEntry{
-		CreatedAt:  now,
-		Service:    "svc",
-		ReportType: reportTypeCSP,
+		CreatedAt:         now,
+		Service:           "svc",
+		ReportType:        reportTypeCSP,
+		ViolatedDirective: "script-src",
+	}).Error; err != nil {
+		t.Fatalf("creating report_to_entry: %v", err)
+	}
+	if err := d.Create(&ReportToEntry{
+		CreatedAt:          now,
+		Service:            "svc",
+		ReportType:         reportTypeCSP,
+		EffectiveDirective: "img-src",
 	}).Error; err != nil {
 		t.Fatalf("creating report_to_entry: %v", err)
 	}
 	if err := d.Create(&SecurityReportEntry{
-		CreatedAt:  now,
-		Service:    "svc",
-		ReportType: "csp-violation",
+		CreatedAt:         now,
+		Service:           "svc",
+		ReportType:        "csp-violation",
+		ViolatedDirective: "script-src",
+	}).Error; err != nil {
+		t.Fatalf("creating security_report_entry: %v", err)
+	}
+	if err := d.Create(&SecurityReportEntry{
+		CreatedAt:          now,
+		Service:            "svc",
+		ReportType:         "csp-violation",
+		EffectiveDirective: "style-src",
 	}).Error; err != nil {
 		t.Fatalf("creating security_report_entry: %v", err)
 	}
@@ -84,6 +102,28 @@ func TestConnectSQLiteAndQueryHelpers(t *testing.T) {
 	for _, c := range counts {
 		if time.Time(c.Day).IsZero() {
 			t.Fatalf("expected non-empty day in counts, got %+v", c)
+		}
+	}
+
+	directives, err := GetTopViolatedDirectives(ctx, d, "svc", 10)
+	if err != nil {
+		t.Fatalf("GetTopViolatedDirectives() error = %v", err)
+	}
+	got := map[string]int64{}
+	for _, d := range directives {
+		got[d.Directive] = d.Count
+	}
+	want := map[string]int64{
+		"script-src": 2,
+		"img-src":    1,
+		"style-src":  1,
+	}
+	if len(got) != len(want) {
+		t.Fatalf("expected %d directives, got %d: %+v", len(want), len(got), directives)
+	}
+	for k, v := range want {
+		if got[k] != v {
+			t.Errorf("directive %q: want count %d, got %d", k, v, got[k])
 		}
 	}
 }
