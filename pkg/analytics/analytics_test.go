@@ -242,6 +242,19 @@ func TestParseAnalyticsPreservesExtremeFloats(t *testing.T) {
 	}
 }
 
+func TestWriteAnalyticsToBigQueryValidation(t *testing.T) {
+	// An invalid WebVital (Service unset) must be rejected before any
+	// BigQuery client is constructed, so this test does not need network or
+	// credentials.
+	err := WriteAnalyticsToBigQuery(t.Context(), "p", "d", "tab", []*WebVital{{}})
+	if err == nil {
+		t.Fatal("expected validation error, got nil")
+	}
+	if !strings.Contains(err.Error(), "validating data") {
+		t.Errorf("error %q should mention validation", err.Error())
+	}
+}
+
 func TestWebVitalValidate(t *testing.T) {
 	tests := []struct {
 		name    string
