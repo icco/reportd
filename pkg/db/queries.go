@@ -3,6 +3,7 @@ package db
 import (
 	"context"
 	"fmt"
+	"math"
 	"sort"
 	"time"
 
@@ -40,23 +41,36 @@ type DirectiveCount struct {
 
 func GetAllServicesHealth(ctx context.Context, d *gorm.DB) (map[string][]ServiceHealth, error) {
 	cutoff := time.Now().AddDate(0, 0, -28)
-	var results []ServiceHealth
-	// PERCENTILE_CONT requires raw SQL -- no GORM builder equivalent.
-	err := d.WithContext(ctx).Raw(`
-		SELECT service, name AS metric,
-			PERCENTILE_CONT(0.75) WITHIN GROUP (ORDER BY value) AS p75
-		FROM web_vitals
-		WHERE created_at >= ? AND deleted_at IS NULL
-		GROUP BY service, name
-		ORDER BY service, name
-	`, cutoff).Scan(&results).Error
+	var rows []WebVital
+	err := d.WithContext(ctx).
+		Model(&WebVital{}).
+		Select("service, name, value").
+		Where("created_at >= ?", cutoff).
+		Find(&rows).Error
 	if err != nil {
 		return nil, fmt.Errorf("querying all services health: %w", err)
 	}
 
+	grouped := make(map[string]map[string][]float64)
+	for _, row := range rows {
+		if _, ok := grouped[row.Service]; !ok {
+			grouped[row.Service] = make(map[string][]float64)
+		}
+		grouped[row.Service][row.Name] = append(grouped[row.Service][row.Name], row.Value)
+	}
+
 	out := make(map[string][]ServiceHealth)
-	for _, r := range results {
-		out[r.Service] = append(out[r.Service], r)
+	for service, metrics := range grouped {
+		for name, values := range metrics {
+			out[service] = append(out[service], ServiceHealth{
+				Service: service,
+				Metric:  name,
+				P75:     percentileCont(values, 0.75),
+			})
+		}
+		sort.Slice(out[service], func(i, j int) bool {
+			return out[service][i].Metric < out[service][j].Metric
+		})
 	}
 	return out, nil
 }
@@ -101,7 +115,7 @@ func GetWebVitalSummaries(ctx context.Context, d *gorm.DB, service string) ([]We
 	var results []WebVitalDailySummary
 	err := d.WithContext(ctx).
 		Model(&WebVital{}).
-		Select("TO_CHAR(DATE(created_at), 'YYYY-MM-DD') AS day, service, name, AVG(value) AS value").
+		Select("DATE(created_at) AS day, service, name, AVG(value) AS value").
 		Where("service = ? AND created_at >= ?", service, cutoff).
 		Group("DATE(created_at), service, name").
 		Order("DATE(created_at) DESC").
@@ -114,16 +128,33 @@ func GetWebVitalSummaries(ctx context.Context, d *gorm.DB, service string) ([]We
 
 func GetWebVitalP75s(ctx context.Context, d *gorm.DB, service string) ([]WebVitalP75, error) {
 	cutoff := time.Now().AddDate(0, 0, -28)
-	var results []WebVitalP75
-	// PERCENTILE_CONT requires raw SQL.
-	err := d.WithContext(ctx).Raw(`
-		SELECT name, PERCENTILE_CONT(0.75) WITHIN GROUP (ORDER BY value) AS value
-		FROM web_vitals
-		WHERE service = ? AND created_at >= ? AND deleted_at IS NULL
-		GROUP BY name
-	`, service, cutoff).Scan(&results).Error
+	var rows []WebVital
+	err := d.WithContext(ctx).
+		Model(&WebVital{}).
+		Select("name, value").
+		Where("service = ? AND created_at >= ?", service, cutoff).
+		Find(&rows).Error
 	if err != nil {
 		return nil, fmt.Errorf("querying web vital p75s: %w", err)
+	}
+
+	grouped := make(map[string][]float64)
+	for _, row := range rows {
+		grouped[row.Name] = append(grouped[row.Name], row.Value)
+	}
+
+	names := make([]string, 0, len(grouped))
+	for name := range grouped {
+		names = append(names, name)
+	}
+	sort.Strings(names)
+
+	results := make([]WebVitalP75, 0, len(names))
+	for _, name := range names {
+		results = append(results, WebVitalP75{
+			Name:  name,
+			Value: percentileCont(grouped[name], 0.75),
+		})
 	}
 	return results, nil
 }
@@ -134,7 +165,7 @@ func GetReportCounts(ctx context.Context, d *gorm.DB, service string) ([]ReportD
 	var rtCounts []ReportDailyCount
 	err := d.WithContext(ctx).
 		Model(&ReportToEntry{}).
-		Select("TO_CHAR(DATE(created_at), 'YYYY-MM-DD') AS day, report_type, COUNT(*) AS count").
+		Select("DATE(created_at) AS day, report_type, COUNT(*) AS count").
 		Where("service = ? AND created_at >= ?", service, cutoff).
 		Group("DATE(created_at), report_type").
 		Order("DATE(created_at) DESC").
@@ -146,7 +177,7 @@ func GetReportCounts(ctx context.Context, d *gorm.DB, service string) ([]ReportD
 	var srCounts []ReportDailyCount
 	err = d.WithContext(ctx).
 		Model(&SecurityReportEntry{}).
-		Select("TO_CHAR(DATE(created_at), 'YYYY-MM-DD') AS day, report_type, COUNT(*) AS count").
+		Select("DATE(created_at) AS day, report_type, COUNT(*) AS count").
 		Where("service = ? AND created_at >= ?", service, cutoff).
 		Group("DATE(created_at), report_type").
 		Order("DATE(created_at) DESC").
@@ -156,6 +187,28 @@ func GetReportCounts(ctx context.Context, d *gorm.DB, service string) ([]ReportD
 	}
 
 	return append(rtCounts, srCounts...), nil
+}
+
+func percentileCont(values []float64, p float64) float64 {
+	if len(values) == 0 {
+		return 0
+	}
+
+	cpy := append([]float64(nil), values...)
+	sort.Float64s(cpy)
+	if len(cpy) == 1 {
+		return cpy[0]
+	}
+
+	rank := p * float64(len(cpy)-1)
+	lower := int(math.Floor(rank))
+	upper := int(math.Ceil(rank))
+	if lower == upper {
+		return cpy[lower]
+	}
+
+	weight := rank - float64(lower)
+	return cpy[lower] + weight*(cpy[upper]-cpy[lower])
 }
 
 func GetRecentReports(ctx context.Context, d *gorm.DB, service string, limit int) ([]SecurityReportEntry, error) {
