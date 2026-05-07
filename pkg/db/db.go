@@ -1,5 +1,5 @@
 // Package db owns the SQL persistence layer: GORM models, dialect
-// detection, and the read-side query helpers used by the dashboard.
+// detection, and dashboard query helpers.
 package db
 
 import (
@@ -16,9 +16,8 @@ import (
 
 const dialectSQLite = "sqlite"
 
-// Connect opens a GORM connection from databaseURL and verifies it with a
-// PingContext. databaseURL may be a "sqlite://<dsn>", a "file:..." DSN
-// (treated as SQLite), or a "postgres://..." URL.
+// Connect opens databaseURL ("sqlite://<dsn>", "file:...", or
+// "postgres://...") and verifies it with PingContext.
 func Connect(ctx context.Context, databaseURL string) (*gorm.DB, error) {
 	dialector, dbType, err := dialector(databaseURL)
 	if err != nil {
@@ -43,8 +42,7 @@ func Connect(ctx context.Context, databaseURL string) (*gorm.DB, error) {
 	return db, nil
 }
 
-// dialector returns the GORM dialector and a human-readable name for the
-// given URL.
+// dialector returns the GORM dialector and dialect name for databaseURL.
 func dialector(databaseURL string) (gorm.Dialector, string, error) {
 	if dsn, ok := strings.CutPrefix(databaseURL, "sqlite://"); ok {
 		if dsn == "" {
@@ -60,8 +58,7 @@ func dialector(databaseURL string) (gorm.Dialector, string, error) {
 	return postgres.Open(databaseURL), "postgres", nil
 }
 
-// AutoMigrate brings the schema in sync with the current model definitions.
-// It is safe to call on every startup.
+// AutoMigrate syncs the schema with the current models; safe on every startup.
 func AutoMigrate(ctx context.Context, db *gorm.DB) error {
 	if err := db.WithContext(ctx).AutoMigrate(
 		&WebVital{},

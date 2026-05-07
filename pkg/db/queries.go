@@ -10,18 +10,17 @@ import (
 	"gorm.io/gorm"
 )
 
-// Day is a date-only value that scans cleanly from both Postgres (date
-// type → time.Time) and SQLite (DATE() text → string) and JSON-marshals as
-// "YYYY-MM-DD".
+// Day is a date-only value that scans cleanly from Postgres (date →
+// time.Time) and SQLite (DATE() → string) and marshals as "YYYY-MM-DD".
 type Day time.Time
 
-// MarshalJSON encodes d as a "YYYY-MM-DD" string.
+// MarshalJSON encodes d as "YYYY-MM-DD".
 func (d Day) MarshalJSON() ([]byte, error) {
 	return json.Marshal(time.Time(d).Format(time.DateOnly))
 }
 
-// Scan implements sql.Scanner for Day, accepting nil, time.Time, []byte,
-// or a string (date-only or ISO timestamp; only the date prefix is used).
+// Scan accepts nil, time.Time, []byte, or string (date-only or ISO
+// timestamp; only the date prefix is used).
 func (d *Day) Scan(v any) error {
 	switch x := v.(type) {
 	case nil:
@@ -48,8 +47,7 @@ func (d *Day) Scan(v any) error {
 	}
 }
 
-// WebVitalDailySummary is the average value of a Web Vitals metric for one
-// service on one day.
+// WebVitalDailySummary is one (service, metric, day) average.
 type WebVitalDailySummary struct {
 	Day     Day     `json:"day"`
 	Service string  `json:"service"`
@@ -57,37 +55,34 @@ type WebVitalDailySummary struct {
 	Value   float64 `json:"value"`
 }
 
-// WebVitalAverage is the average value of a single Web Vitals metric over
-// the trailing 28 days.
+// WebVitalAverage is one metric's trailing-28-day average.
 type WebVitalAverage struct {
 	Name  string  `json:"name"`
 	Value float64 `json:"value"`
 }
 
-// ReportDailyCount is the count of reports of a given type for one service
-// on one day.
+// ReportDailyCount is the count of one report type on one day.
 type ReportDailyCount struct {
 	Day        Day    `json:"day"`
 	ReportType string `json:"report_type"`
 	Count      int64  `json:"count"`
 }
 
-// ServiceHealth is one (metric, average) pair for a service, used by the
-// index dashboard.
+// ServiceHealth is one (metric, average) pair for a service.
 type ServiceHealth struct {
 	Service string  `json:"service"`
 	Metric  string  `json:"metric"`
 	Average float64 `json:"average"`
 }
 
-// DirectiveCount is the count of CSP violations for a single directive.
+// DirectiveCount is the violation count for a single CSP directive.
 type DirectiveCount struct {
 	Directive string `json:"directive"`
 	Count     int64  `json:"count"`
 }
 
-// GetAllServicesHealth returns the average Web Vitals metric values for
-// every service over the trailing 28 days, keyed by service name.
+// GetAllServicesHealth returns trailing-28-day metric averages keyed by
+// service.
 func GetAllServicesHealth(ctx context.Context, d *gorm.DB) (map[string][]ServiceHealth, error) {
 	cutoff := time.Now().AddDate(0, 0, -28)
 	var results []ServiceHealth
@@ -109,8 +104,8 @@ func GetAllServicesHealth(ctx context.Context, d *gorm.DB) (map[string][]Service
 	return out, nil
 }
 
-// GetServices returns the sorted union of service names that have rows in
-// any of the three ingestion tables.
+// GetServices returns the sorted union of services across all three
+// ingestion tables.
 func GetServices(ctx context.Context, d *gorm.DB) ([]string, error) {
 	seen := make(map[string]bool)
 
@@ -146,8 +141,8 @@ func GetServices(ctx context.Context, d *gorm.DB) ([]string, error) {
 	return services, nil
 }
 
-// GetWebVitalSummaries returns the daily average value of every Web Vitals
-// metric for service over the trailing three months, newest day first.
+// GetWebVitalSummaries returns daily metric averages for service over the
+// trailing 3 months, newest first.
 func GetWebVitalSummaries(ctx context.Context, d *gorm.DB, service string) ([]WebVitalDailySummary, error) {
 	cutoff := time.Now().AddDate(0, -3, 0)
 	var results []WebVitalDailySummary
@@ -164,8 +159,7 @@ func GetWebVitalSummaries(ctx context.Context, d *gorm.DB, service string) ([]We
 	return results, nil
 }
 
-// GetWebVitalAverages returns the trailing-28-day average of every Web
-// Vitals metric for service.
+// GetWebVitalAverages returns trailing-28-day metric averages for service.
 func GetWebVitalAverages(ctx context.Context, d *gorm.DB, service string) ([]WebVitalAverage, error) {
 	cutoff := time.Now().AddDate(0, 0, -28)
 	var results []WebVitalAverage
@@ -182,9 +176,8 @@ func GetWebVitalAverages(ctx context.Context, d *gorm.DB, service string) ([]Web
 	return results, nil
 }
 
-// GetReportCounts returns the per-day, per-type report counts for service
-// across both report-to and security-report tables, over the trailing
-// three months.
+// GetReportCounts returns per-day, per-type counts for service across
+// both ingestion tables over the trailing 3 months.
 func GetReportCounts(ctx context.Context, d *gorm.DB, service string) ([]ReportDailyCount, error) {
 	cutoff := time.Now().AddDate(0, -3, 0)
 	const daySelect = "DATE(created_at) AS day, report_type, COUNT(*) AS count"
@@ -216,8 +209,8 @@ func GetReportCounts(ctx context.Context, d *gorm.DB, service string) ([]ReportD
 	return append(rtCounts, srCounts...), nil
 }
 
-// GetRecentReports returns the most recent SecurityReportEntry rows for
-// service, capped at limit.
+// GetRecentReports returns up to limit recent SecurityReportEntry rows
+// for service.
 func GetRecentReports(ctx context.Context, d *gorm.DB, service string, limit int) ([]SecurityReportEntry, error) {
 	var results []SecurityReportEntry
 	err := d.WithContext(ctx).
@@ -231,8 +224,8 @@ func GetRecentReports(ctx context.Context, d *gorm.DB, service string, limit int
 	return results, nil
 }
 
-// GetRecentReportToEntries returns the most recent ReportToEntry rows for
-// service, capped at limit.
+// GetRecentReportToEntries returns up to limit recent ReportToEntry rows
+// for service.
 func GetRecentReportToEntries(ctx context.Context, d *gorm.DB, service string, limit int) ([]ReportToEntry, error) {
 	var results []ReportToEntry
 	err := d.WithContext(ctx).
@@ -246,9 +239,9 @@ func GetRecentReportToEntries(ctx context.Context, d *gorm.DB, service string, l
 	return results, nil
 }
 
-// GetTopViolatedDirectives returns the most-frequently-violated CSP
+// GetTopViolatedDirectives returns up to limit most-violated CSP
 // directives for service over the trailing month, merged across both
-// report-to and security-report tables and capped at limit.
+// ingestion tables.
 func GetTopViolatedDirectives(ctx context.Context, d *gorm.DB, service string, limit int) ([]DirectiveCount, error) {
 	cutoff := time.Now().AddDate(0, -1, 0)
 	cspTypes := []string{reportTypeCSPViolation, reportTypeCSP}

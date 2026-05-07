@@ -1,6 +1,5 @@
-// Package reportto parses payloads sent via the legacy Report-To browser
-// API (CSP reports, Expect-CT, and the original Reporting API draft) and
-// ships them to BigQuery.
+// Package reportto parses legacy Report-To payloads (CSP, Expect-CT, and
+// the original Reporting API draft) and ships them to BigQuery.
 package reportto
 
 import (
@@ -21,17 +20,14 @@ const (
 	ContentTypeCSPReport      = "application/csp-report"
 )
 
-// Report is the parsed envelope returned by ParseReport. Exactly one of
-// ExpectCT, CSP, or ReportTo is populated, depending on the request's
-// Content-Type.
+// Report is the parsed envelope returned by ParseReport; exactly one of
+// ExpectCT, CSP, or ReportTo is populated.
 type Report struct {
 	ExpectCT *ExpectCTReport `bigquery:",nullable"`
 	CSP      *CSPReport      `bigquery:",nullable"`
 	ReportTo []*ReportToReport
 
-	// Time is when the report was received.
-	Time bigquery.NullDateTime
-	// Service is the reportd service identifier the report was posted to.
+	Time    bigquery.NullDateTime
 	Service bigquery.NullString
 }
 
@@ -79,11 +75,10 @@ type CSPReport struct {
 	} `json:"csp-report"`
 }
 
-// ReportToReport is one entry of an application/reports+json payload sent
-// via the Reporting API. The body is intentionally a superset of fields
-// observed in the wild; unset fields are omitted thanks to omitempty.
+// ReportToReport is one entry of an application/reports+json payload.
+// Body is a superset of fields observed across browsers.
 //
-// TODO: browsers send the status field under multiple names — normalize.
+// TODO: browsers send status under multiple names — normalize.
 type ReportToReport struct {
 	Type      string `json:"type"`
 	Age       int    `json:"age"`
@@ -118,9 +113,8 @@ type ReportToReport struct {
 	} `json:"body"`
 }
 
-// ParseReport decodes body as the report kind indicated by the Content-Type
-// header ct (one of the ContentType* constants) and returns a Report scoped
-// to service srv. The result is also validated.
+// ParseReport decodes body according to the Content-Type ct (one of the
+// ContentType* constants), scopes it to service srv, and validates it.
 func ParseReport(ct, body, srv string) (*Report, error) {
 	now := bigquery.NullDateTime{DateTime: civil.DateTimeOf(time.Now()), Valid: true}
 	service := bigquery.NullString{StringVal: srv, Valid: true}
@@ -158,8 +152,8 @@ func ParseReport(ct, body, srv string) (*Report, error) {
 	return r, r.Validate()
 }
 
-// UpdateReportsBQSchema reconciles project.dataset.table's BigQuery schema
-// with the inferred shape of Report, adding any new columns.
+// UpdateReportsBQSchema reconciles project.dataset.table's schema with
+// the inferred shape of Report.
 func UpdateReportsBQSchema(ctx context.Context, project, dataset, table string) error {
 	client, err := bigquery.NewClient(ctx, project)
 	if err != nil {
@@ -188,8 +182,7 @@ func getReportSchema() (bigquery.Schema, error) {
 	return bigquery.InferSchema(Report{})
 }
 
-// WriteReportToBigQuery streams reports into the project.dataset.table
-// BigQuery table.
+// WriteReportToBigQuery streams reports into project.dataset.table.
 func WriteReportToBigQuery(ctx context.Context, project, dataset, table string, reports []*Report) error {
 	client, err := bigquery.NewClient(ctx, project)
 	if err != nil {

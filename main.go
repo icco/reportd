@@ -1,6 +1,5 @@
-// Command reportd is the HTTP server that ingests browser security reports
-// and Web Vitals, persists them to a SQL database, and forwards them to
-// BigQuery for long-term analytics.
+// Command reportd ingests browser security reports and Web Vitals,
+// persists them to SQL, and forwards them to BigQuery.
 package main
 
 import (
@@ -47,8 +46,7 @@ var (
 	log     = logging.Must(logging.NewLogger(service))
 )
 
-// BigQuery writer hooks are injected into the post handlers so tests can
-// substitute no-ops and avoid network I/O.
+// BigQuery writer hooks injected into post handlers so tests can no-op.
 type (
 	reportToBQWriter       func(ctx context.Context, r *reportto.Report)
 	analyticsBQWriter      func(ctx context.Context, r *analytics.WebVital)
@@ -207,9 +205,8 @@ func main() {
 	log.Infow("Server stopped")
 }
 
-// newRouter builds the chi router used by both main() and the handler tests.
-// It registers every route and middleware except prometheus /metrics, which
-// is mounted by main() because it owns the prometheus registry.
+// newRouter builds the chi router shared by main() and the handler tests;
+// /metrics is mounted by main() because it owns the prometheus registry.
 func newRouter(pgDB *gorm.DB, writeReport reportToBQWriter, writeAnalytics analyticsBQWriter, writeSecurityReport securityReportBQWriter) *chi.Mux {
 	r := chi.NewRouter()
 	r.Use(logging.Middleware(log.Desugar()))

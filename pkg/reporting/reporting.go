@@ -1,6 +1,4 @@
-// Package reporting parses payloads sent via the modern Reporting API v1
-// (CSP, deprecation, intervention, crash, COEP/COOP, document-policy,
-// permissions-policy) and ships them to BigQuery.
+// Package reporting parses Reporting API v1 payloads and ships them to BigQuery.
 package reporting
 
 import (
@@ -13,7 +11,7 @@ import (
 	"cloud.google.com/go/civil"
 )
 
-// CSPReport carries a Content-Security-Policy violation.
+// CSPReport is a Content-Security-Policy violation.
 type CSPReport struct {
 	Type string        `json:"type"`
 	URL  string        `json:"url"`
@@ -41,11 +39,9 @@ type DeprecationReport struct {
 	Body DeprecationReportBody `json:"body"`
 }
 
-// DeprecationReportBody is the body of a DeprecationReport. It re-declares
-// the original CSPReportBody fields so existing BigQuery columns continue
-// to type-check; new fields are nullable.
+// DeprecationReportBody re-declares the legacy CSPReportBody fields so
+// existing BigQuery columns keep type-checking; new fields are nullable.
 type DeprecationReportBody struct {
-	// Fields that existed in BQ from when Body was CSPReportBody (REQUIRED).
 	DocumentUri        string `json:"document_uri,omitempty"`
 	Referrer           string `json:"referrer,omitempty"`
 	BlockedUri         string `json:"blocked_uri,omitempty"`
@@ -56,9 +52,7 @@ type DeprecationReportBody struct {
 	LineNumber         int32  `json:"line_number,omitempty"`
 	ColumnNumber       int32  `json:"column_number,omitempty"`
 	ScriptSample       string `json:"script_sample,omitempty"`
-	// Fields new to DeprecationReportBody — nullable for BQ compatibility.
-	// JSON-tagged "-" because they are populated manually in ParseReport
-	// from a sibling decode.
+	// Populated manually in ParseReport via a sibling decode (json:"-").
 	Id                 bigquery.NullString `json:"-"`
 	AnticipatedRemoval bigquery.NullString `json:"-"`
 	Message            bigquery.NullString `json:"-"`
@@ -81,8 +75,8 @@ type PermissionsPolicyReportBody struct {
 	Message      string `json:"message,omitempty"`
 }
 
-// InterventionReport signals that the browser blocked or modified content
-// for performance or UX reasons.
+// InterventionReport signals that the browser blocked content for
+// performance or UX reasons.
 type InterventionReport struct {
 	Type string                 `json:"type"`
 	URL  string                 `json:"url"`
@@ -160,8 +154,8 @@ type DocumentPolicyReportBody struct {
 }
 
 // SecurityReport is the parsed envelope returned by ParseReport. Exactly
-// one of the typed pointers is populated based on the payload's "type"
-// field; unknown types are preserved verbatim in RawJSON.
+// one typed pointer is populated; unknown types fall through with only
+// RawJSON set.
 type SecurityReport struct {
 	Deprecation       *DeprecationReport       `bigquery:",nullable"`
 	CSP               *CSPReport               `bigquery:",nullable"`
@@ -172,24 +166,20 @@ type SecurityReport struct {
 	COOP              *COOPReport              `bigquery:",nullable"`
 	DocumentPolicy    *DocumentPolicyReport    `bigquery:",nullable"`
 
-	// ReportType is the value of the payload's "type" field.
 	ReportType bigquery.NullString
 
-	// RawJSON preserves the original request body so unknown/future report
-	// types remain queryable. Tagged bigquery:"-" because BQ stores the
-	// typed columns above; the SQL store keeps RawJSON.
+	// RawJSON is the original request body, kept for forward-compatibility
+	// with unknown report types. Excluded from BigQuery (typed columns
+	// above) but stored in the SQL layer.
 	RawJSON string `bigquery:"-"`
 
-	// Time is when the report was received.
-	Time bigquery.NullDateTime
-	// Service is the reportd service identifier the report was posted to.
+	Time    bigquery.NullDateTime
 	Service bigquery.NullString
 }
 
-// ParseReport decodes a Reporting API v1 payload posted by the browser
-// into a SecurityReport. The "type" field of the JSON envelope selects
-// which typed pointer is populated; unknown types fall through with only
-// RawJSON, ReportType, Time, and Service set.
+// ParseReport decodes a Reporting API v1 payload into a SecurityReport.
+// The "type" field selects which typed pointer is populated; unknown
+// types are preserved in RawJSON.
 func ParseReport(data, srv string) (*SecurityReport, error) {
 	sr := &SecurityReport{
 		Time:    bigquery.NullDateTime{DateTime: civil.DateTimeOf(time.Now()), Valid: true},
@@ -254,14 +244,13 @@ func ParseReport(data, srv string) (*SecurityReport, error) {
 			return nil, err
 		}
 	default:
-		// Forward-compatible: store raw JSON for unknown types.
+		// Unknown type: preserved in RawJSON.
 	}
 
 	return sr, nil
 }
 
-// WriteReportsToBigQuery streams a single SecurityReport into the
-// project.dataset.table BigQuery table.
+// WriteReportsToBigQuery streams report into project.dataset.table.
 func WriteReportsToBigQuery(ctx context.Context, project, dataset, table string, report *SecurityReport) error {
 	bq, err := bigquery.NewClient(ctx, project)
 	if err != nil {
@@ -275,8 +264,8 @@ func WriteReportsToBigQuery(ctx context.Context, project, dataset, table string,
 	return nil
 }
 
-// UpdateReportsBQSchema reconciles project.dataset.table's BigQuery schema
-// with the inferred shape of SecurityReport, adding any new columns.
+// UpdateReportsBQSchema reconciles project.dataset.table's schema with
+// the inferred shape of SecurityReport.
 func UpdateReportsBQSchema(ctx context.Context, project, dataset, table string) error {
 	client, err := bigquery.NewClient(ctx, project)
 	if err != nil {

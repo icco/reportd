@@ -10,17 +10,11 @@ import (
 )
 
 const (
-	// reportTypeCSP is the legacy Report-To CSP type stored in
-	// ReportToEntry.ReportType.
-	reportTypeCSP = "csp"
-	// reportTypeCSPViolation is the Reporting API v1 type string for CSP
-	// violations stored in SecurityReportEntry.ReportType and used by the
-	// directive-aggregation query in queries.go.
-	reportTypeCSPViolation = "csp-violation"
+	reportTypeCSP          = "csp"           // legacy Report-To CSP type
+	reportTypeCSPViolation = "csp-violation" // Reporting API v1 CSP type
 )
 
-// WebVitalFromAnalytics converts a parsed analytics.WebVital into a
-// persistence-layer WebVital ready for the SQL store.
+// WebVitalFromAnalytics converts an analytics.WebVital to its DB row.
 func WebVitalFromAnalytics(wv *analytics.WebVital) *WebVital {
 	return &WebVital{
 		CreatedAt: time.Now(),
@@ -33,9 +27,8 @@ func WebVitalFromAnalytics(wv *analytics.WebVital) *WebVital {
 	}
 }
 
-// ReportToEntriesFromReport flattens a parsed reportto.Report into one or
-// more ReportToEntry rows. CSP and Expect-CT envelopes always produce one
-// row; a Reporting-API payload produces one row per item in r.ReportTo.
+// ReportToEntriesFromReport flattens r into ReportToEntry rows: one for
+// CSP/Expect-CT, one per item for Reporting-API arrays.
 func ReportToEntriesFromReport(r *reportto.Report) []*ReportToEntry {
 	now := time.Now()
 	srv := r.Service.StringVal
@@ -97,9 +90,8 @@ func ReportToEntriesFromReport(r *reportto.Report) []*ReportToEntry {
 	return entries
 }
 
-// SecurityReportEntryFromReport projects a parsed reporting.SecurityReport
-// into a SecurityReportEntry ready for the SQL store. Whichever typed body
-// is set on sr drives which fields are populated.
+// SecurityReportEntryFromReport projects sr into a SecurityReportEntry;
+// whichever typed body is set drives which fields are populated.
 func SecurityReportEntryFromReport(sr *reporting.SecurityReport) *SecurityReportEntry {
 	entry := &SecurityReportEntry{
 		CreatedAt:  time.Now(),

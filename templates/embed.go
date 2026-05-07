@@ -1,11 +1,9 @@
-// Package templates embeds reportd's HTML templates and static assets so
-// they ship in a single binary.
+// Package templates embeds reportd's HTML templates and static assets.
 package templates
 
 import "embed"
 
-// FS holds reportd's HTML templates (*.tmpl) and static assets
-// (robots.txt) for use with render.EmbedFileSystem.
+// FS holds the embedded *.tmpl and robots.txt files.
 //
 //go:embed *.tmpl robots.txt
 var FS embed.FS
