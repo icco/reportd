@@ -7,6 +7,16 @@ import (
 	"testing"
 )
 
+func TestGetReportSchema(t *testing.T) {
+	schema, err := getReportSchema()
+	if err != nil {
+		t.Fatalf("getReportSchema() error = %v", err)
+	}
+	if len(schema) == 0 {
+		t.Error("inferred schema should not be empty")
+	}
+}
+
 func TestParseReportAllExamples(t *testing.T) {
 	files, err := os.ReadDir("./examples")
 	if err != nil {

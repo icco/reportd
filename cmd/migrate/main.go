@@ -1,3 +1,5 @@
+// Command migrate backfills the SQL database from the legacy BigQuery
+// tables so a fresh reportd can serve historical data.
 package main
 
 import (

@@ -1,3 +1,4 @@
+// Package analytics models Web Vitals measurements and ships them to BigQuery.
 package analytics
 
 import (

@@ -1,3 +1,5 @@
+// Command reportd ingests browser security reports and Web Vitals,
+// persists them to SQL, and forwards them to BigQuery.
 package main
 
 import (
@@ -42,6 +44,13 @@ const serverName = "reportd"
 var (
 	service = "reportd"
 	log     = logging.Must(logging.NewLogger(service))
+)
+
+// BigQuery writer hooks injected into post handlers so tests can no-op.
+type (
+	reportToBQWriter       func(ctx context.Context, r *reportto.Report)
+	analyticsBQWriter      func(ctx context.Context, r *analytics.WebVital)
+	securityReportBQWriter func(ctx context.Context, r *reporting.SecurityReport)
 )
 
 func writeJSON(w http.ResponseWriter, data any) error {
@@ -139,6 +148,66 @@ func main() {
 		log.Errorw("reporting table update", zap.Error(err))
 	}
 
+	writeReport := func(ctx context.Context, r *reportto.Report) {
+		if err := reportto.WriteReportToBigQuery(ctx, *project, *dataset, *rTable, []*reportto.Report{r}); err != nil {
+			log.Errorw("error during report upload to bigquery", "dataset", *dataset, "project", *project, "table", *rTable, zap.Error(err))
+		}
+	}
+	writeAnalytics := func(ctx context.Context, wv *analytics.WebVital) {
+		if err := analytics.WriteAnalyticsToBigQuery(ctx, *project, *dataset, *aTable, []*analytics.WebVital{wv}); err != nil {
+			log.Errorw("error during analytics upload to bigquery", "dataset", *dataset, "project", *project, "table", *aTable, zap.Error(err))
+		}
+	}
+	writeSecurityReport := func(ctx context.Context, sr *reporting.SecurityReport) {
+		if err := reporting.WriteReportsToBigQuery(ctx, *project, *dataset, *rv2Table, sr); err != nil {
+			log.Errorw("error during reporting upload to bigquery", "dataset", *dataset, "project", *project, "table", *rv2Table, zap.Error(err))
+		}
+	}
+
+	r := newRouter(pgDB, writeReport, writeAnalytics, writeSecurityReport)
+	r.Method(http.MethodGet, "/metrics", promhttp.HandlerFor(registry, promhttp.HandlerOpts{}))
+
+	handler := otelhttp.NewHandler(r, serverName,
+		otelhttp.WithFilter(func(req *http.Request) bool {
+			return req.URL.Path != "/metrics"
+		}),
+	)
+
+	srv := http.Server{
+		Addr:              ":" + port,
+		WriteTimeout:      30 * time.Second,
+		ReadTimeout:       30 * time.Second,
+		ReadHeaderTimeout: 5 * time.Second,
+		IdleTimeout:       120 * time.Second,
+		Handler:           handler,
+	}
+
+	done := make(chan os.Signal, 1)
+	signal.Notify(done, os.Interrupt, syscall.SIGTERM)
+
+	go func() {
+		if err := srv.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
+			log.Fatalw("Server failed", zap.Error(err))
+		}
+	}()
+
+	log.Infow("Server ready", "addr", srv.Addr)
+	<-done
+	log.Infow("Shutting down")
+
+	shutdownCtx, cancel := context.WithTimeout(ctx, 15*time.Second)
+	defer cancel()
+
+	if err := srv.Shutdown(shutdownCtx); err != nil {
+		log.Fatalw("Shutdown failed", zap.Error(err))
+	}
+
+	log.Infow("Server stopped")
+}
+
+// newRouter builds the chi router shared by main() and the handler tests;
+// /metrics is mounted by main() because it owns the prometheus registry.
+func newRouter(pgDB *gorm.DB, writeReport reportToBQWriter, writeAnalytics analyticsBQWriter, writeSecurityReport securityReportBQWriter) *chi.Mux {
 	r := chi.NewRouter()
 	r.Use(logging.Middleware(log.Desugar()))
 	r.Use(routeTag)
@@ -187,7 +256,7 @@ func main() {
 	})
 
 	r.Get("/robots.txt", robotsTxtHandler())
-	r.Get("/favicon.ico", func(w http.ResponseWriter, r *http.Request) {
+	r.Get("/favicon.ico", func(w http.ResponseWriter, _ *http.Request) {
 		w.WriteHeader(http.StatusNoContent)
 	})
 
@@ -199,55 +268,18 @@ func main() {
 	r.Options("/analytics/{service}", corsPreflightHandler())
 
 	r.Get("/reports/{service}", getReportsHandler(pgDB))
-	r.Post("/report/{service}", postReportHandler(pgDB, *project, *dataset, *rTable))
+	r.Post("/report/{service}", postReportHandler(pgDB, writeReport))
 
 	r.Get("/services", getServicesHandler(pgDB))
 	r.Get("/analytics/{service}", getAnalyticsHandler(pgDB))
-	r.Post("/analytics/{service}", postAnalyticsHandler(pgDB, *project, *dataset, *aTable))
+	r.Post("/analytics/{service}", postAnalyticsHandler(pgDB, writeAnalytics))
 
-	r.Post("/reporting/{service}", postReportingHandler(pgDB, *project, *dataset, *rv2Table))
+	r.Post("/reporting/{service}", postReportingHandler(pgDB, writeSecurityReport))
 
 	r.Get("/api/vitals/{service}", apiVitalsHandler(pgDB))
 	r.Get("/api/reports/{service}", apiReportsHandler(pgDB))
 
-	r.Method(http.MethodGet, "/metrics", promhttp.HandlerFor(registry, promhttp.HandlerOpts{}))
-
-	handler := otelhttp.NewHandler(r, serverName,
-		otelhttp.WithFilter(func(req *http.Request) bool {
-			return req.URL.Path != "/metrics"
-		}),
-	)
-
-	srv := http.Server{
-		Addr:              ":" + port,
-		WriteTimeout:      30 * time.Second,
-		ReadTimeout:       30 * time.Second,
-		ReadHeaderTimeout: 5 * time.Second,
-		IdleTimeout:       120 * time.Second,
-		Handler:           handler,
-	}
-
-	done := make(chan os.Signal, 1)
-	signal.Notify(done, os.Interrupt, syscall.SIGTERM)
-
-	go func() {
-		if err := srv.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
-			log.Fatalw("Server failed", zap.Error(err))
-		}
-	}()
-
-	log.Infow("Server ready", "addr", srv.Addr)
-	<-done
-	log.Infow("Shutting down")
-
-	shutdownCtx, cancel := context.WithTimeout(ctx, 15*time.Second)
-	defer cancel()
-
-	if err := srv.Shutdown(shutdownCtx); err != nil {
-		log.Fatalw("Shutdown failed", zap.Error(err))
-	}
-
-	log.Infow("Server stopped")
+	return r
 }
 
 func indexHandler(re *render.Render, pgDB *gorm.DB) http.HandlerFunc {
@@ -369,7 +401,7 @@ func getReportsHandler(pgDB *gorm.DB) http.HandlerFunc {
 	}
 }
 
-func postReportHandler(pgDB *gorm.DB, project, dataset, rTable string) http.HandlerFunc {
+func postReportHandler(pgDB *gorm.DB, writeBQ reportToBQWriter) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		ctx := r.Context()
 		l := logging.FromContext(ctx)
@@ -408,13 +440,9 @@ func postReportHandler(pgDB *gorm.DB, project, dataset, rTable string) http.Hand
 
 		w.WriteHeader(http.StatusNoContent)
 
-		// Background goroutine outlives the request; use the package logger.
-		go func() {
-			bgCtx := context.WithoutCancel(ctx)
-			if err := reportto.WriteReportToBigQuery(bgCtx, project, dataset, rTable, []*reportto.Report{data}); err != nil {
-				log.Errorw("error during report upload to bigquery", "dataset", dataset, "project", project, "table", rTable, "bodyJson", bodyStr, zap.Error(err), "service", service)
-			}
-		}()
+		if writeBQ != nil {
+			go writeBQ(context.WithoutCancel(ctx), data)
+		}
 	}
 }
 
@@ -461,7 +489,7 @@ func getAnalyticsHandler(pgDB *gorm.DB) http.HandlerFunc {
 	}
 }
 
-func postAnalyticsHandler(pgDB *gorm.DB, project, dataset, aTable string) http.HandlerFunc {
+func postAnalyticsHandler(pgDB *gorm.DB, writeBQ analyticsBQWriter) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		ctx := r.Context()
 		l := logging.FromContext(ctx)
@@ -499,16 +527,13 @@ func postAnalyticsHandler(pgDB *gorm.DB, project, dataset, aTable string) http.H
 
 		w.WriteHeader(http.StatusNoContent)
 
-		go func() {
-			bgCtx := context.WithoutCancel(ctx)
-			if err := analytics.WriteAnalyticsToBigQuery(bgCtx, project, dataset, aTable, []*analytics.WebVital{data}); err != nil {
-				log.Errorw("error during analytics upload to bigquery", "dataset", dataset, "project", project, "table", aTable, "bodyJson", bodyStr, zap.Error(err), "service", service)
-			}
-		}()
+		if writeBQ != nil {
+			go writeBQ(context.WithoutCancel(ctx), data)
+		}
 	}
 }
 
-func postReportingHandler(pgDB *gorm.DB, project, dataset, rv2Table string) http.HandlerFunc {
+func postReportingHandler(pgDB *gorm.DB, writeBQ securityReportBQWriter) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		ctx := r.Context()
 		l := logging.FromContext(ctx)
@@ -553,12 +578,9 @@ func postReportingHandler(pgDB *gorm.DB, project, dataset, rv2Table string) http
 
 		w.WriteHeader(http.StatusNoContent)
 
-		go func() {
-			bgCtx := context.WithoutCancel(ctx)
-			if err := reporting.WriteReportsToBigQuery(bgCtx, project, dataset, rv2Table, reports); err != nil {
-				log.Errorw("error during reporting upload to bigquery", "dataset", dataset, "project", project, "table", rv2Table, zap.Error(err))
-			}
-		}()
+		if writeBQ != nil {
+			go writeBQ(context.WithoutCancel(ctx), reports)
+		}
 	}
 }
 

@@ -1,3 +1,5 @@
+// Package reportto parses legacy Report-To payloads (CSP, Expect-CT, and
+// the original Reporting API draft) and ships them to BigQuery.
 package reportto
 
 import (
@@ -11,25 +13,26 @@ import (
 	"cloud.google.com/go/civil"
 )
 
+// Content-Type values accepted by ParseReport.
 const (
 	ContentTypeReports        = "application/reports+json"
 	ContentTypeExpectCTReport = "application/expect-ct-report+json"
 	ContentTypeCSPReport      = "application/csp-report"
 )
 
-// Report is a simple interface for types exported by ParseReport.
+// Report is the parsed envelope returned by ParseReport; exactly one of
+// ExpectCT, CSP, or ReportTo is populated.
 type Report struct {
 	ExpectCT *ExpectCTReport `bigquery:",nullable"`
 	CSP      *CSPReport      `bigquery:",nullable"`
 	ReportTo []*ReportToReport
 
-	// When we recorded this metric.
 	Time bigquery.NullDateTime
 
-	// What service this is for.
 	Service bigquery.NullString
 }
 
+// Validate returns an error if Service is unset or empty.
 func (r *Report) Validate() error {
 	if !r.Service.Valid {
 		return fmt.Errorf("service is null")
@@ -42,12 +45,12 @@ func (r *Report) Validate() error {
 	return nil
 }
 
-// ExpectCTReport is the struct for Expect-CT errors.
+// ExpectCTReport carries an Expect-CT (Certificate Transparency) violation.
 type ExpectCTReport struct {
 	ExpectCTReport ExpectCTSubReport `json:"expect-ct-report"`
 }
 
-// ExpectCTSubReport is the internal datastructure of an ExpectCTReport.
+// ExpectCTSubReport is the inner payload of an ExpectCTReport.
 type ExpectCTSubReport struct {
 	DateTime                  time.Time `json:"date-time"`
 	EffectiveExpirationDate   time.Time `json:"effective-expiration-date"`
@@ -58,8 +61,8 @@ type ExpectCTSubReport struct {
 	ValidatedCertificateChain []string  `json:"validated-certificate-chain"`
 }
 
-// CSPReport is the struct for CSP errors.
-// Spec is at https://www.w3.org/TR/CSP3/#violation.
+// CSPReport carries a Content-Security-Policy violation; see
+// https://www.w3.org/TR/CSP3/#violation.
 type CSPReport struct {
 	CSPReport struct {
 		DocumentURI        string `json:"document-uri"`
@@ -75,8 +78,10 @@ type CSPReport struct {
 	} `json:"csp-report"`
 }
 
-// ReportToReport is the struct for generic reports via the Reporting API.
-// TODO: There are multiple ways browsers send the field statuscode!
+// ReportToReport is one entry of an application/reports+json payload.
+// Body is a superset of fields observed across browsers.
+//
+// TODO: browsers send status under multiple names — normalize.
 type ReportToReport struct {
 	Type      string `json:"type"`
 	Age       int    `json:"age"`
@@ -111,8 +116,8 @@ type ReportToReport struct {
 	} `json:"body"`
 }
 
-// ParseReport takes a content-type header and a body json string and parses it
-// into valid Go structs.
+// ParseReport decodes body according to the Content-Type ct (one of the
+// ContentType* constants), scopes it to service srv, and validates it.
 func ParseReport(ct, body, srv string) (*Report, error) {
 	now := bigquery.NullDateTime{DateTime: civil.DateTimeOf(time.Now()), Valid: true}
 	service := bigquery.NullString{StringVal: srv, Valid: true}
@@ -150,7 +155,8 @@ func ParseReport(ct, body, srv string) (*Report, error) {
 	return r, r.Validate()
 }
 
-// UpdateReportsBQSchema updates the bigquery schema if fields are added.
+// UpdateReportsBQSchema reconciles project.dataset.table's schema with
+// the inferred shape of Report.
 func UpdateReportsBQSchema(ctx context.Context, project, dataset, table string) error {
 	client, err := bigquery.NewClient(ctx, project)
 	if err != nil {
@@ -179,7 +185,7 @@ func getReportSchema() (bigquery.Schema, error) {
 	return bigquery.InferSchema(Report{})
 }
 
-// WriteReportToBigQuery saves a copy of a report to BQ.
+// WriteReportToBigQuery streams reports into project.dataset.table.
 func WriteReportToBigQuery(ctx context.Context, project, dataset, table string, reports []*Report) error {
 	client, err := bigquery.NewClient(ctx, project)
 	if err != nil {

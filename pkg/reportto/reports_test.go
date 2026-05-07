@@ -3,10 +3,8 @@ package reportto
 import (
 	"os"
 	"path/filepath"
-	"reflect"
 	"strings"
 	"testing"
-	"time"
 
 	"cloud.google.com/go/bigquery"
 )
@@ -22,7 +20,6 @@ type reportTest struct {
 	Name        string
 	ContentType string
 	JSON        string
-	Expect      *Report
 }
 
 func TestParseReport(t *testing.T) {
@@ -31,13 +28,6 @@ func TestParseReport(t *testing.T) {
 			Name:        "expect-ct-report",
 			ContentType: "application/expect-ct-report+json",
 			JSON:        `{"expect-ct-report":{"date-time":"2019-10-06T15:09:06.894Z","effective-expiration-date":"2019-10-06T15:09:06.894Z","hostname":"expect-ct-report.test","port":443,"scts":[],"served-certificate-chain":[],"validated-certificate-chain":[]}}`,
-			Expect: &Report{
-				ExpectCT: &ExpectCTReport{
-					ExpectCTReport: ExpectCTSubReport{
-						DateTime: time.Now(),
-					},
-				},
-			},
 		},
 	}
 
@@ -47,15 +37,24 @@ func TestParseReport(t *testing.T) {
 			t.Parallel()
 			data, err := ParseReport(tc.ContentType, tc.JSON, "test")
 			if err != nil {
-				t.Error(err)
+				t.Fatal(err)
 			}
 
 			if data == nil {
-				t.Error("data should not be nil")
+				t.Fatal("data should not be nil")
 			}
 
-			if reflect.DeepEqual(data, tc.Expect) {
-				t.Errorf("data is not accurate: %+v != %+v", data, tc.Expect)
+			if data.ExpectCT == nil {
+				t.Fatal("ExpectCT should not be nil")
+			}
+			if data.ExpectCT.ExpectCTReport.Hostname != "expect-ct-report.test" {
+				t.Errorf("expected hostname 'expect-ct-report.test', got %q", data.ExpectCT.ExpectCTReport.Hostname)
+			}
+			if data.ExpectCT.ExpectCTReport.Port != 443 {
+				t.Errorf("expected port 443, got %d", data.ExpectCT.ExpectCTReport.Port)
+			}
+			if data.Service.StringVal != "test" {
+				t.Errorf("expected service 'test', got %q", data.Service.StringVal)
 			}
 		})
 	}

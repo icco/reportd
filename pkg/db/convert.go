@@ -9,8 +9,12 @@ import (
 	"github.com/icco/reportd/pkg/reportto"
 )
 
-const reportTypeCSP = "csp"
+const (
+	reportTypeCSP          = "csp"           // legacy Report-To CSP type
+	reportTypeCSPViolation = "csp-violation" // Reporting API v1 CSP type
+)
 
+// WebVitalFromAnalytics converts an analytics.WebVital to its DB row.
 func WebVitalFromAnalytics(wv *analytics.WebVital) *WebVital {
 	return &WebVital{
 		CreatedAt: time.Now(),
@@ -23,6 +27,8 @@ func WebVitalFromAnalytics(wv *analytics.WebVital) *WebVital {
 	}
 }
 
+// ReportToEntriesFromReport flattens r into ReportToEntry rows: one for
+// CSP/Expect-CT, one per item for Reporting-API arrays.
 func ReportToEntriesFromReport(r *reportto.Report) []*ReportToEntry {
 	now := time.Now()
 	srv := r.Service.StringVal
@@ -84,6 +90,8 @@ func ReportToEntriesFromReport(r *reportto.Report) []*ReportToEntry {
 	return entries
 }
 
+// SecurityReportEntryFromReport projects sr into a SecurityReportEntry;
+// whichever typed body is set drives which fields are populated.
 func SecurityReportEntryFromReport(sr *reporting.SecurityReport) *SecurityReportEntry {
 	entry := &SecurityReportEntry{
 		CreatedAt:  time.Now(),

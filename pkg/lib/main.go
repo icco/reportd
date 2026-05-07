@@ -1,3 +1,4 @@
+// Package lib holds small utilities shared across reportd binaries.
 package lib
 
 import (
@@ -5,25 +6,21 @@ import (
 	"regexp"
 )
 
-// ValidateService returns an error if the service name is invalid.
-// The service name must not be empty, must be less than 32 characters,
-// and must match the regex "^[a-zA-Z0-9_-]+$".
-func ValidateService(service string) error {
-	if service == "" {
+var validServiceName = regexp.MustCompile(`^[a-zA-Z0-9_-]+$`)
+
+// ValidateService rejects empty names, names over 32 characters, and
+// names outside [A-Za-z0-9_-].
+func ValidateService(name string) error {
+	if name == "" {
 		return fmt.Errorf("service must not be empty")
 	}
 
-	if len(service) > 32 {
+	if len(name) > 32 {
 		return fmt.Errorf("service must be less than 32 characters")
 	}
 
-	validRegex, err := regexp.Compile("^[a-zA-Z0-9_-]+$")
-	if err != nil {
-		return fmt.Errorf("compiling regex: %w", err)
-	}
-
-	if !validRegex.MatchString(service) {
-		return fmt.Errorf("service must match regex")
+	if !validServiceName.MatchString(name) {
+		return fmt.Errorf("service %q must match %s", name, validServiceName.String())
 	}
 
 	return nil

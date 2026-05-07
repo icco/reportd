@@ -10,15 +10,17 @@ import (
 	"gorm.io/gorm"
 )
 
-// Day is a date-only value that scans cleanly from both Postgres (date type
-// → time.Time) and SQLite (DATE() text → string), and JSON-marshals as
-// "YYYY-MM-DD".
+// Day is a date-only value that scans cleanly from Postgres (date →
+// time.Time) and SQLite (DATE() → string) and marshals as "YYYY-MM-DD".
 type Day time.Time
 
+// MarshalJSON encodes d as "YYYY-MM-DD".
 func (d Day) MarshalJSON() ([]byte, error) {
 	return json.Marshal(time.Time(d).Format(time.DateOnly))
 }
 
+// Scan accepts nil, time.Time, []byte, or string (date-only or ISO
+// timestamp; only the date prefix is used).
 func (d *Day) Scan(v any) error {
 	switch x := v.(type) {
 	case nil:
@@ -45,6 +47,7 @@ func (d *Day) Scan(v any) error {
 	}
 }
 
+// WebVitalDailySummary is one (service, metric, day) average.
 type WebVitalDailySummary struct {
 	Day     Day     `json:"day"`
 	Service string  `json:"service"`
@@ -52,28 +55,34 @@ type WebVitalDailySummary struct {
 	Value   float64 `json:"value"`
 }
 
+// WebVitalAverage is one metric's trailing-28-day average.
 type WebVitalAverage struct {
 	Name  string  `json:"name"`
 	Value float64 `json:"value"`
 }
 
+// ReportDailyCount is the count of one report type on one day.
 type ReportDailyCount struct {
 	Day        Day    `json:"day"`
 	ReportType string `json:"report_type"`
 	Count      int64  `json:"count"`
 }
 
+// ServiceHealth is one (metric, average) pair for a service.
 type ServiceHealth struct {
 	Service string  `json:"service"`
 	Metric  string  `json:"metric"`
 	Average float64 `json:"average"`
 }
 
+// DirectiveCount is the violation count for a single CSP directive.
 type DirectiveCount struct {
 	Directive string `json:"directive"`
 	Count     int64  `json:"count"`
 }
 
+// GetAllServicesHealth returns trailing-28-day metric averages keyed by
+// service.
 func GetAllServicesHealth(ctx context.Context, d *gorm.DB) (map[string][]ServiceHealth, error) {
 	cutoff := time.Now().AddDate(0, 0, -28)
 	var results []ServiceHealth
@@ -95,6 +104,8 @@ func GetAllServicesHealth(ctx context.Context, d *gorm.DB) (map[string][]Service
 	return out, nil
 }
 
+// GetServices returns the sorted union of services across all three
+// ingestion tables.
 func GetServices(ctx context.Context, d *gorm.DB) ([]string, error) {
 	seen := make(map[string]bool)
 
@@ -130,6 +141,8 @@ func GetServices(ctx context.Context, d *gorm.DB) ([]string, error) {
 	return services, nil
 }
 
+// GetWebVitalSummaries returns daily metric averages for service over the
+// trailing 3 months, newest first.
 func GetWebVitalSummaries(ctx context.Context, d *gorm.DB, service string) ([]WebVitalDailySummary, error) {
 	cutoff := time.Now().AddDate(0, -3, 0)
 	var results []WebVitalDailySummary
@@ -146,6 +159,7 @@ func GetWebVitalSummaries(ctx context.Context, d *gorm.DB, service string) ([]We
 	return results, nil
 }
 
+// GetWebVitalAverages returns trailing-28-day metric averages for service.
 func GetWebVitalAverages(ctx context.Context, d *gorm.DB, service string) ([]WebVitalAverage, error) {
 	cutoff := time.Now().AddDate(0, 0, -28)
 	var results []WebVitalAverage
@@ -162,6 +176,8 @@ func GetWebVitalAverages(ctx context.Context, d *gorm.DB, service string) ([]Web
 	return results, nil
 }
 
+// GetReportCounts returns per-day, per-type counts for service across
+// both ingestion tables over the trailing 3 months.
 func GetReportCounts(ctx context.Context, d *gorm.DB, service string) ([]ReportDailyCount, error) {
 	cutoff := time.Now().AddDate(0, -3, 0)
 	const daySelect = "DATE(created_at) AS day, report_type, COUNT(*) AS count"
@@ -193,6 +209,8 @@ func GetReportCounts(ctx context.Context, d *gorm.DB, service string) ([]ReportD
 	return append(rtCounts, srCounts...), nil
 }
 
+// GetRecentReports returns up to limit recent SecurityReportEntry rows
+// for service.
 func GetRecentReports(ctx context.Context, d *gorm.DB, service string, limit int) ([]SecurityReportEntry, error) {
 	var results []SecurityReportEntry
 	err := d.WithContext(ctx).
@@ -206,6 +224,8 @@ func GetRecentReports(ctx context.Context, d *gorm.DB, service string, limit int
 	return results, nil
 }
 
+// GetRecentReportToEntries returns up to limit recent ReportToEntry rows
+// for service.
 func GetRecentReportToEntries(ctx context.Context, d *gorm.DB, service string, limit int) ([]ReportToEntry, error) {
 	var results []ReportToEntry
 	err := d.WithContext(ctx).
@@ -219,20 +239,57 @@ func GetRecentReportToEntries(ctx context.Context, d *gorm.DB, service string, l
 	return results, nil
 }
 
+// GetTopViolatedDirectives returns up to limit most-violated CSP
+// directives for service over the trailing month, merged across both
+// ingestion tables.
 func GetTopViolatedDirectives(ctx context.Context, d *gorm.DB, service string, limit int) ([]DirectiveCount, error) {
 	cutoff := time.Now().AddDate(0, -1, 0)
-	var results []DirectiveCount
+	cspTypes := []string{reportTypeCSPViolation, reportTypeCSP}
+	const directiveExpr = "COALESCE(NULLIF(violated_directive, ''), effective_directive)"
+	const whereClause = "service = ? AND created_at >= ? AND report_type IN ? AND " + directiveExpr + " != ''"
+
+	var srResults []DirectiveCount
 	err := d.WithContext(ctx).
 		Model(&SecurityReportEntry{}).
-		Select("effective_directive AS directive, COUNT(*) AS count").
-		Where("service = ? AND created_at >= ? AND report_type = ? AND effective_directive != ''",
-			service, cutoff, "csp-violation").
-		Group("effective_directive").
-		Order("count DESC").
-		Limit(limit).
-		Find(&results).Error
+		Select(directiveExpr+" AS directive, COUNT(*) AS count").
+		Where(whereClause, service, cutoff, cspTypes).
+		Group(directiveExpr).
+		Find(&srResults).Error
 	if err != nil {
-		return nil, fmt.Errorf("querying top violated directives: %w", err)
+		return nil, fmt.Errorf("querying top violated directives (security_report): %w", err)
+	}
+
+	var rtResults []DirectiveCount
+	err = d.WithContext(ctx).
+		Model(&ReportToEntry{}).
+		Select(directiveExpr+" AS directive, COUNT(*) AS count").
+		Where(whereClause, service, cutoff, cspTypes).
+		Group(directiveExpr).
+		Find(&rtResults).Error
+	if err != nil {
+		return nil, fmt.Errorf("querying top violated directives (report_to): %w", err)
+	}
+
+	merged := make(map[string]int64, len(srResults)+len(rtResults))
+	for _, r := range srResults {
+		merged[r.Directive] += r.Count
+	}
+	for _, r := range rtResults {
+		merged[r.Directive] += r.Count
+	}
+
+	results := make([]DirectiveCount, 0, len(merged))
+	for directive, count := range merged {
+		results = append(results, DirectiveCount{Directive: directive, Count: count})
+	}
+	sort.Slice(results, func(i, j int) bool {
+		if results[i].Count != results[j].Count {
+			return results[i].Count > results[j].Count
+		}
+		return results[i].Directive < results[j].Directive
+	})
+	if len(results) > limit {
+		results = results[:limit]
 	}
 	return results, nil
 }
