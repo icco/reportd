@@ -9,7 +9,15 @@ import (
 	"github.com/icco/reportd/pkg/reportto"
 )
 
-const reportTypeCSP = "csp"
+const (
+	// reportTypeCSP is the legacy Report-To CSP type stored in
+	// ReportToEntry.ReportType.
+	reportTypeCSP = "csp"
+	// reportTypeCSPViolation is the Reporting API v1 type string for CSP
+	// violations stored in SecurityReportEntry.ReportType and used by the
+	// directive-aggregation query in queries.go.
+	reportTypeCSPViolation = "csp-violation"
+)
 
 // WebVitalFromAnalytics converts a parsed analytics.WebVital into a
 // persistence-layer WebVital ready for the SQL store.

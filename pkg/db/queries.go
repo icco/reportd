@@ -251,7 +251,7 @@ func GetRecentReportToEntries(ctx context.Context, d *gorm.DB, service string, l
 // report-to and security-report tables and capped at limit.
 func GetTopViolatedDirectives(ctx context.Context, d *gorm.DB, service string, limit int) ([]DirectiveCount, error) {
 	cutoff := time.Now().AddDate(0, -1, 0)
-	cspTypes := []string{"csp-violation", reportTypeCSP}
+	cspTypes := []string{reportTypeCSPViolation, reportTypeCSP}
 	const directiveExpr = "COALESCE(NULLIF(violated_directive, ''), effective_directive)"
 	const whereClause = "service = ? AND created_at >= ? AND report_type IN ? AND " + directiveExpr + " != ''"
 
