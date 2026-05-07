@@ -61,15 +61,15 @@ func p75ByGroupSQL(d *gorm.DB, groupCols, valueAlias, where string) string {
 	if isSQLite(d) {
 		// Linear interpolation: rank = 0.75*(n-1); contribution from
 		// floor(rank) is value*(1-frac), from floor(rank)+1 is value*frac.
-		return `
+		return fmt.Sprintf(`
 			WITH ranked AS (
-				SELECT ` + groupCols + `, value,
-					ROW_NUMBER() OVER (PARTITION BY ` + groupCols + ` ORDER BY value) - 1 AS rn,
-					COUNT(*) OVER (PARTITION BY ` + groupCols + `) AS cnt
+				SELECT %[1]s, value,
+					ROW_NUMBER() OVER (PARTITION BY %[1]s ORDER BY value) - 1 AS rn,
+					COUNT(*) OVER (PARTITION BY %[1]s) AS cnt
 				FROM web_vitals
-				WHERE ` + where + `
+				WHERE %[3]s
 			)
-			SELECT ` + groupCols + `,
+			SELECT %[1]s,
 				SUM(
 					CASE
 						WHEN rn = CAST(0.75 * (cnt - 1) AS INTEGER)
@@ -78,18 +78,20 @@ func p75ByGroupSQL(d *gorm.DB, groupCols, valueAlias, where string) string {
 							THEN value * (0.75 * (cnt - 1) - CAST(0.75 * (cnt - 1) AS INTEGER))
 						ELSE 0
 					END
-				) AS ` + valueAlias + `
+				) AS %[2]s
 			FROM ranked
-			GROUP BY ` + groupCols + `
-			ORDER BY ` + groupCols
+			GROUP BY %[1]s
+			ORDER BY %[1]s
+		`, groupCols, valueAlias, where)
 	}
-	return `
-		SELECT ` + groupCols + `,
-			PERCENTILE_CONT(0.75) WITHIN GROUP (ORDER BY value) AS ` + valueAlias + `
+	return fmt.Sprintf(`
+		SELECT %[1]s,
+			PERCENTILE_CONT(0.75) WITHIN GROUP (ORDER BY value) AS %[2]s
 		FROM web_vitals
-		WHERE ` + where + ` AND deleted_at IS NULL
-		GROUP BY ` + groupCols + `
-		ORDER BY ` + groupCols
+		WHERE %[3]s AND deleted_at IS NULL
+		GROUP BY %[1]s
+		ORDER BY %[1]s
+	`, groupCols, valueAlias, where)
 }
 
 func GetAllServicesHealth(ctx context.Context, d *gorm.DB) (map[string][]ServiceHealth, error) {
@@ -158,7 +160,7 @@ func GetWebVitalSummaries(ctx context.Context, d *gorm.DB, service string) ([]We
 	var results []WebVitalDailySummary
 	err := d.WithContext(ctx).
 		Model(&WebVital{}).
-		Select(dayExpr(d) + " AS day, service, name, AVG(value) AS value").
+		Select(fmt.Sprintf("%s AS day, service, name, AVG(value) AS value", dayExpr(d))).
 		Where("service = ? AND created_at >= ?", service, cutoff).
 		Group("DATE(created_at), service, name").
 		Order("DATE(created_at) DESC").
@@ -183,12 +185,12 @@ func GetWebVitalP75s(ctx context.Context, d *gorm.DB, service string) ([]WebVita
 
 func GetReportCounts(ctx context.Context, d *gorm.DB, service string) ([]ReportDailyCount, error) {
 	cutoff := time.Now().AddDate(0, -3, 0)
-	day := dayExpr(d)
+	daySelect := fmt.Sprintf("%s AS day, report_type, COUNT(*) AS count", dayExpr(d))
 
 	var rtCounts []ReportDailyCount
 	err := d.WithContext(ctx).
 		Model(&ReportToEntry{}).
-		Select(day + " AS day, report_type, COUNT(*) AS count").
+		Select(daySelect).
 		Where("service = ? AND created_at >= ?", service, cutoff).
 		Group("DATE(created_at), report_type").
 		Order("DATE(created_at) DESC").
@@ -200,7 +202,7 @@ func GetReportCounts(ctx context.Context, d *gorm.DB, service string) ([]ReportD
 	var srCounts []ReportDailyCount
 	err = d.WithContext(ctx).
 		Model(&SecurityReportEntry{}).
-		Select(day + " AS day, report_type, COUNT(*) AS count").
+		Select(daySelect).
 		Where("service = ? AND created_at >= ?", service, cutoff).
 		Group("DATE(created_at), report_type").
 		Order("DATE(created_at) DESC").
