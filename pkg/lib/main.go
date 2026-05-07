@@ -14,11 +14,14 @@ func ValidateService(name string) error {
 	if name == "" {
 		return fmt.Errorf("service must not be empty")
 	}
+
 	if len(name) > 32 {
 		return fmt.Errorf("service must be less than 32 characters")
 	}
+
 	if !validServiceName.MatchString(name) {
 		return fmt.Errorf("service %q must match %s", name, validServiceName.String())
 	}
+
 	return nil
 }

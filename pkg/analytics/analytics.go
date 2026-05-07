@@ -38,9 +38,11 @@ func (wv *WebVital) Validate() error {
 	if !wv.Service.Valid {
 		return fmt.Errorf("service is null")
 	}
+
 	if wv.Service.StringVal == "" {
 		return fmt.Errorf("service is empty")
 	}
+
 	return nil
 }
 

@@ -35,6 +35,7 @@ func Connect(ctx context.Context, databaseURL string) (*gorm.DB, error) {
 	if err != nil {
 		return nil, fmt.Errorf("getting underlying %s connection: %w", dbType, err)
 	}
+
 	if err := sqlDB.PingContext(ctx); err != nil {
 		return nil, fmt.Errorf("pinging %s: %w", dbType, err)
 	}

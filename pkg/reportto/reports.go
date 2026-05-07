@@ -37,9 +37,11 @@ func (r *Report) Validate() error {
 	if !r.Service.Valid {
 		return fmt.Errorf("service is null")
 	}
+
 	if r.Service.StringVal == "" {
 		return fmt.Errorf("service is empty")
 	}
+
 	return nil
 }
 
