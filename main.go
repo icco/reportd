@@ -1,3 +1,6 @@
+// Command reportd is the HTTP server that ingests browser security reports
+// and Web Vitals, persists them to a SQL database, and forwards them to
+// BigQuery for long-term analytics.
 package main
 
 import (
@@ -44,10 +47,8 @@ var (
 	log     = logging.Must(logging.NewLogger(service))
 )
 
-// reportToBQWriter, analyticsBQWriter, and securityReportBQWriter are the
-// post-handler hooks for shipping a parsed payload to BigQuery. They are
-// injected (instead of having handlers call the bigquery package directly)
-// so handler tests can pass a no-op and avoid any network I/O.
+// BigQuery writer hooks are injected into the post handlers so tests can
+// substitute no-ops and avoid network I/O.
 type (
 	reportToBQWriter       func(ctx context.Context, r *reportto.Report)
 	analyticsBQWriter      func(ctx context.Context, r *analytics.WebVital)
@@ -258,7 +259,7 @@ func newRouter(pgDB *gorm.DB, writeReport reportToBQWriter, writeAnalytics analy
 	})
 
 	r.Get("/robots.txt", robotsTxtHandler())
-	r.Get("/favicon.ico", func(w http.ResponseWriter, r *http.Request) {
+	r.Get("/favicon.ico", func(w http.ResponseWriter, _ *http.Request) {
 		w.WriteHeader(http.StatusNoContent)
 	})
 

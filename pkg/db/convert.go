@@ -11,6 +11,8 @@ import (
 
 const reportTypeCSP = "csp"
 
+// WebVitalFromAnalytics converts a parsed analytics.WebVital into a
+// persistence-layer WebVital ready for the SQL store.
 func WebVitalFromAnalytics(wv *analytics.WebVital) *WebVital {
 	return &WebVital{
 		CreatedAt: time.Now(),
@@ -23,6 +25,9 @@ func WebVitalFromAnalytics(wv *analytics.WebVital) *WebVital {
 	}
 }
 
+// ReportToEntriesFromReport flattens a parsed reportto.Report into one or
+// more ReportToEntry rows. CSP and Expect-CT envelopes always produce one
+// row; a Reporting-API payload produces one row per item in r.ReportTo.
 func ReportToEntriesFromReport(r *reportto.Report) []*ReportToEntry {
 	now := time.Now()
 	srv := r.Service.StringVal
@@ -84,6 +89,9 @@ func ReportToEntriesFromReport(r *reportto.Report) []*ReportToEntry {
 	return entries
 }
 
+// SecurityReportEntryFromReport projects a parsed reporting.SecurityReport
+// into a SecurityReportEntry ready for the SQL store. Whichever typed body
+// is set on sr drives which fields are populated.
 func SecurityReportEntryFromReport(sr *reporting.SecurityReport) *SecurityReportEntry {
 	entry := &SecurityReportEntry{
 		CreatedAt:  time.Now(),

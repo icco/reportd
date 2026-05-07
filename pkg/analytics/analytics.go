@@ -1,3 +1,5 @@
+// Package analytics models Web Vitals measurements posted by the
+// browser-side web-vitals library and ships them to BigQuery.
 package analytics
 
 import (
@@ -10,7 +12,7 @@ import (
 	"cloud.google.com/go/civil"
 )
 
-// WebVital is a a version of https://web.dev/vitals/.
+// WebVital is one Web Vitals measurement, modeled after https://web.dev/vitals/.
 //
 // See also https://nextjs.org/docs/advanced-features/measuring-performance#build-your-own.
 type WebVital struct {
@@ -40,19 +42,19 @@ type WebVital struct {
 	Service bigquery.NullString
 }
 
+// Validate returns an error if Service is unset or empty.
 func (wv *WebVital) Validate() error {
 	if !wv.Service.Valid {
 		return fmt.Errorf("service is null")
 	}
-
 	if wv.Service.StringVal == "" {
 		return fmt.Errorf("service is empty")
 	}
-
 	return nil
 }
 
-// ParseAnalytics parses a webvitals request body.
+// ParseAnalytics decodes a Web Vitals JSON payload and stamps it with the
+// current time and service identifier.
 func ParseAnalytics(body, service string) (*WebVital, error) {
 	now := civil.DateTimeOf(time.Now())
 	var data WebVital
@@ -66,7 +68,8 @@ func ParseAnalytics(body, service string) (*WebVital, error) {
 	return &data, nil
 }
 
-// UpdateAnalyticsBQSchema updates the bigquery schema if fields are added.
+// UpdateAnalyticsBQSchema reconciles project.dataset.table's BigQuery
+// schema with the inferred shape of WebVital, adding any new columns.
 func UpdateAnalyticsBQSchema(ctx context.Context, project, dataset, table string) error {
 	client, err := bigquery.NewClient(ctx, project)
 	if err != nil {
@@ -95,7 +98,8 @@ func getAnalyticsSchema() (bigquery.Schema, error) {
 	return bigquery.InferSchema(WebVital{})
 }
 
-// WriteAnalyticsToBigQuery saves a webvital to bq.
+// WriteAnalyticsToBigQuery streams data into the project.dataset.table
+// BigQuery table after validating each entry.
 func WriteAnalyticsToBigQuery(ctx context.Context, project, dataset, table string, data []*WebVital) error {
 	for _, d := range data {
 		if err := d.Validate(); err != nil {

@@ -1,3 +1,6 @@
+// Command migrate backfills the SQL database from the legacy BigQuery tables
+// (analytics, report-to, and reporting v2) so a freshly-provisioned reportd
+// instance can serve historical data alongside live ingest.
 package main
 
 import (

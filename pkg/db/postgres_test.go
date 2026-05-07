@@ -39,7 +39,7 @@ func TestConnectPostgresAndQueryHelpers(t *testing.T) {
 	t.Cleanup(func() { cleanupService(t, d, service) })
 
 	seedQueryFixtures(t, d, service)
-	assertQueryHelpers(t, ctx, d, service)
+	assertQueryHelpers(ctx, t, d, service)
 }
 
 func randHex(t *testing.T, n int) string {

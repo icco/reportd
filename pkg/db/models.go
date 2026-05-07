@@ -6,6 +6,7 @@ import (
 	"gorm.io/gorm"
 )
 
+// WebVital is one Web Vitals measurement persisted from POST /analytics.
 type WebVital struct {
 	ID        uint           `gorm:"primaryKey" json:"id"`
 	CreatedAt time.Time      `gorm:"index" json:"created_at"`
@@ -18,6 +19,8 @@ type WebVital struct {
 	Label     string         `json:"label"`
 }
 
+// ReportToEntry is a row from POST /report (legacy Report-To API). RawJSON
+// preserves the original payload for forward-compatibility.
 type ReportToEntry struct {
 	ID                 uint           `gorm:"primaryKey" json:"id"`
 	CreatedAt          time.Time      `gorm:"index" json:"created_at"`
@@ -36,6 +39,8 @@ type ReportToEntry struct {
 	RawJSON            string         `gorm:"type:jsonb" json:"raw_json,omitempty"`
 }
 
+// SecurityReportEntry is a row from POST /reporting (Reporting API v1).
+// RawJSON preserves the original payload for forward-compatibility.
 type SecurityReportEntry struct {
 	ID                 uint           `gorm:"primaryKey" json:"id"`
 	CreatedAt          time.Time      `gorm:"index" json:"created_at"`

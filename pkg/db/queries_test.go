@@ -71,7 +71,7 @@ func seedQueryFixtures(t *testing.T, d *gorm.DB, service string) {
 
 // assertQueryHelpers runs the read-side query helpers against the seeded
 // fixtures and asserts the expected aggregates.
-func assertQueryHelpers(t *testing.T, ctx context.Context, d *gorm.DB, service string) {
+func assertQueryHelpers(ctx context.Context, t *testing.T, d *gorm.DB, service string) {
 	t.Helper()
 
 	avgs, err := GetWebVitalAverages(ctx, d, service)

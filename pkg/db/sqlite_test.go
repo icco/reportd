@@ -18,5 +18,5 @@ func TestConnectSQLiteAndQueryHelpers(t *testing.T) {
 
 	const service = "svc"
 	seedQueryFixtures(t, d, service)
-	assertQueryHelpers(t, ctx, d, service)
+	assertQueryHelpers(ctx, t, d, service)
 }
