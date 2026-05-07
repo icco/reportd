@@ -1,5 +1,9 @@
-# Build stage
-FROM golang:1.26-alpine AS builder
+# Build stage — runs natively on the build host and cross-compiles via
+# GOOS/GOARCH so multi-arch builds skip QEMU emulation.
+FROM --platform=$BUILDPLATFORM golang:1.26-alpine AS builder
+
+ARG TARGETOS
+ARG TARGETARCH
 
 ENV GOPROXY="https://proxy.golang.org"
 ENV CGO_ENABLED=0
@@ -10,8 +14,8 @@ COPY go.mod go.sum ./
 RUN go mod download
 
 COPY . .
-RUN go build -ldflags="-s -w" -o /server .
-RUN go build -ldflags="-s -w" -o /migrate ./cmd/migrate
+RUN GOOS=$TARGETOS GOARCH=$TARGETARCH go build -ldflags="-s -w" -o /server .
+RUN GOOS=$TARGETOS GOARCH=$TARGETARCH go build -ldflags="-s -w" -o /migrate ./cmd/migrate
 
 # Final stage
 FROM alpine:3.23
