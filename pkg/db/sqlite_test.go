@@ -44,15 +44,15 @@ func TestConnectSQLiteAndQueryHelpers(t *testing.T) {
 		t.Fatalf("creating security_report_entry: %v", err)
 	}
 
-	p75s, err := GetWebVitalP75s(ctx, d, "svc")
+	avgs, err := GetWebVitalAverages(ctx, d, "svc")
 	if err != nil {
-		t.Fatalf("GetWebVitalP75s() error = %v", err)
+		t.Fatalf("GetWebVitalAverages() error = %v", err)
 	}
-	if len(p75s) != 1 {
-		t.Fatalf("expected 1 p75 metric, got %d", len(p75s))
+	if len(avgs) != 1 {
+		t.Fatalf("expected 1 metric, got %d", len(avgs))
 	}
-	if math.Abs(p75s[0].Value-3.25) > 1e-9 {
-		t.Fatalf("expected p75 3.25, got %v", p75s[0].Value)
+	if math.Abs(avgs[0].Value-2.5) > 1e-9 {
+		t.Fatalf("expected average 2.5, got %v", avgs[0].Value)
 	}
 
 	health, err := GetAllServicesHealth(ctx, d)
@@ -62,8 +62,8 @@ func TestConnectSQLiteAndQueryHelpers(t *testing.T) {
 	if len(health["svc"]) != 1 {
 		t.Fatalf("expected 1 health metric for service, got %d", len(health["svc"]))
 	}
-	if math.Abs(health["svc"][0].P75-3.25) > 1e-9 {
-		t.Fatalf("expected service p75 3.25, got %v", health["svc"][0].P75)
+	if math.Abs(health["svc"][0].Average-2.5) > 1e-9 {
+		t.Fatalf("expected service average 2.5, got %v", health["svc"][0].Average)
 	}
 
 	summaries, err := GetWebVitalSummaries(ctx, d, "svc")

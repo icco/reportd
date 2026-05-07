@@ -55,7 +55,7 @@ type WebVitalDailySummary struct {
 	Value   float64 `json:"value"`
 }
 
-type WebVitalP75 struct {
+type WebVitalAverage struct {
 	Name  string  `json:"name"`
 	Value float64 `json:"value"`
 }
@@ -69,7 +69,7 @@ type ReportDailyCount struct {
 type ServiceHealth struct {
 	Service string  `json:"service"`
 	Metric  string  `json:"metric"`
-	P75     float64 `json:"p75"`
+	Average float64 `json:"average"`
 }
 
 type DirectiveCount struct {
@@ -77,75 +77,23 @@ type DirectiveCount struct {
 	Count     int64  `json:"count"`
 }
 
-func isSQLite(d *gorm.DB) bool {
-	return d.Dialector != nil && d.Name() == dialectSQLite
-}
-
-// p75ByGroupSQL returns a query computing the linear-interpolation 75th
-// percentile of `value` from web_vitals over the given grouping columns
-// (e.g. "name" or "service, name"). Both dialects emit the same column shape.
-//
-// Postgres uses native PERCENTILE_CONT; SQLite emulates it via window
-// functions to keep the Go path identical.
-func p75ByGroupSQL(d *gorm.DB, groupCols, valueAlias, where string) string {
-	if isSQLite(d) {
-		// Linear interpolation: rank = 0.75*(n-1); contribution from
-		// floor(rank) is value*(1-frac), from floor(rank)+1 is value*frac.
-		return fmt.Sprintf(`
-			WITH ranked AS (
-				SELECT %[1]s, value,
-					ROW_NUMBER() OVER (PARTITION BY %[1]s ORDER BY value) - 1 AS rn,
-					COUNT(*) OVER (PARTITION BY %[1]s) AS cnt
-				FROM web_vitals
-				WHERE %[3]s
-			)
-			SELECT %[1]s,
-				SUM(
-					CASE
-						WHEN rn = CAST(0.75 * (cnt - 1) AS INTEGER)
-							THEN value * (1 - (0.75 * (cnt - 1) - CAST(0.75 * (cnt - 1) AS INTEGER)))
-						WHEN rn = CAST(0.75 * (cnt - 1) AS INTEGER) + 1
-							THEN value * (0.75 * (cnt - 1) - CAST(0.75 * (cnt - 1) AS INTEGER))
-						ELSE 0
-					END
-				) AS %[2]s
-			FROM ranked
-			GROUP BY %[1]s
-			ORDER BY %[1]s
-		`, groupCols, valueAlias, where)
-	}
-	return fmt.Sprintf(`
-		SELECT %[1]s,
-			PERCENTILE_CONT(0.75) WITHIN GROUP (ORDER BY value) AS %[2]s
-		FROM web_vitals
-		WHERE %[3]s AND deleted_at IS NULL
-		GROUP BY %[1]s
-		ORDER BY %[1]s
-	`, groupCols, valueAlias, where)
-}
-
 func GetAllServicesHealth(ctx context.Context, d *gorm.DB) (map[string][]ServiceHealth, error) {
 	cutoff := time.Now().AddDate(0, 0, -28)
-	type row struct {
-		Service string
-		Name    string
-		P75     float64
-	}
-	var rows []row
+	var results []ServiceHealth
 	err := d.WithContext(ctx).
-		Raw(p75ByGroupSQL(d, "service, name", "p75", "created_at >= ?"), cutoff).
-		Scan(&rows).Error
+		Model(&WebVital{}).
+		Select("service, name AS metric, AVG(value) AS average").
+		Where("created_at >= ?", cutoff).
+		Group("service, name").
+		Order("service, name").
+		Find(&results).Error
 	if err != nil {
 		return nil, fmt.Errorf("querying all services health: %w", err)
 	}
 
 	out := make(map[string][]ServiceHealth)
-	for _, r := range rows {
-		out[r.Service] = append(out[r.Service], ServiceHealth{
-			Service: r.Service,
-			Metric:  r.Name,
-			P75:     r.P75,
-		})
+	for _, r := range results {
+		out[r.Service] = append(out[r.Service], r)
 	}
 	return out, nil
 }
@@ -201,14 +149,18 @@ func GetWebVitalSummaries(ctx context.Context, d *gorm.DB, service string) ([]We
 	return results, nil
 }
 
-func GetWebVitalP75s(ctx context.Context, d *gorm.DB, service string) ([]WebVitalP75, error) {
+func GetWebVitalAverages(ctx context.Context, d *gorm.DB, service string) ([]WebVitalAverage, error) {
 	cutoff := time.Now().AddDate(0, 0, -28)
-	var results []WebVitalP75
+	var results []WebVitalAverage
 	err := d.WithContext(ctx).
-		Raw(p75ByGroupSQL(d, "name", "value", "service = ? AND created_at >= ?"), service, cutoff).
-		Scan(&results).Error
+		Model(&WebVital{}).
+		Select("name, AVG(value) AS value").
+		Where("service = ? AND created_at >= ?", service, cutoff).
+		Group("name").
+		Order("name").
+		Find(&results).Error
 	if err != nil {
-		return nil, fmt.Errorf("querying web vital p75s: %w", err)
+		return nil, fmt.Errorf("querying web vital averages: %w", err)
 	}
 	return results, nil
 }

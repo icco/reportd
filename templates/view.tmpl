@@ -40,7 +40,7 @@
     <!-- Core Web Vitals -->
     <div class="border-b border-gray-700 pb-2 mb-6">
       <h2 class="text-xl font-medium">Core Web Vitals</h2>
-      <p class="text-gray-500 text-sm">p75 over the last 28 days. <a href="https://web.dev/vitals/" class="underline" target="_blank">Learn more</a></p>
+      <p class="text-gray-500 text-sm">Average over the last 28 days. <a href="https://web.dev/vitals/" class="underline" target="_blank">Learn more</a></p>
     </div>
     <section id="cwv-cards" class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-10">
       <div id="card-LCP" class="rounded-lg border border-gray-700 p-5">
@@ -432,8 +432,8 @@
       fetch(`/api/vitals/${SERVICE}`)
         .then(r => r.json())
         .then(data => {
-          if (data.p75s) {
-            data.p75s.forEach(p => updateCard(p.name, p.value));
+          if (data.averages) {
+            data.averages.forEach(p => updateCard(p.name, p.value));
           }
           if (data.summaries) {
             const byMetric = {};

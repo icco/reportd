@@ -574,9 +574,9 @@ func apiVitalsHandler(pgDB *gorm.DB) http.HandlerFunc {
 			return
 		}
 
-		p75s, err := db.GetWebVitalP75s(ctx, pgDB, service)
+		averages, err := db.GetWebVitalAverages(ctx, pgDB, service)
 		if err != nil {
-			l.Errorw("error getting p75s", zap.Error(err), "service", service)
+			l.Errorw("error getting averages", zap.Error(err), "service", service)
 			http.Error(w, "processing error", 500)
 			return
 		}
@@ -589,10 +589,10 @@ func apiVitalsHandler(pgDB *gorm.DB) http.HandlerFunc {
 		}
 
 		out := struct {
-			P75s      []db.WebVitalP75          `json:"p75s"`
+			Averages  []db.WebVitalAverage      `json:"averages"`
 			Summaries []db.WebVitalDailySummary `json:"summaries"`
 		}{
-			P75s:      p75s,
+			Averages:  averages,
 			Summaries: summaries,
 		}
 
