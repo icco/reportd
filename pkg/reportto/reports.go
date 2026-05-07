@@ -27,7 +27,8 @@ type Report struct {
 	CSP      *CSPReport      `bigquery:",nullable"`
 	ReportTo []*ReportToReport
 
-	Time    bigquery.NullDateTime
+	Time bigquery.NullDateTime
+
 	Service bigquery.NullString
 }
 

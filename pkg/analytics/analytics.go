@@ -13,18 +13,23 @@ import (
 
 // WebVital is one Web Vitals measurement; see https://web.dev/vitals/.
 type WebVital struct {
-	Name  string  `json:"name"`
+	Name string `json:"name"`
+
 	Value float64 `json:"value"`
+
 	// Delta between Value and the last reported value; equal to Value on
 	// the first report.
 	Delta float64 `json:"delta"`
+
 	// ID uniquely identifies a metric for the current page; analytics
 	// tools can use it to dedupe or sum repeated deltas.
 	ID string `json:"id"`
+
 	// Label classifies the metric (e.g. "web-vital", "custom").
 	Label bigquery.NullString `json:"label"`
 
-	Time    bigquery.NullDateTime
+	Time bigquery.NullDateTime
+
 	Service bigquery.NullString
 }
 

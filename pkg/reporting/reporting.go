@@ -42,6 +42,7 @@ type DeprecationReport struct {
 // DeprecationReportBody re-declares the legacy CSPReportBody fields so
 // existing BigQuery columns keep type-checking; new fields are nullable.
 type DeprecationReportBody struct {
+	// Legacy fields kept for BigQuery column compatibility.
 	DocumentUri        string `json:"document_uri,omitempty"`
 	Referrer           string `json:"referrer,omitempty"`
 	BlockedUri         string `json:"blocked_uri,omitempty"`
@@ -52,6 +53,7 @@ type DeprecationReportBody struct {
 	LineNumber         int32  `json:"line_number,omitempty"`
 	ColumnNumber       int32  `json:"column_number,omitempty"`
 	ScriptSample       string `json:"script_sample,omitempty"`
+
 	// Populated manually in ParseReport via a sibling decode (json:"-").
 	Id                 bigquery.NullString `json:"-"`
 	AnticipatedRemoval bigquery.NullString `json:"-"`
@@ -173,7 +175,8 @@ type SecurityReport struct {
 	// above) but stored in the SQL layer.
 	RawJSON string `bigquery:"-"`
 
-	Time    bigquery.NullDateTime
+	Time bigquery.NullDateTime
+
 	Service bigquery.NullString
 }
 
