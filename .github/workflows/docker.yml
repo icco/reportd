@@ -105,7 +105,6 @@ jobs:
           digest=$(docker buildx imagetools inspect "$tag" --format '{{json .Manifest.Digest}}' | tr -d '"')
           echo "digest=$digest" >> $GITHUB_OUTPUT
       - name: Generate artifact attestation
-        if: github.ref == 'refs/heads/main'
         uses: actions/attest-build-provenance@v4
         with:
           subject-name: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
