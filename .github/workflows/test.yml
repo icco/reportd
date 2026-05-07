@@ -20,6 +20,7 @@ jobs:
           --health-retries 10
     env:
       TEST_DATABASE_URL: postgres://reportd:reportd@localhost:5432/reportd_test?sslmode=disable
+      COVERAGE_THRESHOLD: "50"
     steps:
       - uses: actions/checkout@v6
       - name: Setup Go
@@ -30,5 +31,14 @@ jobs:
         run: go get .
       - name: Build
         run: go build -v ./...
-      - name: Test with the Go CLI
-        run: go test -v ./...
+      - name: Test with coverage
+        run: go test -v -coverprofile=coverage.out ./...
+      - name: Enforce coverage threshold
+        run: |
+          total=$(go tool cover -func=coverage.out | awk '/^total:/ {print $3}' | tr -d '%')
+          echo "Total coverage: ${total}% (threshold: ${COVERAGE_THRESHOLD}%)"
+          awk -v c="$total" -v t="$COVERAGE_THRESHOLD" \
+            'BEGIN { if (c+0 < t+0) { exit 1 } }' || {
+              echo "::error::coverage ${total}% is below threshold ${COVERAGE_THRESHOLD}%"
+              exit 1
+            }
