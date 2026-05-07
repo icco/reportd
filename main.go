@@ -70,7 +70,7 @@ func main() {
 	aTable := fs.String("analytics_table", "", "The bigquery table to upload analytics to.")
 	rTable := fs.String("reports_table", "", "The bigquery table to upload reports to.")
 	rv2Table := fs.String("reports_v2_table", "", "The bigquery table to upload reports to.")
-	databaseURL := fs.String("database_url", "", "Postgres connection string (e.g. postgres://user:pass@host/reportd).")
+	databaseURL := fs.String("database_url", "", "Database connection string (e.g. postgres://user:pass@host/reportd or sqlite:///tmp/reportd.db).")
 	if err := fs.Parse(os.Args[1:]); err != nil {
 		log.Fatalw("error parsing flags", zap.Error(err))
 	}
@@ -120,12 +120,12 @@ func main() {
 
 	pgDB, err := db.Connect(ctx, *databaseURL)
 	if err != nil {
-		log.Fatalw("could not connect to postgres", zap.Error(err))
+		log.Fatalw("could not connect to database", zap.Error(err))
 	}
 	if err := db.AutoMigrate(ctx, pgDB); err != nil {
-		log.Fatalw("could not auto-migrate postgres", zap.Error(err))
+		log.Fatalw("could not auto-migrate database", zap.Error(err))
 	}
-	log.Infow("Postgres connected and migrated")
+	log.Infow("Database connected and migrated")
 
 	if err := reportto.UpdateReportsBQSchema(ctx, *project, *dataset, *rTable); err != nil {
 		log.Errorw("report table update", zap.Error(err))
@@ -574,9 +574,9 @@ func apiVitalsHandler(pgDB *gorm.DB) http.HandlerFunc {
 			return
 		}
 
-		p75s, err := db.GetWebVitalP75s(ctx, pgDB, service)
+		averages, err := db.GetWebVitalAverages(ctx, pgDB, service)
 		if err != nil {
-			l.Errorw("error getting p75s", zap.Error(err), "service", service)
+			l.Errorw("error getting averages", zap.Error(err), "service", service)
 			http.Error(w, "processing error", 500)
 			return
 		}
@@ -589,10 +589,10 @@ func apiVitalsHandler(pgDB *gorm.DB) http.HandlerFunc {
 		}
 
 		out := struct {
-			P75s      []db.WebVitalP75          `json:"p75s"`
+			Averages  []db.WebVitalAverage      `json:"averages"`
 			Summaries []db.WebVitalDailySummary `json:"summaries"`
 		}{
-			P75s:      p75s,
+			Averages:  averages,
 			Summaries: summaries,
 		}
 

@@ -26,7 +26,7 @@ func main() {
 	aTable := fs.String("analytics_table", "", "BQ analytics table name")
 	rTable := fs.String("reports_table", "", "BQ reports table name")
 	rv2Table := fs.String("reports_v2_table", "", "BQ reporting (v2) table name")
-	databaseURL := fs.String("database_url", "", "Postgres connection string")
+	databaseURL := fs.String("database_url", "", "Database connection string")
 	if err := fs.Parse(os.Args[1:]); err != nil {
 		log.Fatalf("parsing flags: %v", err)
 	}
@@ -48,7 +48,7 @@ func main() {
 
 	pgDB, err := db.Connect(ctx, *databaseURL)
 	if err != nil {
-		log.Fatalf("connecting to postgres: %v", err)
+		log.Fatalf("connecting to database: %v", err)
 	}
 	if err := db.AutoMigrate(ctx, pgDB); err != nil {
 		log.Fatalf("auto-migrating: %v", err)

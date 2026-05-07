@@ -12,7 +12,7 @@ reportd receives data from two browser APIs and presents it in a dashboard:
 - **Web Vitals** (LCP, CLS, INP, FCP, TTFB) -- performance metrics sent by the [web-vitals](https://github.com/GoogleChrome/web-vitals) library
 - **Browser Reports** (CSP violations, deprecation warnings, interventions, crashes, COOP/COEP violations, permissions policy violations) -- sent automatically by browsers via the [Reporting API](https://developer.chrome.com/docs/capabilities/web-apis/reporting-api)
 
-Data is stored in both **Postgres** (for fast dashboard queries via GORM) and **BigQuery** (for long-term analytics).
+Data is stored in a SQL database (**Postgres** or **SQLite**, for fast dashboard queries via GORM) and **BigQuery** (for long-term analytics).
 
 ## Supported report types
 
@@ -38,7 +38,7 @@ reportd is configured via environment variables (prefix `REPORTD_`) or command-l
 
 | Variable | Flag | Required | Description |
 |----------|------|----------|-------------|
-| `REPORTD_DATABASE_URL` | `--database_url` | Yes | Postgres connection string |
+| `REPORTD_DATABASE_URL` | `--database_url` | Yes | Database connection string (Postgres or SQLite) |
 | `REPORTD_PROJECT` | `--project` | Yes | GCP project ID for BigQuery |
 | `REPORTD_DATASET` | `--dataset` | Yes | BigQuery dataset name |
 | `REPORTD_ANALYTICS_TABLE` | `--analytics_table` | Yes | BigQuery table for Web Vitals |
@@ -75,6 +75,12 @@ export REPORTD_ANALYTICS_TABLE=analytics
 export REPORTD_REPORTS_TABLE=reports
 export REPORTD_REPORTS_V2_TABLE=reports_v2
 go run main.go
+```
+
+For SQLite instead of Postgres:
+
+```bash
+export REPORTD_DATABASE_URL=sqlite:///tmp/reportd.db
 ```
 
 ## Integrating with your site

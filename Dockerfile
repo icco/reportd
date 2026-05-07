@@ -1,12 +1,12 @@
-# Build stage — runs natively on the build host and cross-compiles via
-# GOOS/GOARCH so multi-arch builds skip QEMU emulation.
-FROM --platform=$BUILDPLATFORM golang:1.26-alpine AS builder
-
-ARG TARGETOS
-ARG TARGETARCH
+# Build stage — builds natively for TARGETPLATFORM. CGO is enabled so the
+# SQLite driver (mattn/go-sqlite3) can compile; CI uses native per-arch
+# runners, so no cross-toolchain or QEMU is required.
+FROM golang:1.26-alpine AS builder
 
 ENV GOPROXY="https://proxy.golang.org"
-ENV CGO_ENABLED=0
+ENV CGO_ENABLED=1
+
+RUN apk add --no-cache gcc musl-dev
 
 WORKDIR /src
 
@@ -14,8 +14,8 @@ COPY go.mod go.sum ./
 RUN go mod download
 
 COPY . .
-RUN GOOS=$TARGETOS GOARCH=$TARGETARCH go build -ldflags="-s -w" -o /server .
-RUN GOOS=$TARGETOS GOARCH=$TARGETARCH go build -ldflags="-s -w" -o /migrate ./cmd/migrate
+RUN go build -ldflags="-s -w" -o /server .
+RUN go build -ldflags="-s -w" -o /migrate ./cmd/migrate
 
 # Final stage
 FROM alpine:3.23

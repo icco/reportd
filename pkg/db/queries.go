@@ -2,6 +2,7 @@ package db
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"sort"
 	"time"
@@ -9,20 +10,55 @@ import (
 	"gorm.io/gorm"
 )
 
+// Day is a date-only value that scans cleanly from both Postgres (date type
+// → time.Time) and SQLite (DATE() text → string), and JSON-marshals as
+// "YYYY-MM-DD".
+type Day time.Time
+
+func (d Day) MarshalJSON() ([]byte, error) {
+	return json.Marshal(time.Time(d).Format(time.DateOnly))
+}
+
+func (d *Day) Scan(v any) error {
+	switch x := v.(type) {
+	case nil:
+		*d = Day{}
+		return nil
+	case time.Time:
+		*d = Day(x)
+		return nil
+	case []byte:
+		return d.Scan(string(x))
+	case string:
+		// Some drivers return a longer ISO timestamp; we only want the date.
+		if len(x) > len(time.DateOnly) {
+			x = x[:len(time.DateOnly)]
+		}
+		t, err := time.Parse(time.DateOnly, x)
+		if err != nil {
+			return fmt.Errorf("parsing day %q: %w", x, err)
+		}
+		*d = Day(t)
+		return nil
+	default:
+		return fmt.Errorf("unsupported type for Day: %T", v)
+	}
+}
+
 type WebVitalDailySummary struct {
-	Day     string  `json:"day"`
+	Day     Day     `json:"day"`
 	Service string  `json:"service"`
 	Name    string  `json:"name"`
 	Value   float64 `json:"value"`
 }
 
-type WebVitalP75 struct {
+type WebVitalAverage struct {
 	Name  string  `json:"name"`
 	Value float64 `json:"value"`
 }
 
 type ReportDailyCount struct {
-	Day        string `json:"day"`
+	Day        Day    `json:"day"`
 	ReportType string `json:"report_type"`
 	Count      int64  `json:"count"`
 }
@@ -30,7 +66,7 @@ type ReportDailyCount struct {
 type ServiceHealth struct {
 	Service string  `json:"service"`
 	Metric  string  `json:"metric"`
-	P75     float64 `json:"p75"`
+	Average float64 `json:"average"`
 }
 
 type DirectiveCount struct {
@@ -41,15 +77,13 @@ type DirectiveCount struct {
 func GetAllServicesHealth(ctx context.Context, d *gorm.DB) (map[string][]ServiceHealth, error) {
 	cutoff := time.Now().AddDate(0, 0, -28)
 	var results []ServiceHealth
-	// PERCENTILE_CONT requires raw SQL -- no GORM builder equivalent.
-	err := d.WithContext(ctx).Raw(`
-		SELECT service, name AS metric,
-			PERCENTILE_CONT(0.75) WITHIN GROUP (ORDER BY value) AS p75
-		FROM web_vitals
-		WHERE created_at >= ? AND deleted_at IS NULL
-		GROUP BY service, name
-		ORDER BY service, name
-	`, cutoff).Scan(&results).Error
+	err := d.WithContext(ctx).
+		Model(&WebVital{}).
+		Select("service, name AS metric, AVG(value) AS average").
+		Where("created_at >= ?", cutoff).
+		Group("service, name").
+		Order("service, name").
+		Find(&results).Error
 	if err != nil {
 		return nil, fmt.Errorf("querying all services health: %w", err)
 	}
@@ -101,7 +135,7 @@ func GetWebVitalSummaries(ctx context.Context, d *gorm.DB, service string) ([]We
 	var results []WebVitalDailySummary
 	err := d.WithContext(ctx).
 		Model(&WebVital{}).
-		Select("TO_CHAR(DATE(created_at), 'YYYY-MM-DD') AS day, service, name, AVG(value) AS value").
+		Select("DATE(created_at) AS day, service, name, AVG(value) AS value").
 		Where("service = ? AND created_at >= ?", service, cutoff).
 		Group("DATE(created_at), service, name").
 		Order("DATE(created_at) DESC").
@@ -112,29 +146,30 @@ func GetWebVitalSummaries(ctx context.Context, d *gorm.DB, service string) ([]We
 	return results, nil
 }
 
-func GetWebVitalP75s(ctx context.Context, d *gorm.DB, service string) ([]WebVitalP75, error) {
+func GetWebVitalAverages(ctx context.Context, d *gorm.DB, service string) ([]WebVitalAverage, error) {
 	cutoff := time.Now().AddDate(0, 0, -28)
-	var results []WebVitalP75
-	// PERCENTILE_CONT requires raw SQL.
-	err := d.WithContext(ctx).Raw(`
-		SELECT name, PERCENTILE_CONT(0.75) WITHIN GROUP (ORDER BY value) AS value
-		FROM web_vitals
-		WHERE service = ? AND created_at >= ? AND deleted_at IS NULL
-		GROUP BY name
-	`, service, cutoff).Scan(&results).Error
+	var results []WebVitalAverage
+	err := d.WithContext(ctx).
+		Model(&WebVital{}).
+		Select("name, AVG(value) AS value").
+		Where("service = ? AND created_at >= ?", service, cutoff).
+		Group("name").
+		Order("name").
+		Find(&results).Error
 	if err != nil {
-		return nil, fmt.Errorf("querying web vital p75s: %w", err)
+		return nil, fmt.Errorf("querying web vital averages: %w", err)
 	}
 	return results, nil
 }
 
 func GetReportCounts(ctx context.Context, d *gorm.DB, service string) ([]ReportDailyCount, error) {
 	cutoff := time.Now().AddDate(0, -3, 0)
+	const daySelect = "DATE(created_at) AS day, report_type, COUNT(*) AS count"
 
 	var rtCounts []ReportDailyCount
 	err := d.WithContext(ctx).
 		Model(&ReportToEntry{}).
-		Select("TO_CHAR(DATE(created_at), 'YYYY-MM-DD') AS day, report_type, COUNT(*) AS count").
+		Select(daySelect).
 		Where("service = ? AND created_at >= ?", service, cutoff).
 		Group("DATE(created_at), report_type").
 		Order("DATE(created_at) DESC").
@@ -146,7 +181,7 @@ func GetReportCounts(ctx context.Context, d *gorm.DB, service string) ([]ReportD
 	var srCounts []ReportDailyCount
 	err = d.WithContext(ctx).
 		Model(&SecurityReportEntry{}).
-		Select("TO_CHAR(DATE(created_at), 'YYYY-MM-DD') AS day, report_type, COUNT(*) AS count").
+		Select(daySelect).
 		Where("service = ? AND created_at >= ?", service, cutoff).
 		Group("DATE(created_at), report_type").
 		Order("DATE(created_at) DESC").

@@ -84,8 +84,8 @@ func TestReportToEntryFromCSPReport(t *testing.T) {
 	}
 	entry := entries[0]
 
-	if entry.ReportType != "csp" {
-		t.Errorf("expected type 'csp', got %q", entry.ReportType)
+	if entry.ReportType != reportTypeCSP {
+		t.Errorf("expected type %q, got %q", reportTypeCSP, entry.ReportType)
 	}
 	if entry.Service != "mysite" {
 		t.Errorf("expected service 'mysite', got %q", entry.Service)
