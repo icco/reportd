@@ -9,8 +9,47 @@ import (
 	"gorm.io/gorm"
 )
 
+// Day is a date-only value that scans cleanly from both Postgres (date type
+// → time.Time) and SQLite (DATE() text → string), and JSON-marshals as
+// "YYYY-MM-DD".
+type Day time.Time
+
+const dayLayout = "2006-01-02"
+
+func (d Day) MarshalJSON() ([]byte, error) {
+	return fmt.Appendf(nil, `"%s"`, time.Time(d).Format(dayLayout)), nil
+}
+
+func (d *Day) Scan(v any) error {
+	switch x := v.(type) {
+	case nil:
+		*d = Day{}
+	case time.Time:
+		*d = Day(x)
+	case string:
+		return d.parse(x)
+	case []byte:
+		return d.parse(string(x))
+	default:
+		return fmt.Errorf("unsupported type for Day: %T", v)
+	}
+	return nil
+}
+
+func (d *Day) parse(s string) error {
+	if len(s) >= len(dayLayout) {
+		s = s[:len(dayLayout)]
+	}
+	t, err := time.Parse(dayLayout, s)
+	if err != nil {
+		return fmt.Errorf("parsing day %q: %w", s, err)
+	}
+	*d = Day(t)
+	return nil
+}
+
 type WebVitalDailySummary struct {
-	Day     string  `json:"day"`
+	Day     Day     `json:"day"`
 	Service string  `json:"service"`
 	Name    string  `json:"name"`
 	Value   float64 `json:"value"`
@@ -22,7 +61,7 @@ type WebVitalP75 struct {
 }
 
 type ReportDailyCount struct {
-	Day        string `json:"day"`
+	Day        Day    `json:"day"`
 	ReportType string `json:"report_type"`
 	Count      int64  `json:"count"`
 }
@@ -40,15 +79,6 @@ type DirectiveCount struct {
 
 func isSQLite(d *gorm.DB) bool {
 	return d.Dialector != nil && d.Name() == dialectSQLite
-}
-
-// dayExpr returns a SQL expression that yields a 'YYYY-MM-DD' text value for
-// the created_at column on the active dialect.
-func dayExpr(d *gorm.DB) string {
-	if isSQLite(d) {
-		return "strftime('%Y-%m-%d', created_at)"
-	}
-	return "TO_CHAR(DATE(created_at), 'YYYY-MM-DD')"
 }
 
 // p75ByGroupSQL returns a query computing the linear-interpolation 75th
@@ -160,7 +190,7 @@ func GetWebVitalSummaries(ctx context.Context, d *gorm.DB, service string) ([]We
 	var results []WebVitalDailySummary
 	err := d.WithContext(ctx).
 		Model(&WebVital{}).
-		Select(fmt.Sprintf("%s AS day, service, name, AVG(value) AS value", dayExpr(d))).
+		Select("DATE(created_at) AS day, service, name, AVG(value) AS value").
 		Where("service = ? AND created_at >= ?", service, cutoff).
 		Group("DATE(created_at), service, name").
 		Order("DATE(created_at) DESC").
@@ -185,7 +215,7 @@ func GetWebVitalP75s(ctx context.Context, d *gorm.DB, service string) ([]WebVita
 
 func GetReportCounts(ctx context.Context, d *gorm.DB, service string) ([]ReportDailyCount, error) {
 	cutoff := time.Now().AddDate(0, -3, 0)
-	daySelect := fmt.Sprintf("%s AS day, report_type, COUNT(*) AS count", dayExpr(d))
+	const daySelect = "DATE(created_at) AS day, report_type, COUNT(*) AS count"
 
 	var rtCounts []ReportDailyCount
 	err := d.WithContext(ctx).

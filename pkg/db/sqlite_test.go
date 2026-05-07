@@ -70,7 +70,7 @@ func TestConnectSQLiteAndQueryHelpers(t *testing.T) {
 	if err != nil {
 		t.Fatalf("GetWebVitalSummaries() error = %v", err)
 	}
-	if len(summaries) == 0 || summaries[0].Day == "" {
+	if len(summaries) == 0 || time.Time(summaries[0].Day).IsZero() {
 		t.Fatalf("expected non-empty daily summaries, got %+v", summaries)
 	}
 
@@ -82,7 +82,7 @@ func TestConnectSQLiteAndQueryHelpers(t *testing.T) {
 		t.Fatalf("expected 2 report count rows, got %d", len(counts))
 	}
 	for _, c := range counts {
-		if c.Day == "" {
+		if time.Time(c.Day).IsZero() {
 			t.Fatalf("expected non-empty day in counts, got %+v", c)
 		}
 	}
