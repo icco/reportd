@@ -11,6 +11,12 @@ import (
 	"cloud.google.com/go/civil"
 )
 
+const (
+	ContentTypeReports        = "application/reports+json"
+	ContentTypeExpectCTReport = "application/expect-ct-report+json"
+	ContentTypeCSPReport      = "application/csp-report"
+)
+
 // Report is a simple interface for types exported by ParseReport.
 type Report struct {
 	ExpectCT *ExpectCTReport `bigquery:",nullable"`
@@ -119,19 +125,19 @@ func ParseReport(ct, body, srv string) (*Report, error) {
 	var r *Report
 
 	switch media {
-	case "application/reports+json":
+	case ContentTypeReports:
 		var data []*ReportToReport
 		if err := json.Unmarshal([]byte(body), &data); err != nil {
 			return nil, err
 		}
 		r = &Report{ReportTo: data, Time: now, Service: service}
-	case "application/expect-ct-report+json":
+	case ContentTypeExpectCTReport:
 		var data ExpectCTReport
 		if err := json.Unmarshal([]byte(body), &data); err != nil {
 			return nil, err
 		}
 		r = &Report{ExpectCT: &data, Time: now, Service: service}
-	case "application/csp-report":
+	case ContentTypeCSPReport:
 		var data CSPReport
 		if err := json.Unmarshal([]byte(body), &data); err != nil {
 			return nil, err
