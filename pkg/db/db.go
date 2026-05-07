@@ -11,6 +11,8 @@ import (
 	"gorm.io/gorm/logger"
 )
 
+const dialectSQLite = "sqlite"
+
 func Connect(ctx context.Context, databaseURL string) (*gorm.DB, error) {
 	dialector, dbType, err := dialector(databaseURL)
 	if err != nil {
@@ -28,16 +30,15 @@ func Connect(ctx context.Context, databaseURL string) (*gorm.DB, error) {
 }
 
 func dialector(databaseURL string) (gorm.Dialector, string, error) {
-	if strings.HasPrefix(databaseURL, "sqlite://") {
-		dsn := strings.TrimPrefix(databaseURL, "sqlite://")
+	if dsn, ok := strings.CutPrefix(databaseURL, "sqlite://"); ok {
 		if dsn == "" {
 			return nil, "", fmt.Errorf("connecting to sqlite: missing sqlite dsn")
 		}
-		return sqlite.Open(dsn), "sqlite", nil
+		return sqlite.Open(dsn), dialectSQLite, nil
 	}
 
 	if strings.HasPrefix(databaseURL, "file:") {
-		return sqlite.Open(databaseURL), "sqlite", nil
+		return sqlite.Open(databaseURL), dialectSQLite, nil
 	}
 
 	return postgres.Open(databaseURL), "postgres", nil

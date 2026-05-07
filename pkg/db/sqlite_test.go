@@ -32,7 +32,7 @@ func TestConnectSQLiteAndQueryHelpers(t *testing.T) {
 	if err := d.Create(&ReportToEntry{
 		CreatedAt:  now,
 		Service:    "svc",
-		ReportType: "csp",
+		ReportType: reportTypeCSP,
 	}).Error; err != nil {
 		t.Fatalf("creating report_to_entry: %v", err)
 	}

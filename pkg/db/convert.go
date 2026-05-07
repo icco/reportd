@@ -9,6 +9,8 @@ import (
 	"github.com/icco/reportd/pkg/reportto"
 )
 
+const reportTypeCSP = "csp"
+
 func WebVitalFromAnalytics(wv *analytics.WebVital) *WebVital {
 	return &WebVital{
 		CreatedAt: time.Now(),
@@ -30,7 +32,7 @@ func ReportToEntriesFromReport(r *reportto.Report) []*ReportToEntry {
 		return []*ReportToEntry{{
 			CreatedAt:          now,
 			Service:            srv,
-			ReportType:         "csp",
+			ReportType:         reportTypeCSP,
 			DocumentURI:        r.CSP.CSPReport.DocumentURI,
 			BlockedURI:         r.CSP.CSPReport.BlockedURI,
 			ViolatedDirective:  r.CSP.CSPReport.ViolatedDirective,
