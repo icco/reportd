@@ -82,7 +82,7 @@ func newTestRouter(t *testing.T) (http.Handler, *gorm.DB, *recordingWriters) {
 
 func do(t *testing.T, h http.Handler, method, target string, body io.Reader, contentType string) *httptest.ResponseRecorder {
 	t.Helper()
-	req := httptest.NewRequest(method, target, body)
+	req := httptest.NewRequestWithContext(t.Context(), method, target, body)
 	if contentType != "" {
 		req.Header.Set("Content-Type", contentType)
 	}

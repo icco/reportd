@@ -20,9 +20,9 @@ type CSPReport struct {
 
 // CSPReportBody is the body of a CSPReport.
 type CSPReportBody struct {
-	DocumentUri        string `json:"document_uri,omitempty"`
+	DocumentURI        string `json:"document_uri,omitempty"`
 	Referrer           string `json:"referrer,omitempty"`
-	BlockedUri         string `json:"blocked_uri,omitempty"`
+	BlockedURI         string `json:"blocked_uri,omitempty"`
 	ViolatedDirective  string `json:"violated_directive,omitempty"`
 	EffectiveDirective string `json:"effective_directive,omitempty"`
 	OriginalPolicy     string `json:"original_policy,omitempty"`
@@ -43,9 +43,9 @@ type DeprecationReport struct {
 // existing BigQuery columns keep type-checking; new fields are nullable.
 type DeprecationReportBody struct {
 	// Legacy fields kept for BigQuery column compatibility.
-	DocumentUri        string `json:"document_uri,omitempty"`
+	DocumentURI        string `json:"document_uri,omitempty"`
 	Referrer           string `json:"referrer,omitempty"`
-	BlockedUri         string `json:"blocked_uri,omitempty"`
+	BlockedURI         string `json:"blocked_uri,omitempty"`
 	ViolatedDirective  string `json:"violated_directive,omitempty"`
 	EffectiveDirective string `json:"effective_directive,omitempty"`
 	OriginalPolicy     string `json:"original_policy,omitempty"`
@@ -55,7 +55,7 @@ type DeprecationReportBody struct {
 	ScriptSample       string `json:"script_sample,omitempty"`
 
 	// Populated manually in ParseReport via a sibling decode (json:"-").
-	Id                 bigquery.NullString `json:"-"`
+	ID                 bigquery.NullString `json:"-"`
 	AnticipatedRemoval bigquery.NullString `json:"-"`
 	Message            bigquery.NullString `json:"-"`
 }
@@ -69,7 +69,7 @@ type PermissionsPolicyReport struct {
 
 // PermissionsPolicyReportBody is the body of a PermissionsPolicyReport.
 type PermissionsPolicyReportBody struct {
-	FeatureId    string `json:"featureId,omitempty"`
+	FeatureID    string `json:"featureId,omitempty"`
 	SourceFile   string `json:"sourceFile,omitempty"`
 	LineNumber   int32  `json:"lineNumber,omitempty"`
 	ColumnNumber int32  `json:"columnNumber,omitempty"`
@@ -87,7 +87,7 @@ type InterventionReport struct {
 
 // InterventionReportBody is the body of an InterventionReport.
 type InterventionReportBody struct {
-	Id           string `json:"id,omitempty"`
+	ID           string `json:"id,omitempty"`
 	Message      string `json:"message,omitempty"`
 	SourceFile   string `json:"sourceFile,omitempty"`
 	LineNumber   int32  `json:"lineNumber,omitempty"`
@@ -147,7 +147,7 @@ type DocumentPolicyReport struct {
 
 // DocumentPolicyReportBody is the body of a DocumentPolicyReport.
 type DocumentPolicyReportBody struct {
-	FeatureId    string `json:"featureId,omitempty"`
+	FeatureID    string `json:"featureId,omitempty"`
 	SourceFile   string `json:"sourceFile,omitempty"`
 	LineNumber   int32  `json:"lineNumber,omitempty"`
 	ColumnNumber int32  `json:"columnNumber,omitempty"`
@@ -212,13 +212,13 @@ func ParseReport(data, srv string) (*SecurityReport, error) {
 		// Populate NullString fields that json:"-" skips.
 		var depJSON struct {
 			Body struct {
-				Id                 string `json:"id"`
+				ID                 string `json:"id"`
 				AnticipatedRemoval string `json:"anticipated_removal"`
 				Message            string `json:"message"`
 			} `json:"body"`
 		}
 		if err := json.Unmarshal([]byte(data), &depJSON); err == nil {
-			sr.Deprecation.Body.Id = bigquery.NullString{StringVal: depJSON.Body.Id, Valid: depJSON.Body.Id != ""}
+			sr.Deprecation.Body.ID = bigquery.NullString{StringVal: depJSON.Body.ID, Valid: depJSON.Body.ID != ""}
 			sr.Deprecation.Body.AnticipatedRemoval = bigquery.NullString{StringVal: depJSON.Body.AnticipatedRemoval, Valid: depJSON.Body.AnticipatedRemoval != ""}
 			sr.Deprecation.Body.Message = bigquery.NullString{StringVal: depJSON.Body.Message, Valid: depJSON.Body.Message != ""}
 		}

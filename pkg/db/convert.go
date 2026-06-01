@@ -103,8 +103,8 @@ func SecurityReportEntryFromReport(sr *reporting.SecurityReport) *SecurityReport
 	switch {
 	case sr.CSP != nil:
 		entry.URL = sr.CSP.URL
-		entry.DocumentURI = sr.CSP.Body.DocumentUri
-		entry.BlockedURI = sr.CSP.Body.BlockedUri
+		entry.DocumentURI = sr.CSP.Body.DocumentURI
+		entry.BlockedURI = sr.CSP.Body.BlockedURI
 		entry.ViolatedDirective = sr.CSP.Body.ViolatedDirective
 		entry.EffectiveDirective = sr.CSP.Body.EffectiveDirective
 		entry.SourceFile = sr.CSP.Body.SourceFile

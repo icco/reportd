@@ -25,7 +25,7 @@ const (
 type Report struct {
 	ExpectCT *ExpectCTReport `bigquery:",nullable"`
 	CSP      *CSPReport      `bigquery:",nullable"`
-	ReportTo []*ReportToReport
+	ReportTo []*Entry
 
 	Time bigquery.NullDateTime
 
@@ -78,11 +78,11 @@ type CSPReport struct {
 	} `json:"csp-report"`
 }
 
-// ReportToReport is one entry of an application/reports+json payload.
+// Entry is one entry of an application/reports+json payload.
 // Body is a superset of fields observed across browsers.
 //
 // TODO: browsers send status under multiple names — normalize.
-type ReportToReport struct {
+type Entry struct {
 	Type      string `json:"type"`
 	Age       int    `json:"age"`
 	URL       string `json:"url"`
@@ -131,7 +131,7 @@ func ParseReport(ct, body, srv string) (*Report, error) {
 
 	switch media {
 	case ContentTypeReports:
-		var data []*ReportToReport
+		var data []*Entry
 		if err := json.Unmarshal([]byte(body), &data); err != nil {
 			return nil, err
 		}
