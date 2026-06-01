@@ -41,6 +41,7 @@ type WebVital struct {
 	Service bigquery.NullString
 }
 
+// Validate returns an error if Service is unset or empty.
 func (wv *WebVital) Validate() error {
 	if !wv.Service.Valid {
 		return fmt.Errorf("service is null")

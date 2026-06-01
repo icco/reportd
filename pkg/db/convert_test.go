@@ -124,7 +124,7 @@ func TestReportToEntryFromExpectCT(t *testing.T) {
 func TestReportToEntryFromReportTo(t *testing.T) {
 	r := &reportto.Report{
 		Service: bigquery.NullString{StringVal: "mysite", Valid: true},
-		ReportTo: []*reportto.ReportToReport{
+		ReportTo: []*reportto.Entry{
 			{
 				Type: "csp-violation",
 				URL:  "https://example.com/page",
@@ -201,8 +201,8 @@ func TestSecurityReportEntryFromCSP(t *testing.T) {
 		CSP: &reporting.CSPReport{
 			URL: "https://example.com/",
 			Body: reporting.CSPReportBody{
-				DocumentUri:        "https://example.com/page",
-				BlockedUri:         testBlockedURI,
+				DocumentURI:        "https://example.com/page",
+				BlockedURI:         testBlockedURI,
 				EffectiveDirective: "script-src-elem",
 				SourceFile:         "app.js",
 				LineNumber:         42,
@@ -331,7 +331,7 @@ func TestSecurityReportEntryFromDocumentPolicy(t *testing.T) {
 		DocumentPolicy: &reporting.DocumentPolicyReport{
 			URL: "https://example.com/",
 			Body: reporting.DocumentPolicyReportBody{
-				FeatureId:  "oversized-images",
+				FeatureID:  "oversized-images",
 				Message:    "Image too large",
 				SourceFile: "index.html",
 				LineNumber: 15,
@@ -360,7 +360,7 @@ func TestSecurityReportEntryFromPermissionsPolicy(t *testing.T) {
 		PermissionsPolicy: &reporting.PermissionsPolicyReport{
 			URL: "https://example.com/",
 			Body: reporting.PermissionsPolicyReportBody{
-				FeatureId:  "geolocation",
+				FeatureID:  "geolocation",
 				Message:    "geolocation not allowed",
 				SourceFile: "app.js",
 				LineNumber: 42,
@@ -386,7 +386,7 @@ func TestSecurityReportEntryFromIntervention(t *testing.T) {
 		Intervention: &reporting.InterventionReport{
 			URL: "https://example.com/",
 			Body: reporting.InterventionReportBody{
-				Id:         "HeavyAdIntervention",
+				ID:         "HeavyAdIntervention",
 				Message:    "Ad removed",
 				SourceFile: "ads.js",
 				LineNumber: 100,

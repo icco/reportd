@@ -85,8 +85,8 @@ func TestParseCSPViolation(t *testing.T) {
 	if data.CSP.URL != "https://example.com/" {
 		t.Errorf("expected URL 'https://example.com/', got %q", data.CSP.URL)
 	}
-	if data.CSP.Body.BlockedUri != "https://evil.com/script.js" {
-		t.Errorf("expected blocked_uri 'https://evil.com/script.js', got %q", data.CSP.Body.BlockedUri)
+	if data.CSP.Body.BlockedURI != "https://evil.com/script.js" {
+		t.Errorf("expected blocked_uri 'https://evil.com/script.js', got %q", data.CSP.Body.BlockedURI)
 	}
 	if data.CSP.Body.EffectiveDirective != "script-src-elem" {
 		t.Errorf("expected effective_directive 'script-src-elem', got %q", data.CSP.Body.EffectiveDirective)
@@ -120,8 +120,8 @@ func TestParseDeprecation(t *testing.T) {
 	if data.Deprecation == nil {
 		t.Fatal("Deprecation should not be nil")
 	}
-	if data.Deprecation.Body.Id.StringVal != "websql" {
-		t.Errorf("expected id 'websql', got %q", data.Deprecation.Body.Id.StringVal)
+	if data.Deprecation.Body.ID.StringVal != "websql" {
+		t.Errorf("expected id 'websql', got %q", data.Deprecation.Body.ID.StringVal)
 	}
 	if data.Deprecation.Body.Message.StringVal != "WebSQL is deprecated" {
 		t.Errorf("expected message 'WebSQL is deprecated', got %q", data.Deprecation.Body.Message.StringVal)
@@ -153,8 +153,8 @@ func TestParsePermissionsPolicy(t *testing.T) {
 	if data.PermissionsPolicy == nil {
 		t.Fatal("PermissionsPolicy should not be nil")
 	}
-	if data.PermissionsPolicy.Body.FeatureId != "camera" {
-		t.Errorf("expected featureId 'camera', got %q", data.PermissionsPolicy.Body.FeatureId)
+	if data.PermissionsPolicy.Body.FeatureID != "camera" {
+		t.Errorf("expected featureId 'camera', got %q", data.PermissionsPolicy.Body.FeatureID)
 	}
 	if data.PermissionsPolicy.Body.Disposition != "enforce" {
 		t.Errorf("expected disposition 'enforce', got %q", data.PermissionsPolicy.Body.Disposition)
@@ -188,8 +188,8 @@ func TestParseIntervention(t *testing.T) {
 	if data.Intervention == nil {
 		t.Fatal("Intervention should not be nil")
 	}
-	if data.Intervention.Body.Id != "HeavyAdIntervention" {
-		t.Errorf("expected id 'HeavyAdIntervention', got %q", data.Intervention.Body.Id)
+	if data.Intervention.Body.ID != "HeavyAdIntervention" {
+		t.Errorf("expected id 'HeavyAdIntervention', got %q", data.Intervention.Body.ID)
 	}
 	if data.Intervention.Body.Message != "Ad removed for CPU usage" {
 		t.Errorf("expected message 'Ad removed for CPU usage', got %q", data.Intervention.Body.Message)
@@ -309,8 +309,8 @@ func TestParseDocumentPolicy(t *testing.T) {
 	if data.DocumentPolicy == nil {
 		t.Fatal("DocumentPolicy should not be nil")
 	}
-	if data.DocumentPolicy.Body.FeatureId != "oversized-images" {
-		t.Errorf("expected featureId 'oversized-images', got %q", data.DocumentPolicy.Body.FeatureId)
+	if data.DocumentPolicy.Body.FeatureID != "oversized-images" {
+		t.Errorf("expected featureId 'oversized-images', got %q", data.DocumentPolicy.Body.FeatureID)
 	}
 	if data.DocumentPolicy.Body.Message != "Image exceeds size limit" {
 		t.Errorf("expected message 'Image exceeds size limit', got %q", data.DocumentPolicy.Body.Message)
@@ -604,8 +604,8 @@ func TestParseReportDeprecationNullStringFields(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if !data.Deprecation.Body.Id.Valid || data.Deprecation.Body.Id.StringVal != "websql" {
-		t.Errorf("expected id 'websql', got %+v", data.Deprecation.Body.Id)
+	if !data.Deprecation.Body.ID.Valid || data.Deprecation.Body.ID.StringVal != "websql" {
+		t.Errorf("expected id 'websql', got %+v", data.Deprecation.Body.ID)
 	}
 	if !data.Deprecation.Body.AnticipatedRemoval.Valid || data.Deprecation.Body.AnticipatedRemoval.StringVal != "2025-01-01" {
 		t.Errorf("expected anticipated_removal '2025-01-01', got %+v", data.Deprecation.Body.AnticipatedRemoval)
@@ -622,7 +622,7 @@ func TestParseReportDeprecationEmptyNullFields(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if data.Deprecation.Body.Id.Valid {
+	if data.Deprecation.Body.ID.Valid {
 		t.Error("id should not be valid when missing")
 	}
 	if data.Deprecation.Body.AnticipatedRemoval.Valid {
