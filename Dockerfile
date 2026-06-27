@@ -18,7 +18,7 @@ RUN go build -ldflags="-s -w" -o /server .
 RUN go build -ldflags="-s -w" -o /migrate ./cmd/migrate
 
 # Final stage
-FROM alpine:3.23
+FROM alpine:3.24
 
 LABEL org.opencontainers.image.source=https://github.com/icco/reportd
 LABEL org.opencontainers.image.description="A service for receiving CSP reports and others."
