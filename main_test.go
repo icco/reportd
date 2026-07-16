@@ -91,12 +91,12 @@ func do(t *testing.T, h http.Handler, method, target string, body io.Reader, con
 	return rr
 }
 
-// waitForSignal returns true if a value is received on ch within timeout.
-func waitForSignal(ch chan struct{}, timeout time.Duration) bool {
+// waitForSignal returns true if a value is received on ch within 2s.
+func waitForSignal(ch chan struct{}) bool {
 	select {
 	case <-ch:
 		return true
-	case <-time.After(timeout):
+	case <-time.After(2 * time.Second):
 		return false
 	}
 }
@@ -415,7 +415,7 @@ func TestPostReportHandler(t *testing.T) {
 		t.Errorf("expected 1 report-to row, got %d", count)
 	}
 
-	if !waitForSignal(rec.doneReport, 2*time.Second) {
+	if !waitForSignal(rec.doneReport) {
 		t.Error("expected BQ writer to be invoked")
 	}
 }
@@ -447,7 +447,7 @@ func TestPostAnalyticsHandler(t *testing.T) {
 		t.Errorf("expected 1 web vital row, got %d", count)
 	}
 
-	if !waitForSignal(rec.doneAnalytics, 2*time.Second) {
+	if !waitForSignal(rec.doneAnalytics) {
 		t.Error("expected BQ writer to be invoked")
 	}
 }
@@ -484,7 +484,7 @@ func TestPostReportingHandler(t *testing.T) {
 		t.Errorf("expected 1 security report row, got %d", count)
 	}
 
-	if !waitForSignal(rec.doneSecurityRpt, 2*time.Second) {
+	if !waitForSignal(rec.doneSecurityRpt) {
 		t.Error("expected BQ writer to be invoked")
 	}
 }
@@ -521,7 +521,7 @@ func TestPostReportingHandlerLegacyCSP(t *testing.T) {
 		t.Errorf("violated_directive = %q, want script-src-elem", e.ViolatedDirective)
 	}
 
-	if !waitForSignal(rec.doneSecurityRpt, 2*time.Second) {
+	if !waitForSignal(rec.doneSecurityRpt) {
 		t.Error("expected BQ writer to be invoked")
 	}
 
