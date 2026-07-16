@@ -253,10 +253,9 @@ func ParseReport(data, srv string) (*SecurityReport, error) {
 	return sr, nil
 }
 
-// ParseLegacyCSPReport decodes a legacy report-uri style CSP payload
-// (Content-Type application/csp-report) into a SecurityReport. Safari
-// sends this format even to Reporting-Endpoints URLs. Legacy-only
-// fields like status-code are preserved in RawJSON.
+// ParseLegacyCSPReport decodes a legacy application/csp-report payload
+// into a SecurityReport; Safari sends this format even to
+// Reporting-Endpoints URLs. Legacy-only fields stay in RawJSON.
 func ParseLegacyCSPReport(data, srv string) (*SecurityReport, error) {
 	// Kebab-case wire format; mirrors reportto.CSPReport.
 	var wrapper struct {

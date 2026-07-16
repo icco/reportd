@@ -9,6 +9,7 @@ import (
 	"errors"
 	"fmt"
 	"io/fs"
+	"mime"
 	"net/http"
 	"os"
 	"os/signal"
@@ -539,8 +540,16 @@ func postReportingHandler(pgDB *gorm.DB, writeBQ securityReportBQWriter) http.Ha
 		l := logging.FromContext(ctx)
 		service := chi.URLParam(r, "service")
 		contentType := r.Header.Get("Content-Type")
-		if contentType != "application/reports+json" {
-			l.Errorw("Content-Type header is not application/reports+json", "service", service, "content-type", contentType)
+		media, _, err := mime.ParseMediaType(contentType)
+		if err != nil {
+			l.Errorw("error parsing Content-Type header", zap.Error(err), "service", service, "content-type", contentType)
+			http.Error(w, "uploading error", 400)
+			return
+		}
+		// Safari sends legacy application/csp-report bodies even to
+		// Reporting-Endpoints URLs.
+		if media != "application/reports+json" && media != "application/csp-report" {
+			l.Errorw("unsupported Content-Type for reporting", "service", service, "content-type", contentType)
 			http.Error(w, "uploading error", 400)
 			return
 		}
@@ -560,7 +569,12 @@ func postReportingHandler(pgDB *gorm.DB, writeBQ securityReportBQWriter) http.Ha
 		bodyStr := buf.String()
 
 		l.Infow("reporting received", "content-type", contentType, "service", service, "user-agent", r.UserAgent())
-		reports, err := reporting.ParseReport(bodyStr, service)
+		var reports *reporting.SecurityReport
+		if media == "application/csp-report" {
+			reports, err = reporting.ParseLegacyCSPReport(bodyStr, service)
+		} else {
+			reports, err = reporting.ParseReport(bodyStr, service)
+		}
 		if err != nil {
 			l.Errorw("error on parsing reporting data", zap.Error(err), "service", service, "content-type", contentType, "body", bodyStr)
 			http.Error(w, "uploading error", 500)
