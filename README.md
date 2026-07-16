@@ -185,7 +185,7 @@ Report-To: {"group":"default","max_age":10886400,"endpoints":[{"url":"https://yo
 |----------|-------------|-------------|
 | `POST /analytics/{service}` | `application/json` | Web Vitals data |
 | `POST /report/{service}` | `application/csp-report`, `application/expect-ct-report+json`, `application/reports+json` | Legacy Report-To data |
-| `POST /reporting/{service}` | `application/reports+json` | Reporting API v1 data |
+| `POST /reporting/{service}` | `application/reports+json`, `application/csp-report` | Reporting API v1 data |
 
 ### Dashboard (GET)
 

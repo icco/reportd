@@ -586,6 +586,88 @@ func TestParseReportCaseSensitiveTypes(t *testing.T) {
 	}
 }
 
+func TestParseLegacyCSPReport(t *testing.T) {
+	// The wire format Safari sends to Reporting-Endpoints URLs.
+	body := `{"csp-report":{"document-uri":"https://example.com/page","referrer":"https://referrer.example/","violated-directive":"script-src-elem","effective-directive":"script-src-elem","original-policy":"default-src 'none'","blocked-uri":"https://evil.com/script.js","status-code":200,"source-file":"https://example.com/app.js","line-number":10,"column-number":5}}`
+
+	data, err := ParseLegacyCSPReport(body, "mysite")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if data.ReportType.StringVal != "csp-violation" {
+		t.Errorf("expected type 'csp-violation', got %q", data.ReportType.StringVal)
+	}
+	if !data.Service.Valid || data.Service.StringVal != "mysite" {
+		t.Errorf("expected service 'mysite', got %+v", data.Service)
+	}
+	if !data.Time.Valid {
+		t.Error("time should be set")
+	}
+	if data.RawJSON != body {
+		t.Error("RawJSON should exactly match the input body")
+	}
+	if data.CSP == nil {
+		t.Fatal("CSP should not be nil")
+	}
+	if data.CSP.URL != "https://example.com/page" {
+		t.Errorf("expected URL from document-uri, got %q", data.CSP.URL)
+	}
+	b := data.CSP.Body
+	if b.DocumentURI != "https://example.com/page" {
+		t.Errorf("document_uri = %q", b.DocumentURI)
+	}
+	if b.Referrer != "https://referrer.example/" {
+		t.Errorf("referrer = %q", b.Referrer)
+	}
+	if b.BlockedURI != "https://evil.com/script.js" {
+		t.Errorf("blocked_uri = %q", b.BlockedURI)
+	}
+	if b.ViolatedDirective != "script-src-elem" {
+		t.Errorf("violated_directive = %q", b.ViolatedDirective)
+	}
+	if b.EffectiveDirective != "script-src-elem" {
+		t.Errorf("effective_directive = %q", b.EffectiveDirective)
+	}
+	if b.OriginalPolicy != "default-src 'none'" {
+		t.Errorf("original_policy = %q", b.OriginalPolicy)
+	}
+	if b.SourceFile != "https://example.com/app.js" {
+		t.Errorf("source_file = %q", b.SourceFile)
+	}
+	if b.LineNumber != 10 {
+		t.Errorf("line_number = %d", b.LineNumber)
+	}
+	if b.ColumnNumber != 5 {
+		t.Errorf("column_number = %d", b.ColumnNumber)
+	}
+}
+
+func TestParseLegacyCSPReportErrors(t *testing.T) {
+	tests := []struct {
+		name    string
+		body    string
+		wantErr bool
+	}{
+		{name: "empty body", body: "", wantErr: true},
+		{name: "not json", body: "not json", wantErr: true},
+		{name: "missing csp-report key", body: `{}`, wantErr: true},
+		{name: "csp-report null", body: `{"csp-report":null}`, wantErr: true},
+		{name: "csp-report wrong type", body: `{"csp-report":"str"}`, wantErr: true},
+		{name: "empty csp-report object", body: `{"csp-report":{}}`, wantErr: false},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+			_, err := ParseLegacyCSPReport(tc.body, "test")
+			if (err != nil) != tc.wantErr {
+				t.Errorf("ParseLegacyCSPReport() error = %v, wantErr %v", err, tc.wantErr)
+			}
+		})
+	}
+}
+
 func TestParseReportPreservesRawJSON(t *testing.T) {
 	body := `{"type":"csp-violation","url":"https://example.com/","body":{"document_uri":"https://example.com/"}}`
 	data, err := ParseReport(body, "test")
