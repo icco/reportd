@@ -546,7 +546,6 @@ func postReportingHandler(pgDB *gorm.DB, writeBQ securityReportBQWriter) http.Ha
 			http.Error(w, "uploading error", 400)
 			return
 		}
-		// application/csp-report: Safari sends legacy bodies even to Reporting-Endpoints URLs.
 		if media != "application/reports+json" && media != "application/csp-report" {
 			l.Errorw("unsupported Content-Type for reporting", "service", service, "content-type", contentType)
 			http.Error(w, "uploading error", 400)
