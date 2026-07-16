@@ -489,6 +489,73 @@ func TestPostReportingHandler(t *testing.T) {
 	}
 }
 
+func TestPostReportingHandlerLegacyCSP(t *testing.T) {
+	h, pgDB, rec := newTestRouter(t)
+
+	// Safari delivers legacy-format CSP reports to Reporting-Endpoints URLs
+	// with Content-Type application/csp-report (issue #163).
+	body := `{"csp-report":{"document-uri":"https://example.com/","referrer":"","violated-directive":"script-src-elem","effective-directive":"script-src-elem","original-policy":"default-src 'none'","blocked-uri":"https://evil.com/script.js","status-code":200,"source-file":"https://example.com/app.js","line-number":10,"column-number":5}}`
+	rr := do(t, h, http.MethodPost, "/reporting/svc", strings.NewReader(body), "application/csp-report")
+	if rr.Code != http.StatusNoContent {
+		t.Fatalf("valid: status = %d, want 204, body=%s", rr.Code, rr.Body.String())
+	}
+
+	var entries []db.SecurityReportEntry
+	if err := pgDB.Where("service = ?", "svc").Find(&entries).Error; err != nil {
+		t.Fatalf("find: %v", err)
+	}
+	if len(entries) != 1 {
+		t.Fatalf("expected 1 security report row, got %d", len(entries))
+	}
+	e := entries[0]
+	if e.ReportType != "csp-violation" {
+		t.Errorf("report_type = %q, want csp-violation", e.ReportType)
+	}
+	if e.URL != "https://example.com/" {
+		t.Errorf("url = %q, want https://example.com/", e.URL)
+	}
+	if e.BlockedURI != "https://evil.com/script.js" {
+		t.Errorf("blocked_uri = %q, want https://evil.com/script.js", e.BlockedURI)
+	}
+	if e.ViolatedDirective != "script-src-elem" {
+		t.Errorf("violated_directive = %q, want script-src-elem", e.ViolatedDirective)
+	}
+
+	if !waitForSignal(rec.doneSecurityRpt, 2*time.Second) {
+		t.Error("expected BQ writer to be invoked")
+	}
+
+	// Service validation still applies on the legacy path.
+	rr = do(t, h, http.MethodPost, "/reporting/bad.service", strings.NewReader(body), "application/csp-report")
+	if rr.Code != http.StatusBadRequest {
+		t.Errorf("invalid service: status = %d, want 400", rr.Code)
+	}
+
+	// Bodies without the csp-report envelope are rejected, not stored empty.
+	rr = do(t, h, http.MethodPost, "/reporting/svc", strings.NewReader("{}"), "application/csp-report")
+	if rr.Code != http.StatusInternalServerError {
+		t.Errorf("missing csp-report key: status = %d, want 500", rr.Code)
+	}
+}
+
+func TestPostReportingHandlerContentTypes(t *testing.T) {
+	h, _, _ := newTestRouter(t)
+
+	body := `{"type":"crash","url":"https://example.com/","body":{"reason":"oom"}}`
+
+	// Media-type parameters must not break the check.
+	rr := do(t, h, http.MethodPost, "/reporting/svc", strings.NewReader(body), "application/reports+json; charset=utf-8")
+	if rr.Code != http.StatusNoContent {
+		t.Errorf("with charset param: status = %d, want 204, body=%s", rr.Code, rr.Body.String())
+	}
+
+	// Garbage content types are a client error.
+	rr = do(t, h, http.MethodPost, "/reporting/svc", strings.NewReader(body), ";;;")
+	if rr.Code != http.StatusBadRequest {
+		t.Errorf("unparseable content-type: status = %d, want 400", rr.Code)
+	}
+}
+
 func TestWriteJSON(t *testing.T) {
 	rr := httptest.NewRecorder()
 	if err := writeJSON(rr, map[string]any{"hello": "world"}); err != nil {
