@@ -253,6 +253,57 @@ func ParseReport(data, srv string) (*SecurityReport, error) {
 	return sr, nil
 }
 
+// ParseLegacyCSPReport decodes a legacy report-uri style CSP payload
+// (Content-Type application/csp-report) into a SecurityReport. Safari
+// sends this format even to Reporting-Endpoints URLs. Legacy-only
+// fields like status-code are preserved in RawJSON.
+func ParseLegacyCSPReport(data, srv string) (*SecurityReport, error) {
+	// Kebab-case wire format; mirrors reportto.CSPReport.
+	var wrapper struct {
+		CSPReport *struct {
+			DocumentURI        string `json:"document-uri"`
+			Referrer           string `json:"referrer"`
+			ViolatedDirective  string `json:"violated-directive"`
+			EffectiveDirective string `json:"effective-directive"`
+			OriginalPolicy     string `json:"original-policy"`
+			BlockedURI         string `json:"blocked-uri"`
+			SourceFile         string `json:"source-file"`
+			LineNumber         int32  `json:"line-number"`
+			ColumnNumber       int32  `json:"column-number"`
+		} `json:"csp-report"`
+	}
+
+	if err := json.Unmarshal([]byte(data), &wrapper); err != nil {
+		return nil, err
+	}
+	if wrapper.CSPReport == nil {
+		return nil, fmt.Errorf("missing csp-report key")
+	}
+
+	body := wrapper.CSPReport
+	return &SecurityReport{
+		CSP: &CSPReport{
+			Type: "csp-violation",
+			URL:  body.DocumentURI,
+			Body: CSPReportBody{
+				DocumentURI:        body.DocumentURI,
+				Referrer:           body.Referrer,
+				BlockedURI:         body.BlockedURI,
+				ViolatedDirective:  body.ViolatedDirective,
+				EffectiveDirective: body.EffectiveDirective,
+				OriginalPolicy:     body.OriginalPolicy,
+				SourceFile:         body.SourceFile,
+				LineNumber:         body.LineNumber,
+				ColumnNumber:       body.ColumnNumber,
+			},
+		},
+		ReportType: bigquery.NullString{StringVal: "csp-violation", Valid: true},
+		RawJSON:    data,
+		Time:       bigquery.NullDateTime{DateTime: civil.DateTimeOf(time.Now()), Valid: true},
+		Service:    bigquery.NullString{StringVal: srv, Valid: true},
+	}, nil
+}
+
 // WriteReportsToBigQuery streams report into project.dataset.table.
 func WriteReportsToBigQuery(ctx context.Context, project, dataset, table string, report *SecurityReport) error {
 	bq, err := bigquery.NewClient(ctx, project)
