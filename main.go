@@ -402,10 +402,9 @@ func getReportsHandler(pgDB *gorm.DB) http.HandlerFunc {
 	}
 }
 
-// ingestContext detaches a request context for a write that has to outlive the
-// request. Browsers send to the ingest endpoints with navigator.sendBeacon or
-// on page unload, so the connection is routinely torn down mid-insert and
-// r.Context() gets cancelled out from under the write.
+// ingestContext detaches a request context so a write survives the client
+// hanging up. Beacons are sent on page unload, so the connection is routinely
+// torn down mid-insert.
 func ingestContext(ctx context.Context) (context.Context, context.CancelFunc) {
 	return context.WithTimeout(context.WithoutCancel(ctx), 10*time.Second)
 }
