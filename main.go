@@ -402,6 +402,13 @@ func getReportsHandler(pgDB *gorm.DB) http.HandlerFunc {
 	}
 }
 
+// ingestContext detaches a request context so a write survives the client
+// hanging up. Beacons are sent on page unload, so the connection is routinely
+// torn down mid-insert.
+func ingestContext(ctx context.Context) (context.Context, context.CancelFunc) {
+	return context.WithTimeout(context.WithoutCancel(ctx), 10*time.Second)
+}
+
 func postReportHandler(pgDB *gorm.DB, writeBQ reportToBQWriter) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		ctx := r.Context()
@@ -433,7 +440,9 @@ func postReportHandler(pgDB *gorm.DB, writeBQ reportToBQWriter) http.HandlerFunc
 		l.Infow("report received", "content-type", ct, "service", service, "user-agent", r.UserAgent(), "report", data)
 
 		entries := db.ReportToEntriesFromReport(data)
-		if err := pgDB.WithContext(ctx).Create(&entries).Error; err != nil {
+		writeCtx, cancel := ingestContext(ctx)
+		defer cancel()
+		if err := pgDB.WithContext(writeCtx).Create(&entries).Error; err != nil {
 			l.Errorw("error writing report to postgres", zap.Error(err), "service", service)
 			http.Error(w, "storage error", 500)
 			return
@@ -520,7 +529,9 @@ func postAnalyticsHandler(pgDB *gorm.DB, writeBQ analyticsBQWriter) http.Handler
 		l.Infow("analytics received", "content-type", ct, "service", service, "user-agent", r.UserAgent(), "analytics", data)
 
 		entry := db.WebVitalFromAnalytics(data)
-		if err := pgDB.WithContext(ctx).Create(entry).Error; err != nil {
+		writeCtx, cancel := ingestContext(ctx)
+		defer cancel()
+		if err := pgDB.WithContext(writeCtx).Create(entry).Error; err != nil {
 			l.Errorw("error writing analytics to postgres", zap.Error(err), "service", service)
 			http.Error(w, "storage error", 500)
 			return
@@ -582,7 +593,9 @@ func postReportingHandler(pgDB *gorm.DB, writeBQ securityReportBQWriter) http.Ha
 		l.Infow("reporting parsed", "reports", reports, "service", service, "content-type", contentType, "user-agent", r.UserAgent())
 
 		entry := db.SecurityReportEntryFromReport(reports)
-		if err := pgDB.WithContext(ctx).Create(entry).Error; err != nil {
+		writeCtx, cancel := ingestContext(ctx)
+		defer cancel()
+		if err := pgDB.WithContext(writeCtx).Create(entry).Error; err != nil {
 			l.Errorw("error writing reporting to postgres", zap.Error(err), "service", service)
 			http.Error(w, "storage error", 500)
 			return
