@@ -7,7 +7,7 @@ require (
 	cloud.google.com/go/bigquery v1.79.1
 	github.com/go-chi/chi/v5 v5.3.1
 	github.com/go-chi/cors v1.2.2
-	github.com/icco/gutil v1.0.8
+	github.com/icco/gutil v1.0.9
 	github.com/namsral/flag v1.7.4-pre
 	github.com/prometheus/client_golang v1.24.1
 	github.com/unrolled/render v1.7.0
