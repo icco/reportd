@@ -7,6 +7,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"flag"
 	"fmt"
 	"io/fs"
 	"mime"
@@ -26,7 +27,7 @@ import (
 	"github.com/icco/reportd/pkg/reporting"
 	"github.com/icco/reportd/pkg/reportto"
 	"github.com/icco/reportd/templates"
-	"github.com/namsral/flag"
+	"github.com/peterbourgon/ff/v3"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"github.com/unrolled/render"
@@ -74,14 +75,14 @@ func routeTag(next http.Handler) http.Handler {
 }
 
 func main() {
-	fs := flag.NewFlagSetWithEnvPrefix(os.Args[0], "REPORTD", 0)
+	fs := flag.NewFlagSet(os.Args[0], flag.ContinueOnError)
 	project := fs.String("project", "", "Project ID containing the bigquery dataset to upload to.")
 	dataset := fs.String("dataset", "", "The bigquery dataset to upload to.")
 	aTable := fs.String("analytics_table", "", "The bigquery table to upload analytics to.")
 	rTable := fs.String("reports_table", "", "The bigquery table to upload reports to.")
 	rv2Table := fs.String("reports_v2_table", "", "The bigquery table to upload reports to.")
 	databaseURL := fs.String("database_url", "", "Database connection string (e.g. postgres://user:pass@host/reportd or sqlite:///tmp/reportd.db).")
-	if err := fs.Parse(os.Args[1:]); err != nil {
+	if err := ff.Parse(fs, os.Args[1:], ff.WithEnvVarPrefix("REPORTD")); err != nil {
 		log.Fatalw("error parsing flags", zap.Error(err))
 	}
 
