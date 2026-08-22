@@ -6,6 +6,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"flag"
 	"fmt"
 	"log"
 	"os"
@@ -16,20 +17,20 @@ import (
 	"github.com/icco/reportd/pkg/db"
 	"github.com/icco/reportd/pkg/reporting"
 	"github.com/icco/reportd/pkg/reportto"
-	"github.com/namsral/flag"
+	"github.com/peterbourgon/ff/v3"
 	"google.golang.org/api/iterator"
 	"gorm.io/gorm"
 )
 
 func main() {
-	fs := flag.NewFlagSetWithEnvPrefix(os.Args[0], "REPORTD", 0)
+	fs := flag.NewFlagSet(os.Args[0], flag.ContinueOnError)
 	project := fs.String("project", "", "GCP project ID")
 	dataset := fs.String("dataset", "", "BigQuery dataset")
 	aTable := fs.String("analytics_table", "", "BQ analytics table name")
 	rTable := fs.String("reports_table", "", "BQ reports table name")
 	rv2Table := fs.String("reports_v2_table", "", "BQ reporting (v2) table name")
 	databaseURL := fs.String("database_url", "", "Database connection string")
-	if err := fs.Parse(os.Args[1:]); err != nil {
+	if err := ff.Parse(fs, os.Args[1:], ff.WithEnvVarPrefix("REPORTD")); err != nil {
 		log.Fatalf("parsing flags: %v", err)
 	}
 
