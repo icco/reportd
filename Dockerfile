@@ -1,7 +1,7 @@
 # Build stage — builds natively for TARGETPLATFORM. CGO is enabled so the
 # SQLite driver (mattn/go-sqlite3) can compile; CI uses native per-arch
 # runners, so no cross-toolchain or QEMU is required.
-FROM golang:1.26-alpine AS builder
+FROM golang:1.27-alpine AS builder
 
 ENV GOPROXY="https://proxy.golang.org"
 ENV CGO_ENABLED=1
