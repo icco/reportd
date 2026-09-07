@@ -52,8 +52,11 @@ jobs:
         uses: stefanzweifel/git-auto-commit-action@v7
         with:
           commit_message: 'style: format YAML and JSON with yq'
-          # The default GITHUB_TOKEN cannot edit files under .github/workflows.
-          file_pattern: '*.yml *.yaml *.json :!.github/workflows/*'
+          # A literal '*.json' pathspec makes git add exit 128 in a repo with
+          # no JSON at all, so stage everything and let the steps above decide
+          # what changed. The exclusion stays: the default GITHUB_TOKEN cannot
+          # edit files under .github/workflows.
+          file_pattern: '. :!.github/workflows/*'
           commit_author: GitHub Actions <actions@github.com>
           commit_user_name: github-actions[bot]
           commit_user_email: github-actions[bot]@users.noreply.github.com

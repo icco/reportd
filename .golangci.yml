@@ -1,0 +1,40 @@
+# Committed rather than passed as CI flags so local and CI enforce the same set.
+# Comments sit on their own lines: the yaml-json format job runs `yq -iP`, which
+# collapses the two spaces yamllint wants before an inline comment.
+# https://golangci-lint.run/docs/configuration/file/
+version: "2"
+linters:
+  default: standard
+  enable:
+    # an unclosed response body leaks a connection
+    - bodyclose
+    # a dropped context breaks cancellation and tracing
+    - contextcheck
+    - copyloopvar
+    # %v on an error breaks errors.Is/As for callers
+    - errorlint
+    - gocritic
+    - gosec
+    - intrange
+    - misspell
+    # returning nil after a non-nil error swallows failures
+    - nilerr
+    # an HTTP request with no context cannot be cancelled
+    - noctx
+    - revive
+    - unconvert
+    - unparam
+    - wastedassign
+  exclusions:
+    presets:
+      - std-error-handling
+    rules:
+      # Table-driven tests repeat short literals; these findings are noise.
+      - path: _test\.go$
+        linters:
+          - dupl
+          - goconst
+formatters:
+  enable:
+    - gofmt
+    - goimports
