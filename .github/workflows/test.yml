@@ -20,10 +20,11 @@ jobs:
           --health-retries 10
     env:
       TEST_DATABASE_URL: postgres://reportd:reportd@localhost:5432/reportd_test?sslmode=disable
-      # Below go-template's 80: cmd/migrate and the BigQuery helpers need live
-      # infrastructure to exercise. Actual is 63.3%; the slack absorbs the few
-      # points the total shifts between Go versions. Raise as coverage climbs.
-      COVERAGE_THRESHOLD: "60"
+      # Below go-template's 80: func main() and the BigQuery helpers need live
+      # infrastructure to exercise, so the tree tops out around 77%. cmd/migrate
+      # is excluded from the run below rather than counted. Measured 77.2% under
+      # the go.mod toolchain, which reproduces CI exactly. Raise as it climbs.
+      COVERAGE_THRESHOLD: "75"
     steps:
       - uses: actions/checkout@v7
       - name: Setup Go
@@ -35,7 +36,12 @@ jobs:
       - name: Build
         run: go build -v ./...
       - name: Test with coverage
-        run: go test -v -race -coverprofile=coverage.out ./...
+        # cmd/migrate is a one-shot BigQuery backfill CLI with no tests. Every
+        # statement in it needs a live BigQuery to reach, so counting it only
+        # depresses the floor. It still has to compile: see Build above.
+        run: |
+          go test -v -race -coverprofile=coverage.out \
+            $(go list ./... | grep -v /cmd/migrate)
       - name: Enforce coverage threshold
         run: |
           total=$(go tool cover -func=coverage.out | awk '/^total:/ {print $3}' | tr -d '%')
