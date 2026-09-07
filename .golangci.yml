@@ -1,6 +1,6 @@
 # Committed rather than passed as CI flags so local and CI enforce the same set.
-# Comments sit on their own lines: the yaml-json format job runs `yq -iP`, which
-# collapses the two spaces yamllint wants before an inline comment.
+# Comments go on their own lines: the yaml-json format job's yq collapses the
+# inline spacing yamllint wants.
 # https://golangci-lint.run/docs/configuration/file/
 version: "2"
 linters:
