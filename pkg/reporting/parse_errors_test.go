@@ -5,11 +5,9 @@ import (
 	"testing"
 )
 
-// TestParseReportRejectsMalformedBodyPerType covers the type-specific
-// json.Unmarshal error return in each switch arm. Every report type declares
-// "body" as a struct, so handing it an array fails to unmarshal while the
-// leading type sniff still succeeds — which is the only way to reach the arm
-// and then fail inside it.
+// Every report type declares "body" as a struct, so an array clears the
+// leading type sniff and then fails the arm's own unmarshal — the only way to
+// reach a switch arm and fail inside it.
 func TestParseReportRejectsMalformedBodyPerType(t *testing.T) {
 	reportTypes := []string{
 		"csp-violation",
@@ -43,7 +41,7 @@ func TestParseReportRejectsInvalidJSON(t *testing.T) {
 	}
 }
 
-// TestParseReportKeepsUnknownTypeInRawJSON covers the default switch arm.
+// The default switch arm.
 func TestParseReportKeepsUnknownTypeInRawJSON(t *testing.T) {
 	const body = `{"type":"brand-new-report-type","body":{"anything":1}}`
 

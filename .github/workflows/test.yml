@@ -20,12 +20,9 @@ jobs:
           --health-retries 10
     env:
       TEST_DATABASE_URL: postgres://reportd:reportd@localhost:5432/reportd_test?sslmode=disable
-      # go-template mandates 80, which reportd cannot hold yet: cmd/migrate
-      # (152 statements, 0%) and the BigQuery write/schema helpers need a live
-      # BQ and DB to exercise. Actual coverage is 63.3%, so this is a ratchet
-      # from the old 50 with slack for toolchain drift -- `go get .` below can
-      # bump the go directive, and the reported total moves a few points
-      # between Go versions. Raise it as coverage climbs.
+      # Below go-template's 80: cmd/migrate and the BigQuery helpers need live
+      # infrastructure to exercise. Actual is 63.3%; the slack absorbs the few
+      # points the total shifts between Go versions. Raise as coverage climbs.
       COVERAGE_THRESHOLD: "60"
     steps:
       - uses: actions/checkout@v7

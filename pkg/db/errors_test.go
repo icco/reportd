@@ -22,10 +22,9 @@ func newSchemaDB(ctx context.Context, t *testing.T) *gorm.DB {
 	return d
 }
 
-// dropTable removes one table so a single query inside a helper fails while
-// the others still succeed. That is what makes the per-table error returns
-// reachable: several helpers query all three tables in sequence and return on
-// the first failure, so dropping everything would only ever exercise the first.
+// dropTable removes one table so a single query mid-sequence fails. Helpers
+// query all three and return on first error, so dropping all would only ever
+// reach the first return.
 func dropTable(t *testing.T, d *gorm.DB, model any) {
 	t.Helper()
 	if err := d.Migrator().DropTable(model); err != nil {
@@ -140,8 +139,7 @@ func TestSingleTableQueryErrors(t *testing.T) {
 	}
 }
 
-// TestGetTopViolatedDirectivesTruncatesToLimit covers the limit branch, which
-// only runs when more distinct directives exist than the caller asked for.
+// The limit branch only runs with more distinct directives than were asked for.
 func TestGetTopViolatedDirectivesTruncatesToLimit(t *testing.T) {
 	ctx := context.Background()
 	d := newSchemaDB(ctx, t)
@@ -167,9 +165,7 @@ func TestGetTopViolatedDirectivesTruncatesToLimit(t *testing.T) {
 	}
 }
 
-// TestReportToEntriesPrefersBodyDirective covers the override branches: a
-// report-to entry that carries its own directive and URL wins over the values
-// derived from the CSP fields.
+// The entry's own directive and URL override the CSP-derived values.
 func TestReportToEntriesPrefersBodyDirective(t *testing.T) {
 	entry := &reportto.Entry{Type: "csp-violation", URL: "https://example.com/page"}
 	entry.Body.Directive = "script-src-elem"

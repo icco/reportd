@@ -11,9 +11,8 @@ import (
 	"gorm.io/gorm"
 )
 
-// dropModel removes a table from an already-migrated database so the query
-// inside a handler fails. It is how the storage-error branches become
-// reachable without an actual database outage.
+// dropModel removes a table from a migrated database so a handler's query
+// fails — the storage-error branches without an actual outage.
 func dropModel(t *testing.T, pgDB *gorm.DB, model any) {
 	t.Helper()
 	if err := pgDB.Migrator().DropTable(model); err != nil {
@@ -21,8 +20,7 @@ func dropModel(t *testing.T, pgDB *gorm.DB, model any) {
 	}
 }
 
-// TestHandlerStorageErrors asserts each read handler surfaces a 500 when its
-// underlying table is gone.
+// Each read handler should surface a 500 when its table is gone.
 func TestHandlerStorageErrors(t *testing.T) {
 	for _, tt := range []struct {
 		name   string
@@ -49,8 +47,7 @@ func TestHandlerStorageErrors(t *testing.T) {
 	}
 }
 
-// TestIngestStorageErrors covers the insert-failure branch in each of the
-// three ingest handlers: the payload parses, then the write has nowhere to go.
+// The insert-failure branch: the payload parses, then the write has nowhere to go.
 func TestIngestStorageErrors(t *testing.T) {
 	const (
 		reportToBody  = `{"csp-report":{"document-uri":"https://example.com/","blocked-uri":"https://evil.com/","violated-directive":"script-src"}}`
@@ -81,8 +78,8 @@ func TestIngestStorageErrors(t *testing.T) {
 	}
 }
 
-// errReader fails on the first Read so the handlers' body-read error branches
-// run. A client that hangs up mid-upload produces the same shape.
+// errReader fails on the first Read, reaching the body-read error branches.
+// A client hanging up mid-upload produces the same shape.
 type errReader struct{}
 
 func (errReader) Read([]byte) (int, error) { return 0, errors.New("simulated read failure") }
@@ -112,8 +109,7 @@ func TestIngestBodyReadErrors(t *testing.T) {
 	}
 }
 
-// TestPostReportingContentTypeRejections covers the two Content-Type guards:
-// an unparseable header, and a media type the endpoint does not accept.
+// The two Content-Type guards: an unparseable header, and an unaccepted type.
 func TestPostReportingContentTypeRejections(t *testing.T) {
 	for _, tt := range []struct {
 		name        string
@@ -140,8 +136,7 @@ func TestPostReportingContentTypeRejections(t *testing.T) {
 	}
 }
 
-// TestPostReportingLegacyCSPParseError covers the ParseLegacyCSPReport error
-// arm, which only runs for the application/csp-report media type.
+// The ParseLegacyCSPReport error arm only runs for application/csp-report.
 func TestPostReportingLegacyCSPParseError(t *testing.T) {
 	h, _, _ := newTestRouter(t)
 
@@ -151,9 +146,8 @@ func TestPostReportingLegacyCSPParseError(t *testing.T) {
 	}
 }
 
-// TestServiceValidationRejectsOverlongName covers the validation branch on
-// every handler that takes a {service} parameter. 33 characters exceeds the
-// 32-character limit while staying a legal URL path segment.
+// 33 characters exceeds the 32-character limit while staying a legal path
+// segment, hitting the validation branch on every {service} handler.
 func TestServiceValidationRejectsOverlongName(t *testing.T) {
 	long := strings.Repeat("a", 33)
 

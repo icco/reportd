@@ -48,10 +48,8 @@ func TestConnectRejectsEmptySQLiteDSN(t *testing.T) {
 	}
 }
 
-// TestConnectFailsOnUnreachablePostgres covers the failure path after the
-// dialector is built: port 1 is never listening, so opening or pinging fails.
-// The DSN carries no userinfo — the connection never gets far enough to
-// authenticate, and a password here would trip gosec's G101.
+// Covers the failure path after the dialector is built: port 1 never listens.
+// No userinfo in the DSN — it never authenticates, and a password trips G101.
 func TestConnectFailsOnUnreachablePostgres(t *testing.T) {
 	dsn := "postgres://127.0.0.1:1/none?sslmode=disable&connect_timeout=1"
 	_, err := Connect(context.Background(), dsn)

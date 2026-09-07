@@ -11,9 +11,8 @@ import (
 	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
 )
 
-// failingWriter accepts headers but fails every Write, so the handlers'
-// "error writing response" branches run. A client that disconnects after the
-// status line produces the same failure.
+// failingWriter accepts headers but fails every Write, reaching the "error
+// writing response" branches. Same as a client disconnecting after the status.
 type failingWriter struct {
 	header http.Header
 	code   int
@@ -27,10 +26,9 @@ func (f *failingWriter) Header() http.Header       { return f.header }
 func (f *failingWriter) WriteHeader(code int)      { f.code = code }
 func (f *failingWriter) Write([]byte) (int, error) { return 0, errors.New("simulated write failure") }
 
-// requestWithService builds a request carrying a chi route parameter, so a
-// handler can be called directly rather than through the router. That is
-// required here: the router owns its ResponseWriter, so a failing one can only
-// be injected by invoking the handler itself.
+// requestWithService carries a chi route parameter so a handler can be called
+// directly. Required: the router owns its ResponseWriter, so a failing one can
+// only be injected by invoking the handler.
 func requestWithService(t *testing.T, service string) *http.Request {
 	t.Helper()
 	req := httptest.NewRequestWithContext(t.Context(), http.MethodGet, "/", nil)
@@ -39,9 +37,8 @@ func requestWithService(t *testing.T, service string) *http.Request {
 	return req.WithContext(context.WithValue(req.Context(), chi.RouteCtxKey, rctx))
 }
 
-// TestHandlerWriteErrors exercises the response-write failure branches. The
-// handlers log and return, so the assertion is that they do not panic and
-// never report success through the writer.
+// The handlers log and return on a write failure, so the assertion is that
+// they neither panic nor report success through the writer.
 func TestHandlerWriteErrors(t *testing.T) {
 	_, pgDB, _ := newTestRouter(t)
 
@@ -69,8 +66,7 @@ func TestHandlerWriteErrors(t *testing.T) {
 	}
 }
 
-// TestRouteTagAddsRoutePattern covers the labeler branch in routeTag, which is
-// skipped unless an otelhttp labeler is present in the request context.
+// routeTag's labeler branch is skipped unless an otelhttp labeler is present.
 func TestRouteTagAddsRoutePattern(t *testing.T) {
 	var called bool
 	inner := http.HandlerFunc(func(http.ResponseWriter, *http.Request) { called = true })

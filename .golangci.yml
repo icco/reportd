@@ -1,20 +1,26 @@
-# golangci-lint configuration. Committed rather than passed as CI flags so a
-# local run and a CI run enforce the same thing.
+# Committed rather than passed as CI flags so local and CI enforce the same set.
+# Comments sit on their own lines: the yaml-json format job runs `yq -iP`, which
+# collapses the two spaces yamllint wants before an inline comment.
 # https://golangci-lint.run/docs/configuration/file/
 version: "2"
 linters:
   default: standard
   enable:
-    - bodyclose # an unclosed response body leaks a connection
-    - contextcheck # a dropped context breaks cancellation and tracing
+    # an unclosed response body leaks a connection
+    - bodyclose
+    # a dropped context breaks cancellation and tracing
+    - contextcheck
     - copyloopvar
-    - errorlint # %v on an error breaks errors.Is/As for callers
+    # %v on an error breaks errors.Is/As for callers
+    - errorlint
     - gocritic
     - gosec
     - intrange
     - misspell
-    - nilerr # returning nil after a non-nil error swallows failures
-    - noctx # an HTTP request with no context cannot be cancelled
+    # returning nil after a non-nil error swallows failures
+    - nilerr
+    # an HTTP request with no context cannot be cancelled
+    - noctx
     - revive
     - unconvert
     - unparam
@@ -23,8 +29,7 @@ linters:
     presets:
       - std-error-handling
     rules:
-      # Table-driven tests and fixtures repeat short literals constantly, and
-      # goconst/dupl findings there are noise rather than signal.
+      # Table-driven tests repeat short literals; these findings are noise.
       - path: _test\.go$
         linters:
           - dupl
