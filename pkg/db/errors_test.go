@@ -10,9 +10,8 @@ import (
 )
 
 // newSchemaDB returns a migrated SQLite database backed by a temp file.
-func newSchemaDB(t *testing.T) *gorm.DB {
+func newSchemaDB(ctx context.Context, t *testing.T) *gorm.DB {
 	t.Helper()
-	ctx := context.Background()
 	d, err := Connect(ctx, "sqlite://"+filepath.Join(t.TempDir(), "errors.db"))
 	if err != nil {
 		t.Fatalf("Connect() error = %v", err)
@@ -48,7 +47,7 @@ func TestGetServicesErrorPerTable(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			d := newSchemaDB(t)
+			d := newSchemaDB(ctx, t)
 			dropTable(t, d, tt.model)
 
 			if _, err := GetServices(ctx, d); err == nil {
@@ -69,7 +68,7 @@ func TestGetTopViolatedDirectivesErrorPerTable(t *testing.T) {
 		{"report_to_entries missing", &ReportToEntry{}},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
-			d := newSchemaDB(t)
+			d := newSchemaDB(ctx, t)
 			dropTable(t, d, tt.model)
 
 			if _, err := GetTopViolatedDirectives(ctx, d, "svc", 10); err == nil {
@@ -90,7 +89,7 @@ func TestGetReportCountsErrorPerTable(t *testing.T) {
 		{"report_to_entries missing", &ReportToEntry{}},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
-			d := newSchemaDB(t)
+			d := newSchemaDB(ctx, t)
 			dropTable(t, d, tt.model)
 
 			if _, err := GetReportCounts(ctx, d, "svc"); err == nil {
@@ -131,7 +130,7 @@ func TestSingleTableQueryErrors(t *testing.T) {
 		}},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
-			d := newSchemaDB(t)
+			d := newSchemaDB(ctx, t)
 			dropTable(t, d, tt.model)
 
 			if err := tt.call(d); err == nil {
@@ -145,7 +144,7 @@ func TestSingleTableQueryErrors(t *testing.T) {
 // only runs when more distinct directives exist than the caller asked for.
 func TestGetTopViolatedDirectivesTruncatesToLimit(t *testing.T) {
 	ctx := context.Background()
-	d := newSchemaDB(t)
+	d := newSchemaDB(ctx, t)
 
 	const service = "limit-svc"
 	for _, directive := range []string{"script-src", "img-src", "style-src", "font-src"} {
