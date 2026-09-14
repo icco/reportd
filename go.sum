@@ -73,8 +73,8 @@ github.com/googleapis/enterprise-certificate-proxy v0.3.21 h1:OFdQ3tnCX/zaQ0Cedu
 github.com/googleapis/enterprise-certificate-proxy v0.3.21/go.mod h1:L3D/IQExI6LqEjBdXcZQ1WluSgigQmSwBboFstVPM4w=
 github.com/googleapis/gax-go/v2 v2.24.1 h1:AtqTN21IXMMWo99LiEVAiBfNNQmO40d8xUfZI640mc0=
 github.com/googleapis/gax-go/v2 v2.24.1/go.mod h1:bWeBei0NVwaNZKb2y1HUBS7gLXIF3/Tu3pq7j8D2Tb0=
-github.com/icco/gutil v1.0.19 h1:uVUABFQOCY0xpCS134fhLyD9YILRpfgf+/mOYihIL2w=
-github.com/icco/gutil v1.0.19/go.mod h1:jnE3yHLhVGTaUR/79hNHEAaZYOT6sbcnRMZL/lcEOvI=
+github.com/icco/gutil v1.0.21 h1:0r+x5Xn1a6F5eGuzuXifzfNcVXAEZdg2rx77SUOVWkQ=
+github.com/icco/gutil v1.0.21/go.mod h1:BBGF2LHIgdr1to4Q/PnJG1xiTjuo4N4lyr9RBGtDvak=
 github.com/jackc/pgpassfile v1.0.0 h1:/6Hmqy13Ss2zCq62VdNG8tM1wchn8zjSGOBJ6icpsIM=
 github.com/jackc/pgpassfile v1.0.0/go.mod h1:CEx0iS5ambNFdcRtxPj5JhEz+xB6uRky5eyVu/W2HEg=
 github.com/jackc/pgservicefile v0.0.0-20240606120523-5a60cdf6a761 h1:iCEnooe7UlwOQYpKFhBabPMi4aNAfoODPEFNiAnClxo=
