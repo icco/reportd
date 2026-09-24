@@ -10,7 +10,7 @@ require (
 	github.com/icco/gutil v1.0.23
 	github.com/peterbourgon/ff/v3 v3.4.0
 	github.com/prometheus/client_golang v1.24.1
-	github.com/unrolled/render v1.7.0
+	github.com/unrolled/render v1.8.1
 	github.com/unrolled/secure v1.17.0
 	go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp v0.71.0
 	go.opentelemetry.io/otel v1.46.0

@@ -121,8 +121,8 @@ github.com/stretchr/testify v1.3.0/go.mod h1:M5WIy9Dh21IEIfnGCwXGc5bZfKNJtfHm1UV
 github.com/stretchr/testify v1.7.0/go.mod h1:6Fq8oRcR53rry900zMqJjRRixrwX3KX962/h/Wwjteg=
 github.com/stretchr/testify v1.12.1 h1:EuwCh5fleGS7H32xRwO3wRGT7DxrDhLAT6FF8MpWDWE=
 github.com/stretchr/testify v1.12.1/go.mod h1:MDEgiDPPsNp5cuIrHPPCyornHKgEVbtFUmoNlxoYthg=
-github.com/unrolled/render v1.7.0 h1:1yke01/tZiZpiXfUG+zqB+6fq3G4I+KDmnh0EhPq7So=
-github.com/unrolled/render v1.7.0/go.mod h1:LwQSeDhjml8NLjIO9GJO1/1qpFJxtfVIpzxXKjfVkoI=
+github.com/unrolled/render v1.8.1 h1:hUqbfl8e82kD+f39PCDCVcTRUL8lTVUzfxCgxp1FYVY=
+github.com/unrolled/render v1.8.1/go.mod h1:nQ5rv5B38X4Xb3Vtx6tRVle+Vcy0XbcunTkxIWVKmc8=
 github.com/unrolled/secure v1.17.0 h1:Io7ifFgo99Bnh0J7+Q+qcMzWM6kaDPCA5FroFZEdbWU=
 github.com/unrolled/secure v1.17.0/go.mod h1:BmF5hyM6tXczk3MpQkFf1hpKSRqCyhqcbiQtiAF7+40=
 github.com/zeebo/assert v1.3.0 h1:g7C04CbJuIDKNPFHmsk4hwZDO5O+kntRxzaUoNXj+IQ=
