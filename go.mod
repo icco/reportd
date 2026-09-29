@@ -1,4 +1,4 @@
-module github.com/icco/reportd
+module go.icco.me/reportd
 
 go 1.26.2
 

@@ -4,7 +4,7 @@ Guidance for coding agents working on reportd.
 
 ## Project Overview
 
-A collector daemon written in Go (`github.com/icco/reportd`) for ingesting browser reporting API payloads (such as Content Security Policy violations and deprecation reports).
+A collector daemon written in Go (`go.icco.me/reportd`) for ingesting browser reporting API payloads (such as Content Security Policy violations and deprecation reports).
 
 ## Commands
 

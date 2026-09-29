@@ -7,7 +7,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/icco/reportd/pkg/db"
+	"go.icco.me/reportd/pkg/db"
 	"gorm.io/gorm"
 )
 

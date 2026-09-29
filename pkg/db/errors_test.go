@@ -5,7 +5,7 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/icco/reportd/pkg/reportto"
+	"go.icco.me/reportd/pkg/reportto"
 	"gorm.io/gorm"
 )
 
