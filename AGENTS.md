@@ -18,6 +18,6 @@ go build .       # Build binary
 ## Architecture & Conventions
 
 - `main.go` — Server entrypoint, Chi router, and report parsing handlers.
-- Follow icco Go conventions (`github.com/icco/gutil` for logging and structured JSON).
+- Follow icco Go conventions (`go.icco.me/gutil` for logging and structured JSON).
 - PR titles and commits must follow Conventional Commits with lowercase subjects.
 - Ensure all tests pass before submitting PRs.
