@@ -12,10 +12,10 @@ import (
 	"testing"
 	"time"
 
-	"github.com/icco/reportd/pkg/analytics"
-	"github.com/icco/reportd/pkg/db"
-	"github.com/icco/reportd/pkg/reporting"
-	"github.com/icco/reportd/pkg/reportto"
+	"go.icco.me/reportd/pkg/analytics"
+	"go.icco.me/reportd/pkg/db"
+	"go.icco.me/reportd/pkg/reporting"
+	"go.icco.me/reportd/pkg/reportto"
 	"gorm.io/gorm"
 )
 

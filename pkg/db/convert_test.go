@@ -4,9 +4,9 @@ import (
 	"testing"
 
 	"cloud.google.com/go/bigquery"
-	"github.com/icco/reportd/pkg/analytics"
-	"github.com/icco/reportd/pkg/reporting"
-	"github.com/icco/reportd/pkg/reportto"
+	"go.icco.me/reportd/pkg/analytics"
+	"go.icco.me/reportd/pkg/reporting"
+	"go.icco.me/reportd/pkg/reportto"
 )
 
 func nullStr(s string) bigquery.NullString {

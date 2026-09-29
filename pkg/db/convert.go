@@ -4,9 +4,9 @@ import (
 	"encoding/json"
 	"time"
 
-	"github.com/icco/reportd/pkg/analytics"
-	"github.com/icco/reportd/pkg/reporting"
-	"github.com/icco/reportd/pkg/reportto"
+	"go.icco.me/reportd/pkg/analytics"
+	"go.icco.me/reportd/pkg/reporting"
+	"go.icco.me/reportd/pkg/reportto"
 )
 
 const (

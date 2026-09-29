@@ -13,11 +13,11 @@ import (
 	"time"
 
 	"cloud.google.com/go/bigquery"
-	"github.com/icco/reportd/pkg/analytics"
-	"github.com/icco/reportd/pkg/db"
-	"github.com/icco/reportd/pkg/reporting"
-	"github.com/icco/reportd/pkg/reportto"
 	"github.com/peterbourgon/ff/v3"
+	"go.icco.me/reportd/pkg/analytics"
+	"go.icco.me/reportd/pkg/db"
+	"go.icco.me/reportd/pkg/reporting"
+	"go.icco.me/reportd/pkg/reportto"
 	"google.golang.org/api/iterator"
 	"gorm.io/gorm"
 )

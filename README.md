@@ -1,6 +1,6 @@
 # reportd
 
-[![GoDoc](https://godoc.org/github.com/icco/reportd?status.svg)](https://godoc.org/github.com/icco/reportd)
+[![GoDoc](https://pkg.go.dev/badge/go.icco.me/reportd.svg)](https://pkg.go.dev/go.icco.me/reportd)
 [![Go Report Card](https://goreportcard.com/badge/github.com/icco/reportd)](https://goreportcard.com/report/github.com/icco/reportd)
 
 A self-hosted service for collecting browser security reports and Web Vitals, with a dashboard for understanding your site's health.
