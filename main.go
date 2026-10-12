@@ -9,6 +9,7 @@ import (
 	"errors"
 	"flag"
 	"fmt"
+	"io"
 	"io/fs"
 	"mime"
 	"net/http"
@@ -410,6 +411,17 @@ func ingestContext(ctx context.Context) (context.Context, context.CancelFunc) {
 	return context.WithTimeout(context.WithoutCancel(ctx), 10*time.Second)
 }
 
+func handleBodyReadError(w http.ResponseWriter, r *http.Request, service string, err error) {
+	l := logging.FromContext(r.Context())
+	if errors.Is(err, io.ErrUnexpectedEOF) {
+		l.Warnw("incomplete request body", zap.Error(err), "service", service, "content-type", r.Header.Get("Content-Type"))
+		http.Error(w, "incomplete request body", http.StatusBadRequest)
+		return
+	}
+	l.Errorw("error reading body", zap.Error(err), "service", service, "content-type", r.Header.Get("Content-Type"))
+	http.Error(w, "uploading error", http.StatusInternalServerError)
+}
+
 func postReportHandler(pgDB *gorm.DB, writeBQ reportToBQWriter) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		ctx := r.Context()
@@ -424,8 +436,7 @@ func postReportHandler(pgDB *gorm.DB, writeBQ reportToBQWriter) http.HandlerFunc
 
 		buf := new(bytes.Buffer)
 		if _, err := buf.ReadFrom(r.Body); err != nil {
-			l.Errorw("error reading body", zap.Error(err), "service", service)
-			http.Error(w, "uploading error", 500)
+			handleBodyReadError(w, r, service, err)
 			return
 		}
 		bodyStr := buf.String()
@@ -515,8 +526,7 @@ func postAnalyticsHandler(pgDB *gorm.DB, writeBQ analyticsBQWriter) http.Handler
 
 		buf := new(bytes.Buffer)
 		if _, err := buf.ReadFrom(r.Body); err != nil {
-			l.Errorw("error reading body", zap.Error(err), "service", service)
-			http.Error(w, "uploading error", 500)
+			handleBodyReadError(w, r, service, err)
 			return
 		}
 		bodyStr := buf.String()
@@ -572,8 +582,7 @@ func postReportingHandler(pgDB *gorm.DB, writeBQ securityReportBQWriter) http.Ha
 
 		buf := new(bytes.Buffer)
 		if _, err := buf.ReadFrom(r.Body); err != nil {
-			l.Errorw("error reading body", zap.Error(err), "service", service, "content-type", contentType)
-			http.Error(w, "uploading error", 500)
+			handleBodyReadError(w, r, service, err)
 			return
 		}
 		bodyStr := buf.String()

@@ -1,13 +1,17 @@
 package main
 
 import (
+	"bufio"
 	"errors"
+	"io"
 	"net/http"
 	"net/http/httptest"
 	"strings"
 	"testing"
 
 	"go.icco.me/reportd/pkg/db"
+	"go.uber.org/zap"
+	"go.uber.org/zap/zaptest/observer"
 	"gorm.io/gorm"
 )
 
@@ -104,6 +108,43 @@ func TestIngestBodyReadErrors(t *testing.T) {
 
 			if rr.Code != http.StatusInternalServerError {
 				t.Errorf("status = %d, want 500 (body=%q)", rr.Code, rr.Body.String())
+			}
+		})
+	}
+}
+
+func TestIngestTruncatedBodies(t *testing.T) {
+	previousLog := log
+	core, logs := observer.New(zap.WarnLevel)
+	log = zap.New(core).Sugar()
+	t.Cleanup(func() { log = previousLog })
+	h := newRouter(nil, nil, nil, nil)
+
+	for _, tc := range []struct {
+		target      string
+		contentType string
+	}{
+		{"/report/svc", "application/csp-report"},
+		{"/analytics/svc", "application/json"},
+		{"/reporting/svc", "application/reports+json"},
+	} {
+		t.Run(tc.target, func(t *testing.T) {
+			logs.TakeAll()
+			raw := "POST " + tc.target + " HTTP/1.1\r\nHost: example.com\r\nContent-Type: " + tc.contentType + "\r\nContent-Length: 100\r\n\r\n{"
+			req, err := http.ReadRequest(bufio.NewReader(strings.NewReader(raw)))
+			if err != nil {
+				t.Fatal(err)
+			}
+			rr := httptest.NewRecorder()
+			h.ServeHTTP(rr, req.WithContext(t.Context()))
+			if rr.Code != http.StatusBadRequest {
+				t.Errorf("status = %d, want 400", rr.Code)
+			}
+			if got := logs.FilterLevelExact(zap.ErrorLevel).Len(); got != 0 {
+				t.Errorf("error logs = %d, want 0", got)
+			}
+			if got := logs.FilterLevelExact(zap.WarnLevel).FilterField(zap.Error(io.ErrUnexpectedEOF)).Len(); got != 1 {
+				t.Errorf("incomplete upload warnings = %d, want 1", got)
 			}
 		})
 	}
