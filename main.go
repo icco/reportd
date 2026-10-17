@@ -325,7 +325,7 @@ func viewHandler(re *render.Render) http.HandlerFunc {
 		service := chi.URLParam(r, "service")
 
 		if err := lib.ValidateService(service); err != nil {
-			l.Errorw("error validating service", zap.Error(err), "service", service)
+			l.Warnw("invalid service", zap.Error(err), "service", service)
 			http.Error(w, "could not validate service", 400)
 			return
 		}
@@ -369,7 +369,7 @@ func corsPreflightHandler() http.HandlerFunc {
 		l := logging.FromContext(r.Context())
 		service := chi.URLParam(r, "service")
 		if err := lib.ValidateService(service); err != nil {
-			l.Errorw("error validating service", zap.Error(err), "service", service)
+			l.Warnw("invalid service", zap.Error(err), "service", service)
 			http.Error(w, "could not validate service", 400)
 			return
 		}
@@ -386,7 +386,7 @@ func getReportsHandler(pgDB *gorm.DB) http.HandlerFunc {
 		service := chi.URLParam(r, "service")
 
 		if err := lib.ValidateService(service); err != nil {
-			l.Errorw("error validating service", zap.Error(err), "service", service)
+			l.Warnw("invalid service", zap.Error(err), "service", service)
 			http.Error(w, "could not validate service", 400)
 			return
 		}
@@ -429,7 +429,7 @@ func postReportHandler(pgDB *gorm.DB, writeBQ reportToBQWriter) http.HandlerFunc
 		service := chi.URLParam(r, "service")
 
 		if err := lib.ValidateService(service); err != nil {
-			l.Errorw("error validating service", zap.Error(err), "service", service)
+			l.Warnw("invalid service", zap.Error(err), "service", service)
 			http.Error(w, "could not validate service", 400)
 			return
 		}
@@ -493,7 +493,7 @@ func getAnalyticsHandler(pgDB *gorm.DB) http.HandlerFunc {
 		service := chi.URLParam(r, "service")
 
 		if err := lib.ValidateService(service); err != nil {
-			l.Errorw("error validating service", zap.Error(err), "service", service)
+			l.Warnw("invalid service", zap.Error(err), "service", service)
 			http.Error(w, "could not validate service", 400)
 			return
 		}
@@ -519,7 +519,7 @@ func postAnalyticsHandler(pgDB *gorm.DB, writeBQ analyticsBQWriter) http.Handler
 		ct := r.Header.Get("content-type")
 
 		if err := lib.ValidateService(service); err != nil {
-			l.Errorw("error validating service", zap.Error(err), "service", service)
+			l.Warnw("invalid service", zap.Error(err), "service", service)
 			http.Error(w, "could not validate service", 400)
 			return
 		}
@@ -575,7 +575,7 @@ func postReportingHandler(pgDB *gorm.DB, writeBQ securityReportBQWriter) http.Ha
 		}
 
 		if err := lib.ValidateService(service); err != nil {
-			l.Errorw("error validating service", zap.Error(err), "service", service)
+			l.Warnw("invalid service", zap.Error(err), "service", service)
 			http.Error(w, "could not validate service", 400)
 			return
 		}
@@ -626,7 +626,7 @@ func apiVitalsHandler(pgDB *gorm.DB) http.HandlerFunc {
 		service := chi.URLParam(r, "service")
 
 		if err := lib.ValidateService(service); err != nil {
-			l.Errorw("error validating service", zap.Error(err), "service", service)
+			l.Warnw("invalid service", zap.Error(err), "service", service)
 			http.Error(w, "could not validate service", 400)
 			return
 		}
@@ -666,7 +666,7 @@ func apiReportsHandler(pgDB *gorm.DB) http.HandlerFunc {
 		service := chi.URLParam(r, "service")
 
 		if err := lib.ValidateService(service); err != nil {
-			l.Errorw("error validating service", zap.Error(err), "service", service)
+			l.Warnw("invalid service", zap.Error(err), "service", service)
 			http.Error(w, "could not validate service", 400)
 			return
 		}
