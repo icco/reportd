@@ -24,7 +24,7 @@ LABEL org.opencontainers.image.source=https://github.com/icco/reportd
 LABEL org.opencontainers.image.description="A service for receiving CSP reports and others."
 LABEL org.opencontainers.image.licenses=MIT
 
-RUN apk add --no-cache ca-certificates tzdata
+RUN apk upgrade --no-cache ca-certificates ca-certificates-bundle && apk add --no-cache ca-certificates tzdata
 RUN adduser -S -u 1001 app
 
 WORKDIR /app
