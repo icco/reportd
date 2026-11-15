@@ -287,7 +287,8 @@ func newRouter(pgDB *gorm.DB, writeReport reportToBQWriter, writeAnalytics analy
 
 func indexHandler(re *render.Render, pgDB *gorm.DB) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		ctx := r.Context()
+		ctx, cancel := queryContext(r.Context())
+		defer cancel()
 		l := logging.FromContext(ctx)
 
 		services, err := db.GetServices(ctx, pgDB)
@@ -408,6 +409,12 @@ func getReportsHandler(pgDB *gorm.DB) http.HandlerFunc {
 // hanging up. Beacons are sent on page unload, so the connection is routinely
 // torn down mid-insert.
 func ingestContext(ctx context.Context) (context.Context, context.CancelFunc) {
+	return context.WithTimeout(context.WithoutCancel(ctx), 10*time.Second)
+}
+
+// queryContext detaches a request context so a client hanging up does not
+// cancel a short dashboard query mid-flight, which Postgres logs as an error.
+func queryContext(ctx context.Context) (context.Context, context.CancelFunc) {
 	return context.WithTimeout(context.WithoutCancel(ctx), 10*time.Second)
 }
 
