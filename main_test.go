@@ -145,6 +145,18 @@ func TestIndexHandler(t *testing.T) {
 	}
 }
 
+func TestIndexHandlerClientGone(t *testing.T) {
+	h, _, _ := newTestRouter(t)
+	ctx, cancel := context.WithCancel(t.Context())
+	cancel()
+	req := httptest.NewRequestWithContext(ctx, http.MethodGet, "/", nil)
+	rr := httptest.NewRecorder()
+	h.ServeHTTP(rr, req)
+	if rr.Code != http.StatusOK {
+		t.Fatalf("status = %d, want 200, body=%s", rr.Code, rr.Body.String())
+	}
+}
+
 func TestViewHandler(t *testing.T) {
 	h, _, _ := newTestRouter(t)
 
