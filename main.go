@@ -27,6 +27,7 @@ import (
 	"github.com/unrolled/render"
 	"github.com/unrolled/secure"
 	"go.icco.me/gutil/logging"
+	"go.icco.me/gutil/tracing"
 	"go.icco.me/reportd/pkg/analytics"
 	"go.icco.me/reportd/pkg/db"
 	"go.icco.me/reportd/pkg/lib"
@@ -40,6 +41,7 @@ import (
 	semconv "go.opentelemetry.io/otel/semconv/v1.40.0"
 	"go.uber.org/zap"
 	"gorm.io/gorm"
+	gormtracing "gorm.io/plugin/opentelemetry/tracing"
 )
 
 const serverName = "reportd"
@@ -76,6 +78,18 @@ func routeTag(next http.Handler) http.Handler {
 }
 
 func main() {
+	shutdownTracer, err := tracing.Init(context.Background(), service)
+	if err != nil {
+		log.Fatalw("tracing init", zap.Error(err))
+	}
+	defer func() {
+		shutdownCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+		defer cancel()
+		if err := shutdownTracer(shutdownCtx); err != nil {
+			log.Warnw("tracing shutdown", zap.Error(err))
+		}
+	}()
+
 	fs := flag.NewFlagSet(os.Args[0], flag.ContinueOnError)
 	project := fs.String("project", "", "Project ID containing the bigquery dataset to upload to.")
 	dataset := fs.String("dataset", "", "The bigquery dataset to upload to.")
@@ -134,6 +148,12 @@ func main() {
 	if err != nil {
 		log.Fatalw("could not connect to database", zap.Error(err))
 	}
+	if err := pgDB.Use(gormtracing.NewPlugin(
+		gormtracing.WithoutMetrics(),
+		gormtracing.WithoutQueryVariables(),
+	)); err != nil {
+		log.Fatalw("could not register otel plugin", zap.Error(err))
+	}
 	if err := db.AutoMigrate(ctx, pgDB); err != nil {
 		log.Fatalw("could not auto-migrate database", zap.Error(err))
 	}
@@ -172,7 +192,7 @@ func main() {
 
 	handler := otelhttp.NewHandler(r, serverName,
 		otelhttp.WithFilter(func(req *http.Request) bool {
-			return req.URL.Path != "/metrics"
+			return req.URL.Path != "/metrics" && req.URL.Path != "/healthz"
 		}),
 	)
 
