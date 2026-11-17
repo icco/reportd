@@ -148,7 +148,10 @@ func main() {
 	if err != nil {
 		log.Fatalw("could not connect to database", zap.Error(err))
 	}
-	if err := pgDB.Use(gormtracing.NewPlugin(gormtracing.WithoutMetrics())); err != nil {
+	if err := pgDB.Use(gormtracing.NewPlugin(
+		gormtracing.WithoutMetrics(),
+		gormtracing.WithoutQueryVariables(),
+	)); err != nil {
 		log.Fatalw("could not register otel plugin", zap.Error(err))
 	}
 	if err := db.AutoMigrate(ctx, pgDB); err != nil {
